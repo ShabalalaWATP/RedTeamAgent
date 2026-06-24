@@ -71,6 +71,7 @@ Edit `.env.production`:
 - Set `COOKIE_SECURE=true`.
 - Set `CORS_ORIGINS=https://your-domain`.
 - Set `PUBLIC_APP_URL=https://your-domain`.
+- Set `DAILY_REVIEW_RUN_LIMIT` to the number of review runs one user may start per UTC day.
 - Set `MAIL_DELIVERY=smtp`.
 - Set `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `SMTP_STARTTLS`.
 

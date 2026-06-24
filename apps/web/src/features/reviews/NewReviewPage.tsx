@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { AGENT_OPTIONS } from '../../shared/agentOptions';
-import type { ContextPack, Review, Source } from '../../shared/types';
+import type { ContextPack, Review, Source, UsageLimits } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 import { SourceIntakePanel } from './SourceIntakePanel';
 import { Stage2ReviewSettings } from './Stage2ReviewSettings';
@@ -33,8 +33,18 @@ export function NewReviewPage() {
   const [contextMessage, setContextMessage] = useState<string | null>(null);
   const [contextError, setContextError] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<Record<string, unknown> | null>(null);
+  const [usage, setUsage] = useState<UsageLimits | null>(null);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sourceError, setSourceError] = useState<string | null>(null);
+
+  const refreshUsage = async () => {
+    try {
+      setUsage(await api.usageLimits());
+    } catch {
+      setUsage(null);
+    }
+  };
 
   useEffect(() => {
     if (!auth) return;
@@ -47,26 +57,32 @@ export function NewReviewPage() {
       .catch((err) => {
         if (!ignore) setContextError((err as Error).message);
       });
+    refreshUsage();
     return () => {
       ignore = true;
     };
   }, [auth]);
 
+  const createReviewDraft = async () => {
+    if (!auth || !projectId) throw new Error('Project or session is missing.');
+    const next = await api.createReview(auth.csrfToken, projectId, {
+      title,
+      proposal_text: proposal,
+      mode,
+      focus_chips: toList(focus),
+      external_research: externalResearch,
+      private_research: privateResearch,
+      domain_allowlist: toList(allowlist),
+      domain_blocklist: toList(blocklist)
+    });
+    setReview(next);
+    return next;
+  };
+
   const createReview = async () => {
-    if (!auth || !projectId) return;
     setError(null);
     try {
-      const next = await api.createReview(auth.csrfToken, projectId, {
-        title,
-        proposal_text: proposal,
-        mode,
-        focus_chips: toList(focus),
-        external_research: externalResearch,
-        private_research: privateResearch,
-        domain_allowlist: toList(allowlist),
-        domain_blocklist: toList(blocklist)
-      });
-      setReview(next);
+      await createReviewDraft();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -127,10 +143,26 @@ export function NewReviewPage() {
   };
 
   const startRun = async () => {
-    /* v8 ignore next -- the run button is disabled until a review exists. */
-    if (!auth || !review) return;
-    const run = await api.startRun(auth.csrfToken, review.id);
-    navigate(`/runs/${run.id}`);
+    /* v8 ignore next -- the app layout prevents unauthenticated rendering of this route. */
+    if (!auth) return;
+    setError(null);
+    setSourceError(null);
+    setStarting(true);
+    try {
+      const currentReview = review ?? await createReviewDraft();
+      if (sources.length === 0) {
+        const source = await api.addTextSource(auth.csrfToken, currentReview.id, proposal);
+        setSources((current) => [source, ...current]);
+      }
+      const run = await api.startRun(auth.csrfToken, currentReview.id);
+      await refreshUsage();
+      navigate(`/runs/${run.id}`);
+    } catch (err) {
+      setError((err as Error).message);
+      await refreshUsage();
+    } finally {
+      setStarting(false);
+    }
   };
 
   return (
@@ -141,6 +173,11 @@ export function NewReviewPage() {
           <p className="muted">Use any source material, inspect routing, then run the structured decision workflow.</p>
         </div>
         <Status tone={review ? 'ok' : 'info'}>{review ? 'Review created' : 'Draft'}</Status>
+        {usage ? (
+          <Status tone={usage.runs_remaining_today > 0 ? 'ok' : 'warn'}>
+            {usage.runs_remaining_today} runs left today
+          </Status>
+        ) : null}
       </div>
       <div className="grid">
         <div className="stack">
@@ -243,7 +280,14 @@ export function NewReviewPage() {
           <h2 id="preflight-heading">Preflight</h2>
           <div className="row">
             <Button type="button" onClick={runPreflight} disabled={!review}><ShieldQuestion size={16} /> Preflight</Button>
-            <Button type="button" variant="primary" onClick={startRun} disabled={!review}><Play size={16} /> Run review</Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={startRun}
+              disabled={starting || !title.trim() || !proposal.trim() || usage?.runs_remaining_today === 0}
+            >
+              <Play size={16} /> {starting ? 'Starting' : 'Run review'}
+            </Button>
           </div>
           {preflight ? (
             <pre className="panel">{JSON.stringify(preflight, null, 2)}</pre>

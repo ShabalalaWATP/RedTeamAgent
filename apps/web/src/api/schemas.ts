@@ -58,6 +58,13 @@ export const runSchema = z.object({
   usage: z.record(z.string(), z.unknown())
 });
 
+export const usageLimitsSchema = z.object({
+  daily_review_run_limit: z.number(),
+  runs_started_today: z.number(),
+  runs_remaining_today: z.number(),
+  resets_at: z.string()
+});
+
 export const workflowSummarySchema = z.object({
   id: z.string(),
   workspace_id: z.string(),

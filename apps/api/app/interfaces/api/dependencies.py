@@ -127,8 +127,9 @@ def workflow_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     governance: Annotated[ProviderGovernanceService, Depends(provider_governance)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> WorkflowService:
-    return WorkflowService(repo, registry, governance)
+    return WorkflowService(repo, registry, governance, settings.daily_review_run_limit)
 
 
 def enterprise_service(

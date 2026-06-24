@@ -26,6 +26,16 @@ npm run dev --prefix apps/web
 
 Open the web app at `http://localhost:5173`. The API runs at `http://localhost:8000`.
 
+## First Signup
+
+1. Open `/auth`.
+2. Enter an email address and a password of at least 12 characters.
+3. Select `Register`.
+4. In local mode, paste the returned verification token into `Verification token` and select `Verify email`. In production, use the emailed verification link.
+5. Select `Log in`, then create a project and start a review.
+
+Password reset uses the same `/auth` page: select `Send reset`, then use the emailed reset link or local reset token with `New password` and `Confirm reset`.
+
 ## Testing And Quality Gates
 
 ```powershell
@@ -78,6 +88,10 @@ Credentials are encrypted server-side and write-only from the browser perspectiv
 Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 2 capability records cover text generation, structured output, streaming, tool use, image input, embeddings, transcription and reranking where an adapter claims support.
 
 Workspace governance can centrally restrict provider adapters, model identifiers, data classifications, regions, purposes and approved external research domains. Non-empty allow-lists fail closed before provider setup, model registration or review execution.
+
+## Usage Controls
+
+`DAILY_REVIEW_RUN_LIMIT` controls how many AI review runs one signed-in user can start per UTC day. The API enforces this before a run is queued, so direct API calls and browser clicks are covered. Source ingestion and other expensive actions also keep the existing per-minute limiter.
 
 ## Stage 3 Enterprise Controls
 

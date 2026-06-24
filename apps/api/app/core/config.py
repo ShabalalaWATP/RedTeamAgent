@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     self_hosted_provider_mode: bool = False
     cors_origins: str = "http://localhost:5173"
     max_upload_bytes: int = 10 * 1024 * 1024
+    daily_review_run_limit: int = Field(default=20, ge=0)
     public_app_url: str = "http://localhost:5173"
     mail_delivery: str = "local"
     mail_from: str = "RedTeamAgent <noreply@localhost>"

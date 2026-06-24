@@ -9,6 +9,8 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
 
   await assertNoWcagViolations(page);
+  await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await page.getByRole('button', { name: 'Register' }).click();
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
   await page.getByRole('button', { name: 'Verify email' }).click();
@@ -67,6 +69,8 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await page.goto('/auth');
   await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
 
+  await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await tabTo(page, page.getByRole('button', { name: 'Register' }));
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');

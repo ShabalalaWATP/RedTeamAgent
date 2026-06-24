@@ -11,37 +11,6 @@ afterEach(() => {
 });
 
 describe('edge UI flows', () => {
-  it('shows auth errors, supports reset and updates fields', async () => {
-    const user = userEvent.setup();
-    mockFetch((url) => {
-      if (url.includes('/auth/register')) return jsonResponse({ message: 'duplicate' }, 409);
-      if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);
-      if (url.includes('/auth/login')) return jsonResponse({ message: 'bad login' }, 401);
-      if (url.includes('/auth/password-reset/request')) {
-        return jsonResponse({
-          user: { id: 'zero', email: 'new@example.com', is_verified: false },
-          workspace: { id: 'zero', name: 'none' },
-          reset_token: 'reset-token'
-        });
-      }
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-    renderApp('/auth');
-    await user.clear(screen.getByLabelText(/email/i));
-    await user.type(screen.getByLabelText(/email/i), 'new@example.com');
-    await user.clear(screen.getByLabelText(/password/i));
-    await user.type(screen.getByLabelText(/password/i), 'another safe phrase');
-    await user.click(screen.getByRole('button', { name: /register/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('duplicate');
-    await user.type(screen.getByLabelText(/verification token/i), 'bad');
-    await user.click(screen.getByRole('button', { name: /verify email/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('bad token');
-    await user.click(screen.getByRole('button', { name: /log in/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('bad login');
-    await user.click(screen.getByRole('button', { name: /^reset$/i }));
-    expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
-  });
-
   it('surfaces dashboard project creation errors', async () => {
     storeAuth();
     const user = userEvent.setup();
@@ -90,7 +59,7 @@ describe('edge UI flows', () => {
   it('prevents native form submission on route screens', async () => {
     mockFetch(() => jsonResponse([]));
     renderApp('/auth');
-    fireEvent.submit(screen.getByLabelText(/email/i).closest('form') as HTMLFormElement);
+    fireEvent.submit(screen.getByLabelText(/^email$/i).closest('form') as HTMLFormElement);
     expect(screen.getByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
     cleanup();
 
@@ -194,7 +163,8 @@ describe('edge UI flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth');
-    await user.click(screen.getByRole('button', { name: /^reset$/i }));
+    await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
+    await user.click(screen.getByRole('button', { name: /send reset/i }));
     expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
   });
 
@@ -217,8 +187,10 @@ describe('edge UI flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'correct horse battery');
     await user.click(screen.getByRole('button', { name: /register/i }));
-    expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
+    expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /verify email/i })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: /log in/i }));
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();

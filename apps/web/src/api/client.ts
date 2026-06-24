@@ -21,6 +21,7 @@ import {
   reviewSchema,
   runSchema,
   sourceSchema,
+  usageLimitsSchema,
   webhookSchema,
   workflowSummarySchema
 } from './schemas';
@@ -46,6 +47,10 @@ export class ApiClient {
 
   async resetPassword(email: string) {
     return authSchema.parse(await this.request('/auth/password-reset/request', 'POST', { body: { email } }));
+  }
+
+  async confirmResetPassword(token: string, password: string) {
+    await this.request('/auth/password-reset/confirm', 'POST', { body: { token, password } });
   }
 
   async logout(csrf: string) {
@@ -155,6 +160,10 @@ export class ApiClient {
 
   async startRun(csrf: string, reviewId: string) {
     return runSchema.parse(await this.request(`/reviews/${reviewId}/runs`, 'POST', { csrf }));
+  }
+
+  async usageLimits() {
+    return usageLimitsSchema.parse(await this.request('/usage/limits', 'GET'));
   }
 
   async getRun(runId: string) {

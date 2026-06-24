@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.application.ports.repositories import RepositoryPorts
@@ -9,7 +10,7 @@ from app.application.search_service import DeterministicSearchProvider, research
 from app.application.workflow_retry import retry_policy_snapshot
 from app.domain.agents import AGENT_LABELS
 from app.domain.enums import AgentKey, ReviewMode, RunState
-from app.domain.exceptions import AuthorisationError, NotFoundError, QualityGateError
+from app.domain.exceptions import AuthorisationError, NotFoundError, QualityGateError, RateLimitExceeded
 from app.domain.policies import route_agents
 
 STAGES = [
@@ -32,13 +33,16 @@ class WorkflowService:
         repo: RepositoryPorts,
         registry: Any,
         governance: ProviderGovernanceService | None = None,
+        daily_run_limit: int = 20,
     ) -> None:
         self.repo = repo
         self.registry = registry
         self.governance = governance
+        self.daily_run_limit = daily_run_limit
 
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         review = self._require_review(user_id, review_id)
+        self._enforce_daily_run_quota(user_id)
         decision = route_agents(ReviewMode(review.mode), review.focus_chips)
         selected_agents = [agent.value for agent in decision.selected_agents]
         context_packs = context_pack_snapshot(
@@ -56,13 +60,22 @@ class WorkflowService:
             "retry_policy": retry_policy_snapshot(),
             **routing_metadata,
         }
-        run = self.repo.create_run(review.workspace_id, review.id, routing_plan)
+        run = self.repo.create_run(review.workspace_id, review.id, routing_plan, user_id)
         self.repo.add_run_event(run.id, RunState.INTAKE.value, "Run queued for background execution.")
         self.repo.audit(review.workspace_id, user_id, "run.started", {"run_id": run.id})
         self.repo.commit()
         if execute_immediately:
             return self.execute_run(run.id)
         return self.repo.get_run(run.id)
+
+    def usage_limits(self, user_id: str) -> dict[str, Any]:
+        runs_started_today = self.repo.count_user_runs_since(user_id, self._today_start())
+        return {
+            "daily_review_run_limit": self.daily_run_limit,
+            "runs_started_today": runs_started_today,
+            "runs_remaining_today": max(0, self.daily_run_limit - runs_started_today),
+            "resets_at": self._today_start() + timedelta(days=1),
+        }
 
     def execute_run(self, run_id: str, actor_user_id: str | None = None) -> Any:
         run = self.repo.get_run(run_id)
@@ -285,6 +298,17 @@ class WorkflowService:
         if not isinstance(value, list):
             return []
         return [item for item in value if isinstance(item, dict)]
+
+    def _enforce_daily_run_quota(self, user_id: str) -> None:
+        if self.repo.count_user_runs_since(user_id, self._today_start()) >= self.daily_run_limit:
+            raise RateLimitExceeded(
+                "Daily review run limit reached. Try again tomorrow or increase DAILY_REVIEW_RUN_LIMIT."
+            )
+
+    @staticmethod
+    def _today_start() -> datetime:
+        now = datetime.now(UTC)
+        return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def _routing_metadata(self, review: Any, selected_agents: list[str]) -> dict[str, Any]:
         models = self.repo.list_models(review.workspace_id)

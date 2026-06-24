@@ -169,6 +169,7 @@ class Run(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     review_id: Mapped[str] = mapped_column(ForeignKey("reviews.id", ondelete="CASCADE"), index=True)
+    created_by_user_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
     state: Mapped[str] = mapped_column(String(60))
     routing_plan: Mapped[dict[str, object]] = mapped_column(JsonType, default=dict)
     usage: Mapped[dict[str, object]] = mapped_column(JsonType, default=dict)

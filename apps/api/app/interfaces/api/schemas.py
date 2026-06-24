@@ -205,6 +205,13 @@ class RunView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UsageLimitsView(BaseModel):
+    daily_review_run_limit: int
+    runs_started_today: int
+    runs_remaining_today: int
+    resets_at: datetime
+
+
 class WorkflowSummaryView(BaseModel):
     id: str
     workspace_id: str

@@ -20,7 +20,14 @@ from app.interfaces.api.dependencies import (
     require_csrf,
     workflow_service,
 )
-from app.interfaces.api.schemas import ReportComparisonView, ReportView, RunEventView, RunView, WorkflowSummaryView
+from app.interfaces.api.schemas import (
+    ReportComparisonView,
+    ReportView,
+    RunEventView,
+    RunView,
+    UsageLimitsView,
+    WorkflowSummaryView,
+)
 
 router = APIRouter(tags=["runs"])
 
@@ -40,6 +47,14 @@ def start_run(
     run = service.start_run(context.user.id, review_id, execute_immediately=False)
     background_tasks.add_task(execute_workflow_background, run.id, settings.self_hosted_provider_mode, context.user.id)
     return RunView.model_validate(run)
+
+
+@router.get("/usage/limits", response_model=UsageLimitsView)
+def usage_limits(
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[WorkflowService, Depends(workflow_service)],
+) -> UsageLimitsView:
+    return UsageLimitsView.model_validate(service.usage_limits(context.user.id))
 
 
 @router.post("/runs/{run_id}/cancel", response_model=RunView, dependencies=[Depends(require_csrf)])

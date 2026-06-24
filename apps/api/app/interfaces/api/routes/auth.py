@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response
 
 from app.application.auth_service import AuthService
+from app.core.config import Settings, get_settings
 from app.infrastructure.auth.security import new_csrf_token
 from app.interfaces.api.dependencies import AuthContext, auth_service, current_context, rate_limit_login, require_csrf
 from app.interfaces.api.schemas import (
@@ -41,11 +42,18 @@ def login(
     payload: LoginRequest,
     response: Response,
     service: Annotated[AuthService, Depends(auth_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     csrf_token = new_csrf_token()
     result = service.login(str(payload.email), payload.password, csrf_token)
-    response.set_cookie("rta_session", result["session"].id, httponly=True, samesite="lax", secure=False)
-    response.set_cookie("rta_csrf", csrf_token, httponly=False, samesite="lax", secure=False)
+    response.set_cookie(
+        "rta_session",
+        result["session"].id,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+    )
+    response.set_cookie("rta_csrf", csrf_token, httponly=False, samesite="lax", secure=settings.cookie_secure)
     return AuthResponse(
         user=UserView.model_validate(result["user"]),
         workspace=WorkspaceView.model_validate(result["workspace"]),
@@ -58,10 +66,11 @@ def logout(
     response: Response,
     context: Annotated[AuthContext, Depends(current_context)],
     service: Annotated[AuthService, Depends(auth_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     service.logout(context.session.id, context.user.id)
-    response.delete_cookie("rta_session")
-    response.delete_cookie("rta_csrf")
+    response.delete_cookie("rta_session", secure=settings.cookie_secure, samesite="lax")
+    response.delete_cookie("rta_csrf", secure=settings.cookie_secure, samesite="lax")
 
 
 @router.post("/password-reset/request", response_model=AuthResponse)

@@ -419,6 +419,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/usage/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage Limits */
+        get: operations["usage_limits_usage_limits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -2198,6 +2215,20 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
+        /** UsageLimitsView */
+        UsageLimitsView: {
+            /** Daily Review Run Limit */
+            daily_review_run_limit: number;
+            /** Runs Started Today */
+            runs_started_today: number;
+            /** Runs Remaining Today */
+            runs_remaining_today: number;
+            /**
+             * Resets At
+             * Format: date-time
+             */
+            resets_at: string;
+        };
         /** UserView */
         UserView: {
             /** Id */
@@ -3393,6 +3424,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_limits_usage_limits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageLimitsView"];
                 };
             };
             /** @description Validation Error */

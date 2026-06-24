@@ -1995,6 +1995,55 @@
         }
       }
     },
+    "/usage/limits": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Usage Limits",
+        "operationId": "usage_limits_usage_limits_get",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageLimitsView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runs/{run_id}/cancel": {
       "post": {
         "tags": [
@@ -8522,6 +8571,35 @@
           "state"
         ],
         "title": "SourceView"
+      },
+      "UsageLimitsView": {
+        "properties": {
+          "daily_review_run_limit": {
+            "type": "integer",
+            "title": "Daily Review Run Limit"
+          },
+          "runs_started_today": {
+            "type": "integer",
+            "title": "Runs Started Today"
+          },
+          "runs_remaining_today": {
+            "type": "integer",
+            "title": "Runs Remaining Today"
+          },
+          "resets_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Resets At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily_review_run_limit",
+          "runs_started_today",
+          "runs_remaining_today",
+          "resets_at"
+        ],
+        "title": "UsageLimitsView"
       },
       "UserView": {
         "properties": {

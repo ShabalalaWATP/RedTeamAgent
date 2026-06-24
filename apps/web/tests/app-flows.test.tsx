@@ -32,6 +32,8 @@ describe('RedTeamAgent app flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'correct horse battery');
     await user.click(screen.getByRole('button', { name: /register/i }));
     expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /verify email/i }));
@@ -204,6 +206,14 @@ describe('RedTeamAgent app flows', () => {
           private_research: true,
           domain_allowlist: ['example.com'],
           domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
+        });
+      }
+      if (url.includes('/usage/limits')) {
+        return jsonResponse({
+          daily_review_run_limit: 20,
+          runs_started_today: 0,
+          runs_remaining_today: 20,
+          resets_at: '2026-06-25T00:00:00Z'
         });
       }
       if (url.includes('/sources/text')) {

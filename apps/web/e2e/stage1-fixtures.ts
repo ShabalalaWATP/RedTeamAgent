@@ -74,6 +74,15 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       await fulfilJson(route, authResponse({ reset_token: 'reset-local' }));
       return;
     }
+    if (url.pathname === '/usage/limits') {
+      await fulfilJson(route, {
+        daily_review_run_limit: 20,
+        runs_started_today: 2,
+        runs_remaining_today: 18,
+        resets_at: '2026-06-25T00:00:00Z'
+      });
+      return;
+    }
     if (url.pathname === '/projects' && request.method() === 'GET') {
       await fulfilJson(route, state.projects);
       return;
@@ -269,6 +278,8 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
 
 export async function signIn(page: Page) {
   await page.goto('/auth');
+  await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await page.getByRole('button', { name: 'Register' }).click();
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
   await page.getByRole('button', { name: 'Verify email' }).click();

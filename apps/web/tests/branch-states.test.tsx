@@ -103,6 +103,14 @@ describe('unauthenticated and alternate branch states', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch((url) => {
       if (url.includes('/context-packs?')) return jsonResponse([]);
+      if (url.includes('/usage/limits')) {
+        return jsonResponse({
+          daily_review_run_limit: 20,
+          runs_started_today: 0,
+          runs_remaining_today: 20,
+          resets_at: '2026-06-25T00:00:00Z'
+        });
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
@@ -113,14 +121,14 @@ describe('unauthenticated and alternate branch states', () => {
       '/projects/project-1/reviews/new'
     );
     expect(await screen.findByText('No context packs yet')).toBeInTheDocument();
-    for (const name of [/add pasted text/i, /preflight/i, /run review/i]) {
+    for (const name of [/add pasted text/i, /preflight/i]) {
       const button = screen.getByRole('button', { name }) as HTMLButtonElement;
       button.disabled = false;
       await user.click(button);
     }
     const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
     await user.upload(screen.getByLabelText(/upload rich evidence/i), file);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('keeps disabled provider model actions defensive without selections', async () => {

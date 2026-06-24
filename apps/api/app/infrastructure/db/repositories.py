@@ -281,16 +281,22 @@ class SqlRepository:
         statement = select(models.ModelProfile).where(models.ModelProfile.workspace_id == workspace_id)
         return list(self.session.scalars(statement))
 
-    def create_run(self, workspace_id: str, review_id: str, routing_plan: dict[str, Any]) -> models.Run:
+    def create_run(
+        self, workspace_id: str, review_id: str, routing_plan: dict[str, Any], created_by_user_id: str | None
+    ) -> models.Run:
         run = models.Run(
-            workspace_id=workspace_id,
-            review_id=review_id,
-            state=RunState.INTAKE.value,
-            routing_plan=routing_plan,
+            workspace_id=workspace_id, review_id=review_id, created_by_user_id=created_by_user_id,
+            state=RunState.INTAKE.value, routing_plan=routing_plan,
         )
         self.session.add(run)
         self.session.flush()
         return run
+
+    def count_user_runs_since(self, user_id: str, since: datetime) -> int:
+        statement = select(func.count()).select_from(models.Run).where(
+            models.Run.created_by_user_id == user_id, models.Run.created_at >= since
+        )
+        return int(self.session.scalar(statement) or 0)
 
     def get_run(self, run_id: str) -> models.Run | None:
         run = self.session.get(models.Run, run_id)

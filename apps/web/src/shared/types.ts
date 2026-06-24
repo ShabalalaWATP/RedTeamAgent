@@ -85,6 +85,13 @@ export type Run = {
   usage: Record<string, unknown>;
 };
 
+export type UsageLimits = {
+  daily_review_run_limit: number;
+  runs_started_today: number;
+  runs_remaining_today: number;
+  resets_at: string;
+};
+
 export type WorkflowSummary = {
   id: string;
   workspace_id: string;
