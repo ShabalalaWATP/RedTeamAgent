@@ -1,15 +1,16 @@
+import type { SelectHTMLAttributes } from 'react';
 import type { CatalogueModel } from './providerCatalogue';
 
-type ModelDropdownProps = {
+type ModelDropdownProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> & {
   value: string;
   options: CatalogueModel[];
-  disabled?: boolean;
   onChange: (value: string) => void;
 };
 
-export function ModelDropdown({ value, options, disabled = false, onChange }: ModelDropdownProps) {
+export function ModelDropdown({ value, options, disabled = false, onChange, ...selectProps }: ModelDropdownProps) {
   return (
     <select
+      {...selectProps}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled || options.length === 0}

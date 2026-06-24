@@ -41,7 +41,7 @@ describe('provider catalogue helpers', () => {
     expect(adapterFieldHint({ name: 'api_key', label: 'API key', secret: true, required: true, input_type: 'password' }))
       .toMatch(/server-side/i);
     expect(adapterFieldHint({ name: 'endpoint_url', label: 'Endpoint', secret: false, required: true, input_type: 'url' }))
-      .toMatch(/endpoint url/i);
+      .toMatch(/compatible or self-hosted/i);
     expect(adapterFieldHint({ name: 'scenario', label: 'Scenario', secret: false, required: false, input_type: 'text' }))
       .toBeUndefined();
     expect(modelOptionsForSchema(schema)).toHaveLength(1);

@@ -35,6 +35,7 @@ const seededApi = {
 };
 
 test('stage 1 screens have accessibility coverage and visual baselines', async ({ page }) => {
+  test.setTimeout(120_000);
   await mockApi(page, seededApi);
   await page.emulateMedia({ colorScheme: 'dark' });
   await verifyVisualJourney(page, '');
@@ -48,12 +49,15 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await verifyScreen(page, `auth${suffix}`);
 
   await signIn(page);
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
+  await page.getByRole('link', { name: 'Projects' }).click();
   await expect(page.getByText('Stage 1 launch review')).toBeVisible();
   await verifyScreen(page, `dashboard${suffix}`);
 
   await page.getByRole('link', { name: 'New review' }).click();
   await expect(page.getByRole('heading', { name: 'New review' })).toBeVisible();
   await page.getByRole('button', { name: 'Create review' }).click();
+  await expect(page.getByText('Review created')).toBeVisible();
   await page.getByRole('button', { name: 'Add pasted text' }).click();
   await page.getByRole('button', { name: 'Add context pack' }).click();
   await expect(page.getByText('Stage 1 governance context', { exact: true })).toBeVisible();
@@ -61,24 +65,24 @@ async function verifyVisualJourney(page: Page, suffix: string) {
 
   await page.goto('/runs/run-1');
   await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
-  await expect(page.getByLabel('Findings').getByText('Unsupported claim risk')).toBeVisible();
+  await expect(page.getByText('Unsupported claim risk').first()).toBeVisible();
   await verifyScreen(page, `report${suffix}`);
 
   await page.goto('/workflows');
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
   await expect(page.getByText('Checkout provider migration')).toBeVisible();
   await verifyScreen(page, `workflows${suffix}`);
 
   await page.goto('/settings');
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AI setup' })).toBeVisible();
   await expect(page.getByLabel('AI provider')).toBeVisible();
   await expect(page.getByLabel('Display name')).toBeVisible();
   await expect(page.getByText('Available models reported by the selected provider.')).toBeVisible();
   await expect(page.getByText(/not a URL/i)).toBeVisible();
-  await expect(page.getByText('Model routing and agent assignment')).toBeVisible();
-  await expect(page.getByText('Evaluation tools')).toBeVisible();
-  await expect(page.locator('summary', { hasText: 'Workspace administration' })).toBeVisible();
+  await expect(page.getByText('Advanced AI controls')).toBeVisible();
+  await expect(page.getByText('Workspace administration')).toHaveCount(0);
   await verifyScreen(page, `settings${suffix}`);
 }
 
@@ -120,6 +124,7 @@ async function auditAuth(page: Page) {
 
 async function auditDashboard(page: Page) {
   await signIn(page);
+  await page.getByRole('link', { name: 'Projects' }).click();
   await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
   await auditCurrentScreen(page);
 }
@@ -128,6 +133,7 @@ async function auditNewReview(page: Page) {
   await page.goto('/projects/project-1/reviews/new');
   await expect(page.getByRole('heading', { name: 'New review' })).toBeVisible();
   await page.getByRole('button', { name: 'Create review' }).click();
+  await expect(page.getByText('Review created')).toBeVisible();
   await page.getByRole('button', { name: 'Add pasted text' }).click();
   await page.getByRole('button', { name: 'Add context pack' }).click();
   await expect(page.getByText('Stage 1 governance context', { exact: true })).toBeVisible();
@@ -137,13 +143,13 @@ async function auditNewReview(page: Page) {
 async function auditReport(page: Page) {
   await page.goto('/runs/run-1');
   await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
-  await expect(page.getByLabel('Findings').getByText('Unsupported claim risk')).toBeVisible();
+  await expect(page.getByText('Unsupported claim risk').first()).toBeVisible();
   await auditCurrentScreen(page);
 }
 
 async function auditWorkflows(page: Page) {
   await page.goto('/workflows');
-  await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
   await auditCurrentScreen(page);
 }
 

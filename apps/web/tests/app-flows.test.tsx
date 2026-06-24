@@ -30,7 +30,7 @@ describe('RedTeamAgent app flows', () => {
           csrf_token: 'csrf-token'
         });
       }
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth');
@@ -41,7 +41,7 @@ describe('RedTeamAgent app flows', () => {
     expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /verify email/i }));
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toContain('csrf-token');
     expect(sessionStorage.getItem('rta.auth')).toContain('"workspaceRole":"owner"');
@@ -72,8 +72,8 @@ describe('RedTeamAgent app flows', () => {
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/dashboard');
-    await user.click(await screen.findByRole('button', { name: /create project/i }));
+    renderApp('/projects');
+    await user.click(await screen.findByRole('button', { name: /create project group/i }));
     expect(await screen.findByText('Stage 1 launch review')).toBeInTheDocument();
     expect(screen.getByText('No description provided.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /new review/i })).toHaveAttribute('href', '/projects/project-1/reviews/new');
@@ -88,7 +88,7 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /^delete$/i }));
     await user.click(screen.getByRole('button', { name: /confirm delete/i }));
     await waitFor(() => expect(screen.queryByText('Updated decision review')).not.toBeInTheDocument());
-    expect(screen.getByText('No projects yet')).toBeInTheDocument();
+    expect(screen.getByText('No project groups yet')).toBeInTheDocument();
   });
 
   it('creates a review, ingests text, preflights and starts a run', async () => {
@@ -269,7 +269,7 @@ describe('RedTeamAgent app flows', () => {
     expect(await screen.findByText('cancelled')).toBeInTheDocument();
   });
 
-  it('shows previous workflows for the signed-in workspace', async () => {
+  it('shows previous workflows for the signed-in account', async () => {
     storeAuth();
     mockFetch((url) => {
       if (url.includes('/workspaces/workspace-1/workflows')) {
@@ -294,8 +294,91 @@ describe('RedTeamAgent app flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/workflows');
-    expect(await screen.findByRole('heading', { name: 'Previous workflows' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Previous workflows' })).toBeInTheDocument();
     expect(screen.getByText('Essay argument review')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
+  });
+
+  it('starts a workflow without requiring a project first', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.endsWith('/projects') && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          title: 'General workflows',
+          description: 'Default group for workflows that do not need a project.'
+        });
+        return jsonResponse({
+          id: 'project-1',
+          workspace_id: authState.workspaceId,
+          title: 'General workflows',
+          description: 'Default group for workflows that do not need a project.'
+        });
+      }
+      if (url.includes('/context-packs?')) return jsonResponse([]);
+      if (url.includes('/usage/limits')) {
+        return jsonResponse({
+          daily_review_run_limit: 20,
+          runs_started_today: 0,
+          runs_remaining_today: 20,
+          resets_at: '2026-06-25T00:00:00Z'
+        });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/workflows');
+    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
+    expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
+  });
+
+  it('starts a workflow in an existing optional project group', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    const requests: string[] = [];
+    mockFetch((url, init) => {
+      requests.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      if (url.includes('/projects?workspace_id=')) {
+        return jsonResponse([{
+          id: 'project-existing',
+          workspace_id: authState.workspaceId,
+          title: 'Decision reviews',
+          description: ''
+        }]);
+      }
+      if (url.includes('/context-packs?')) return jsonResponse([]);
+      if (url.includes('/usage/limits')) {
+        return jsonResponse({
+          daily_review_run_limit: 20,
+          runs_started_today: 0,
+          runs_remaining_today: 20,
+          resets_at: '2026-06-25T00:00:00Z'
+        });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/workflows');
+    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
+    expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
+    expect(requests.some((request) => request.includes('POST http://localhost:8000/projects'))).toBe(false);
+  });
+
+  it('shows an error when workflow launch cannot load projects', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      if (url.includes('/projects?workspace_id=')) return jsonResponse({ message: 'project list failed' }, 503);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/workflows');
+    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('project list failed');
   });
 });

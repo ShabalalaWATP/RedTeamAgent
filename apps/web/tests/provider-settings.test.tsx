@@ -97,7 +97,7 @@ describe('ProviderSettings', () => {
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
     expect(screen.getByText(/not a url/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/connection name/i)).not.toBeInTheDocument();
-    await openDisclosure(user, /model routing and agent assignment/i);
+    await openDisclosure(user, /advanced ai controls/i);
     expect(await screen.findByText('No capabilities recorded.')).toBeInTheDocument();
     expect(screen.getByText(/fallback allowed/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /register model/i }));
@@ -110,7 +110,6 @@ describe('ProviderSettings', () => {
     expect(await screen.findByText('Model list refreshed with 1 model.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
-    await openDisclosure(user, /evaluation tools/i);
     await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
     expect(await screen.findByText('10 fixtures')).toBeInTheDocument();
     expect(screen.getByText('Routing Precision')).toBeInTheDocument();
@@ -155,7 +154,7 @@ describe('ProviderSettings', () => {
 
     renderProviderSettings();
 
-    await openDisclosure(user, /model routing and agent assignment/i);
+    await openDisclosure(user, /advanced ai controls/i);
     expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
     const manualForm = screen.getByRole('heading', { name: /manual model record/i }).closest('form') as HTMLElement;
     await user.selectOptions(within(manualForm).getAllByRole('combobox')[1], 'backup-reviewer');
@@ -180,7 +179,6 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
     await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
-    await openDisclosure(user, /evaluation tools/i);
     await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
     expect(await screen.findByText('evaluation denied')).toBeInTheDocument();
   });

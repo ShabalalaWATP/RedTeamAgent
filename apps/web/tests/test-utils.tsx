@@ -17,7 +17,7 @@ export function storeAuth(overrides: Partial<typeof authState> = {}) {
   sessionStorage.setItem('rta.auth', JSON.stringify({ ...authState, ...overrides }));
 }
 
-export function renderApp(path = '/dashboard') {
+export function renderApp(path = '/workflows') {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App />

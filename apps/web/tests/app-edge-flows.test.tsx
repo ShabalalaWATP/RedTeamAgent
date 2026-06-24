@@ -20,7 +20,7 @@ describe('edge UI flows', () => {
       if (url.endsWith('/projects') && init?.method === 'POST') return jsonResponse({ message: 'denied' }, 403);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/dashboard');
+    renderApp('/projects');
     await user.clear(await screen.findByLabelText(/project title/i));
     await user.type(screen.getByLabelText(/project title/i), 'Denied project');
     await user.clear(screen.getByLabelText(/description/i));
@@ -47,7 +47,7 @@ describe('edge UI flows', () => {
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse({ message: 'delete denied' }, 403);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/dashboard');
+    renderApp('/projects');
     await user.click(await screen.findByRole('button', { name: /edit/i }));
     await user.click(screen.getByRole('button', { name: /save changes/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('stale project');
@@ -65,7 +65,7 @@ describe('edge UI flows', () => {
     cleanup();
 
     storeAuth();
-    renderApp('/dashboard');
+    renderApp('/projects');
     fireEvent.submit((await screen.findByLabelText(/project title/i)).closest('form') as HTMLFormElement);
     expect(screen.getByRole('heading', { name: 'Projects' })).toBeInTheDocument();
     cleanup();
@@ -73,7 +73,7 @@ describe('edge UI flows', () => {
     storeAuth();
     renderProviderSettings();
     fireEvent.submit((await screen.findByLabelText(/ai provider/i)).closest('form') as HTMLFormElement);
-    expect(screen.getByRole('heading', { name: 'AI providers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI setup' })).toBeInTheDocument();
     cleanup();
 
     storeAuth();
@@ -91,11 +91,11 @@ describe('edge UI flows', () => {
 
     storeAuth();
     mockFetch((url) => {
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
       if (url.includes('/auth/logout')) return jsonResponse(null, 204);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/dashboard');
+    renderApp('/workflows');
     await userEvent.click(await screen.findByRole('button', { name: /log out/i }));
     expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
   });
@@ -103,21 +103,21 @@ describe('edge UI flows', () => {
   it('hides admin settings from members and redirects deep links', async () => {
     storeAuth({ workspaceRole: 'member', email: 'member@example.com' });
     mockFetch((url) => {
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/dashboard');
-    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    renderApp('/workflows');
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /settings/i })).not.toBeInTheDocument();
     cleanup();
 
     storeAuth({ workspaceRole: 'member', email: 'member@example.com' });
     mockFetch((url) => {
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/settings');
-    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
   });
 
@@ -207,7 +207,7 @@ describe('edge UI flows', () => {
           workspace: { id: 'workspace-1', name: 'Personal workspace' }
         });
       }
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth');
@@ -219,7 +219,7 @@ describe('edge UI flows', () => {
     expect(screen.queryByRole('button', { name: /verify email/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /back to sign in/i }));
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toContain('"csrfToken":""');
   });
   it('throws when auth context is used outside its provider', () => {

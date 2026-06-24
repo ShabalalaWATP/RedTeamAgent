@@ -285,7 +285,7 @@ export async function signIn(page: Page) {
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
   await page.getByRole('button', { name: 'Verify email' }).click();
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
 }
 
 export { modelProfileResponse, modelRecordResponse, projectResponse, providerConnectionResponse };

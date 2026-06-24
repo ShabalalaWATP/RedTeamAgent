@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import type { Project } from '../../shared/types';
-import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { Button, EmptyState, ErrorState, Field } from '../../shared/ui';
 
 export function Dashboard() {
   const { auth } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [title, setTitle] = useState('Decision review workspace');
+  const [title, setTitle] = useState('Decision review group');
   const [description, setDescription] = useState('Red-team a project, proposal, essay, policy or code change.');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -82,13 +82,12 @@ export function Dashboard() {
       <div className="screen-header">
         <div>
           <h1>Projects</h1>
-          <p className="muted">Create a workspace for any decision artefact and keep every workflow source-linked.</p>
+          <p className="muted">Optional groups for related workflows. You can start a workflow without setting one up first.</p>
         </div>
-        <Status tone="ok">Tenant isolated</Status>
       </div>
       <div className="grid">
         <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-          <h2>New project</h2>
+          <h2>New project group</h2>
           <Field label="Project title">
             <input value={title} onChange={(event) => setTitle(event.target.value)} />
           </Field>
@@ -97,14 +96,14 @@ export function Dashboard() {
           </Field>
           <ErrorState message={createError} />
           <Button type="button" variant="primary" onClick={create}>
-            <Plus size={16} /> Create project
+            <Plus size={16} /> Create project group
           </Button>
         </form>
         <div className="panel stack">
-          <h2>Active projects</h2>
+          <h2>Project groups</h2>
           <ErrorState message={projectError} />
           {projects.length === 0 ? (
-            <EmptyState title="No projects yet" body="Create the first decision space to start a structured review." />
+            <EmptyState title="No project groups yet" body="Use Workflows to start immediately, or create a group here when related reviews need to stay together." />
           ) : (
             <div className="list">
               {projects.map((project) => (

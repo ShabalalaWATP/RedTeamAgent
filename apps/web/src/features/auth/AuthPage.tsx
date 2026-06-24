@@ -75,7 +75,7 @@ export function AuthPage() {
         workspaceRole: response.workspace_role ?? 'member',
         csrfToken: response.csrf_token ?? ''
       });
-      navigate('/dashboard');
+      navigate('/workflows');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -113,7 +113,7 @@ export function AuthPage() {
           <div className="auth-mark"><ShieldCheck aria-hidden="true" size={28} /></div>
           <div>
             <h1 id="auth-title">RedTeamAgent</h1>
-            <p>Sign in to your decision review workspace.</p>
+            <p>Sign in to review decisions, proposals, projects, code and writing.</p>
           </div>
         </div>
         <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
@@ -121,9 +121,9 @@ export function AuthPage() {
             <h2>{mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Reset password'}</h2>
             <p className="muted">
               {mode === 'login'
-                ? 'Use your workspace account.'
+                ? 'Use your account.'
                 : mode === 'register'
-                  ? 'Create an owner workspace account.'
+                  ? 'Create your account.'
                   : 'Request a reset code for your account.'}
             </p>
           </div>

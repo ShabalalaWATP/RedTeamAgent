@@ -1,4 +1,5 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+import { cloneElement, useId } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -36,15 +37,20 @@ export function Field({
   hint
 }: {
   label: string;
-  children: ReactNode;
+  children: ReactElement<{ id?: string; 'aria-describedby'?: string }>;
   hint?: string;
 }) {
+  const generatedId = useId();
+  const controlId = children.props.id ?? generatedId;
+  const hintId = hint ? `${controlId}-hint` : undefined;
+  const describedBy = [children.props['aria-describedby'], hintId].filter(Boolean).join(' ') || undefined;
+
   return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-      {hint ? <small>{hint}</small> : null}
-    </label>
+    <div className="field">
+      <label htmlFor={controlId}>{label}</label>
+      {cloneElement(children, { id: controlId, 'aria-describedby': describedBy })}
+      {hint ? <small id={hintId}>{hint}</small> : null}
+    </div>
   );
 }
 

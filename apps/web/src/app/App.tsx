@@ -29,16 +29,16 @@ function Layout() {
           <span>RedTeamAgent</span>
         </div>
         <nav>
-          <NavLink to="/dashboard"><FolderKanban />Projects</NavLink>
           <NavLink to="/workflows"><Activity />Workflows</NavLink>
+          <NavLink to="/projects"><FolderKanban />Projects</NavLink>
           {isAdmin ? <NavLink to="/settings"><Settings />Settings</NavLink> : null}
         </nav>
       </aside>
       <main>
         <header className="topbar">
           <div>
-            <strong>{auth.workspaceName}</strong>
-            <span>{auth.email} · {roleLabel(auth.workspaceRole)}</span>
+            <strong>{auth.email}</strong>
+            <span>{roleLabel(auth.workspaceRole)}</span>
           </div>
           <Button onClick={logout}>Log out</Button>
         </header>
@@ -50,7 +50,7 @@ function Layout() {
 
 function AdminRoute({ children }: { children: ReactElement }) {
   const { auth } = useAuth();
-  if (!isWorkspaceAdmin(auth?.workspaceRole ?? 'member')) return <Navigate to="/dashboard" replace />;
+  if (!isWorkspaceAdmin(auth?.workspaceRole ?? 'member')) return <Navigate to="/workflows" replace />;
   return children;
 }
 
@@ -59,7 +59,7 @@ function isWorkspaceAdmin(role: string) {
 }
 
 function roleLabel(role: string) {
-  return role.replace(/_/g, ' ');
+  return isWorkspaceAdmin(role) ? 'Admin' : 'User';
 }
 
 function AppRoutes() {
@@ -67,15 +67,16 @@ function AppRoutes() {
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
       <Route element={<Layout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workflows" element={<WorkflowHistory />} />
+        <Route path="/projects" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Navigate to="/workflows" replace />} />
         <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="/providers" element={<Navigate to="/settings" replace />} />
         <Route path="/enterprise" element={<Navigate to="/settings" replace />} />
         <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
         <Route path="/runs/:runId" element={<ReportPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/workflows" replace />} />
     </Routes>
   );
 }

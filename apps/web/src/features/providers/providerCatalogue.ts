@@ -24,7 +24,7 @@ export type AdapterSchema = {
 export function adapterFieldHint(field: AdapterField) {
   if (field.secret) return 'Stored server-side only. The browser never receives it back.';
   if (field.input_type === 'url' || field.name.includes('url') || field.name.includes('endpoint')) {
-    return 'Provider endpoint URL. Leave this to admins configuring self-hosted or compatible providers.';
+    return 'Only needed for compatible or self-hosted providers.';
   }
   return undefined;
 }

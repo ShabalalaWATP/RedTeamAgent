@@ -4,7 +4,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ModelProfile, ModelRecord, ProviderConnection } from '../../shared/types';
-import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { Button, EmptyState, ErrorState, Field } from '../../shared/ui';
 import { EvaluationPanel } from './EvaluationPanel';
 import { ModelDropdown } from './ModelDropdown';
 import { adapterFieldHint, capabilitiesForModel, modelOptionKey, modelOptionsForConnection, modelOptionsForSchema, preferredModelIdentifier, schemaForConnection, type AdapterSchema } from './providerCatalogue';
@@ -201,16 +201,11 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     <section className={embedded ? 'settings-block stack' : 'screen'}>
       <div className="screen-header">
         <div>
-          {embedded ? <h2>AI providers</h2> : <h1>AI providers</h1>}
-          <p className="muted">Connect an AI provider first. Model routing and evaluations are advanced steps.</p>
+          {embedded ? <h2>AI setup</h2> : <h1>AI setup</h1>}
+          <p className="muted">Choose the provider and model RedTeamAgent should use.</p>
         </div>
-        <Status tone="warn">Credentials write-only</Status>
       </div>
       <ErrorState message={error || workspaceError} />
-      <div className="provider-setup-note">
-        <strong>What you need here</strong>
-        <span>Choose the provider, give this saved setup a clear internal name, then add credentials only if that provider asks for them.</span>
-      </div>
       <div className="grid provider-primary-grid">
         <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
           <h2>Connect an AI provider</h2>
@@ -231,7 +226,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
           </Field>
           <Field
             label="Display name"
-            hint="An internal label for admins, for example 'OpenAI production'. This is not a URL."
+            hint="An internal label, for example 'OpenAI production'. This is not a URL."
           >
             <input value={name} onChange={(event) => setName(event.target.value)} />
           </Field>
@@ -252,7 +247,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
         <aside className="panel stack">
           <h2>Saved connections</h2>
           {connections.length === 0 ? (
-            <EmptyState title="No connections" body="Save a provider connection before registering models." />
+            <EmptyState title="No saved provider" body="Save the provider RedTeamAgent should use for reviews." />
           ) : (
             <div className="list">
               {connections.map((connection) => (
@@ -273,13 +268,13 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
               ))}
             </div>
           )}
-          <p className="muted">{result || 'Capability provenance appears after a model record is saved.'}</p>
+          <p className="muted">{result || 'Saved providers can be tested or refreshed here.'}</p>
         </aside>
       </div>
       <details className="settings-disclosure">
         <summary>
-          <span>Model routing and agent assignment</span>
-          <small>Optional model records, capability probes and per-agent model profiles.</small>
+          <span>Advanced AI controls</span>
+          <small>Optional model records, agent pins, capability probes and evaluation checks.</small>
         </summary>
         <div className="grid">
           <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
@@ -379,12 +374,6 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
             )}
           </section>
         </div>
-      </details>
-      <details className="settings-disclosure">
-        <summary>
-          <span>Evaluation tools</span>
-          <small>Run fixture-based checks for routing, citations and adversarial handling.</small>
-        </summary>
         <EvaluationPanel />
       </details>
     </section>

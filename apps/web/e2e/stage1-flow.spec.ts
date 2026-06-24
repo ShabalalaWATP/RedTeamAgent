@@ -17,13 +17,8 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
   await page.getByRole('button', { name: 'Verify email' }).click();
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await page.getByRole('button', { name: 'Edit' }).click();
-  await page.getByLabel('Edit project title').fill('Launch decision review');
-  await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByText('Launch decision review')).toBeVisible();
-  await page.getByRole('link', { name: 'New review' }).click();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Start workflow' }).click();
 
   await page.getByLabel('Enable external research for this review').check();
   await page.getByLabel('Domain allow-list').fill('example.com');
@@ -60,6 +55,7 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
   await page.getByRole('button', { name: 'Compare reports' }).click();
   await expect(page.getByText('Prior launch risk removed')).toBeVisible();
   await page.getByRole('link', { name: 'Workflows' }).click();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
   await expect(page.getByText('Checkout provider migration')).toBeVisible();
   await expect(page.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
@@ -82,12 +78,9 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: 'Sign in' }));
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
 
-  await tabTo(page, page.getByRole('button', { name: 'Create project' }));
-  await page.keyboard.press('Enter');
-  await expect(page.getByText('Stage 1 launch review')).toBeVisible();
-  await tabTo(page, page.getByRole('link', { name: 'New review' }));
+  await tabTo(page, page.getByRole('button', { name: 'Start workflow' }));
   await page.keyboard.press('Enter');
 
   await expect(page.getByRole('heading', { name: 'New review' })).toBeVisible();
@@ -110,11 +103,11 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('link', { name: 'Workflows' }));
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
   await tabTo(page, page.getByRole('link', { name: 'Settings' }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AI setup' })).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: 'Test and save' }));
 });
 
