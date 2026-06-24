@@ -117,8 +117,11 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
         headers=csrf_headers(auth),
     )
     assert run.status_code == 200, run.text
-    assert run.json()["state"] == "completed"
-    run_context = run.json()["routing_plan"]["context_packs"][0]
+    assert run.json()["state"] == "intake"
+    completed_run = client.get(f"/runs/{run.json()['id']}")
+    assert completed_run.status_code == 200, completed_run.text
+    assert completed_run.json()["state"] == "completed"
+    run_context = completed_run.json()["routing_plan"]["context_packs"][0]
     assert run_context["agent_key"] == "software_architecture"
     assert run_context["markdown_sha256"] == policy_hash
 
@@ -248,5 +251,11 @@ def test_invalid_provider_output_fails_closed(client: TestClient) -> None:
         json={"title": "Bad schema", "proposal_text": "invalid_schema", "mode": "basic", "focus_chips": []},
     )
     run = client.post(f"/reviews/{review.json()['id']}/runs", headers=csrf_headers(auth))
-    assert run.status_code == 422
-    assert run.json()["code"] == "quality_gate_failed"
+    assert run.status_code == 200
+    failed = client.get(f"/runs/{run.json()['id']}")
+    assert failed.status_code == 200
+    assert failed.json()["state"] == "failed"
+    events = client.get(f"/runs/{run.json()['id']}/events")
+    assert events.status_code == 200
+    assert events.json()[-1]["message"] == "Provider output failed strict schema validation."
+    assert client.get(f"/runs/{run.json()['id']}/report").status_code == 404

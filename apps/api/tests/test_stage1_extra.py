@@ -9,9 +9,13 @@ from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 
 from app.application.report_export import export_report
+from app.application.workflow_service import WorkflowService
+from app.core.database import SessionLocal
 from app.domain.exceptions import ValidationFailure
 from app.infrastructure.auth.security import PasswordService, TokenService
+from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
+from app.infrastructure.providers.adapters import ProviderRegistry
 from app.infrastructure.storage import object_storage
 from app.infrastructure.storage.object_storage import LocalObjectStorage, S3ObjectStorage
 from tests.conftest import csrf_headers, register_verified
@@ -86,6 +90,28 @@ def test_me_project_lists_updates_deletes_and_cancel(client: TestClient) -> None
 
     deleted = client.delete(f"/projects/{ids['project_id']}", headers=csrf_headers(auth))
     assert deleted.status_code == 204
+
+
+def test_queued_run_can_be_cancelled_before_background_execution(client: TestClient) -> None:
+    auth = register_verified(client, "queued@example.com")
+    ids = create_project_review(client, auth)
+
+    with SessionLocal() as session:
+        service = WorkflowService(SqlRepository(session), ProviderRegistry(False))
+        run = service.start_run(str(auth["user_id"]), ids["review_id"], execute_immediately=False)
+
+    cancelled = client.post(f"/runs/{run.id}/cancel", headers=csrf_headers(auth))
+    assert cancelled.status_code == 200
+    assert cancelled.json()["state"] == "cancelled"
+
+    with SessionLocal() as session:
+        service = WorkflowService(SqlRepository(session), ProviderRegistry(False))
+        result = service.execute_run(run.id)
+        assert result.state == "cancelled"
+
+    events = client.get(f"/runs/{run.id}/events")
+    assert [event["state"] for event in events.json()] == ["intake", "cancelled"]
+    assert client.get(f"/runs/{run.id}/report").status_code == 404
 
 
 def test_provider_routes_lists_and_failures(client: TestClient) -> None:

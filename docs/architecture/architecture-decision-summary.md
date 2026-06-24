@@ -8,7 +8,7 @@ RedTeamAgent is implemented as a local-first modular monolith with a React/Vite 
 
 - Use FastAPI, Pydantic and SQLAlchemy for a typed API and persistence layer.
 - Use PostgreSQL with the `pgvector` image in Docker Compose, while tests use isolated SQLite databases.
-- Use Redis as the Stage 1 queue/event dependency and keep an in-process workflow runner for deterministic local tests.
+- Use Redis as the Stage 1 queue/event deployment dependency and keep an in-process background workflow runner for deterministic local tests.
 - Store source originals behind an object-storage port with MinIO-compatible S3 in local development.
 - Use deterministic provider contracts, a registry and typed adapter configuration schemas.
 - Use HttpOnly cookie sessions, Argon2id password hashing and CSRF protection for cookie-authenticated mutations.

@@ -82,5 +82,6 @@ Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deploym
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
 - Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration and capability metadata.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes, true background workflow execution semantics and complete WCAG audit coverage.
+- Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes and complete WCAG audit coverage.
+- Workflow execution uses FastAPI background tasks for the Stage 1 vertical slice. A Redis-backed external worker queue remains a production hardening item.
 - Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.

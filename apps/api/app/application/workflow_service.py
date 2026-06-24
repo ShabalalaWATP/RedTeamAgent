@@ -18,6 +18,8 @@ STAGES = [
     RunState.REPORT_COMPOSITION,
     RunState.QUALITY_GATE,
 ]
+EXECUTION_STAGES = STAGES[1:]
+TERMINAL_STATES = {RunState.COMPLETED.value, RunState.FAILED.value, RunState.CANCELLED.value}
 
 
 class WorkflowService:
@@ -25,7 +27,7 @@ class WorkflowService:
         self.repo = repo
         self.registry = registry
 
-    def start_run(self, user_id: str, review_id: str) -> Any:
+    def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         review = self._require_review(user_id, review_id)
         decision = route_agents(ReviewMode(review.mode), review.focus_chips)
         selected_agents = [agent.value for agent in decision.selected_agents]
@@ -41,9 +43,31 @@ class WorkflowService:
             "permitted_fallbacks": ["fake-local"],
         }
         run = self.repo.create_run(review.workspace_id, review.id, routing_plan)
-        for stage in STAGES:
+        self.repo.add_run_event(run.id, RunState.INTAKE.value, "Run queued for background execution.")
+        self.repo.audit(review.workspace_id, user_id, "run.started", {"run_id": run.id})
+        self.repo.commit()
+        if execute_immediately:
+            return self.execute_run(run.id)
+        return self.repo.get_run(run.id)
+
+    def execute_run(self, run_id: str, actor_user_id: str | None = None) -> Any:
+        run = self.repo.get_run(run_id)
+        if run is None:
+            raise NotFoundError("Run not found.")
+        if run.state in TERMINAL_STATES:
+            return run
+        review = self.repo.get_review(run.review_id)
+        if review is None:
+            raise NotFoundError("Review not found.")
+
+        for stage in EXECUTION_STAGES:
+            if self._is_cancelled(run.id):
+                return self.repo.get_run(run.id)
             self.repo.update_run(run.id, stage.value)
             self.repo.add_run_event(run.id, stage.value, self._message(stage))
+            self.repo.commit()
+        if self._is_cancelled(run.id):
+            return self.repo.get_run(run.id)
         provider_output = self.registry.get("fake").generate_structured(
             review.proposal_text,
             "specialist_output",
@@ -52,21 +76,31 @@ class WorkflowService:
             self.repo.update_run(run.id, RunState.FAILED.value)
             self.repo.add_run_event(run.id, RunState.FAILED.value, "Provider output failed strict schema validation.")
             self.repo.commit()
-            raise QualityGateError("Invalid structured provider output.")
+            return self.repo.get_run(run.id)
+        routing_plan = run.routing_plan if isinstance(run.routing_plan, dict) else {}
         report_data = self._compose_report(review, run.id, routing_plan)
-        self._quality_gate(report_data)
+        try:
+            self._quality_gate(report_data)
+        except QualityGateError:
+            self.repo.update_run(run.id, RunState.FAILED.value)
+            self.repo.add_run_event(run.id, RunState.FAILED.value, "Report failed evidence quality gate.")
+            self.repo.commit()
+            return self.repo.get_run(run.id)
+        if self._is_cancelled(run.id):
+            return self.repo.get_run(run.id)
         self.repo.create_report(review.workspace_id, run.id, report_data)
         self.repo.update_run(run.id, RunState.COMPLETED.value, {"provider": "fake", "tokens": 0})
         self.repo.add_run_event(run.id, RunState.COMPLETED.value, "Structured report passed quality gate.")
-        self.repo.audit(review.workspace_id, user_id, "run.completed", {"run_id": run.id})
+        self.repo.audit(review.workspace_id, actor_user_id, "run.completed", {"run_id": run.id})
         self.repo.commit()
         return self.repo.get_run(run.id)
 
     def cancel_run(self, user_id: str, run_id: str) -> Any:
         run = self._require_run(user_id, run_id)
-        if run.state not in {RunState.COMPLETED.value, RunState.FAILED.value}:
+        if run.state not in TERMINAL_STATES:
             self.repo.update_run(run.id, RunState.CANCELLED.value)
             self.repo.add_run_event(run.id, RunState.CANCELLED.value, "Run cancelled by user.")
+            self.repo.audit(run.workspace_id, user_id, "run.cancelled", {"run_id": run.id})
             self.repo.commit()
         return self.repo.get_run(run.id)
 
@@ -164,6 +198,10 @@ class WorkflowService:
     def _require_member(self, user_id: str, workspace_id: str) -> None:
         if self.repo.membership_role(workspace_id, user_id) is None:
             raise AuthorisationError("Workspace access denied.")
+
+    def _is_cancelled(self, run_id: str) -> bool:
+        run = self.repo.get_run(run_id)
+        return run is not None and run.state == RunState.CANCELLED.value
 
     @staticmethod
     def _message(stage: RunState) -> str:

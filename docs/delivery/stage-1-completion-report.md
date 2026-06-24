@@ -31,6 +31,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Local workflow progression through intake, ingestion, framing, agent planning, specialist review, reconciliation, report composition and quality gate.
 - JSON Server-Sent Events replay is consumed by the report timeline, with run snapshot refresh after page reload.
 - Report timeline controls can cancel non-terminal runs and retry a run from the same review.
+- Run start returns an `intake` run while background execution commits durable stage events, creates the report and honours cancellation before report creation.
 - Structured evidence-linked report retrieval and Markdown, JSON and HTML export.
 - Dark-mode-first responsive UI for auth, projects, provider settings, review creation and report screens.
 - Docker Compose configuration and runtime validation for web, API, worker, PostgreSQL with pgvector image, Redis and MinIO.
@@ -42,7 +43,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Live model catalogue sync from provider APIs is not complete.
 - Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
-- True long-running background execution and in-flight cancellation are still limited by the synchronous local workflow engine.
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
 - WCAG coverage includes automated Playwright axe smoke checks across the core screen matrix, not a complete WCAG 2.2 AA audit.
 - Branch coverage is below 95 percent on the frontend, although statements, functions and lines pass the 95 percent gate.
@@ -62,8 +62,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Test Results
 
-- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 25 tests.
-- Backend coverage: pytest-cov, 96.91 percent total coverage.
+- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 26 tests.
+- Backend coverage: pytest-cov, 96.32 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.
@@ -157,7 +157,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Route handlers remain thin and delegate to application services.
 - Provider, storage, ingestion, workflow and export behaviour sit behind small ports or adapter seams.
 - Domain and application layers do not import FastAPI, SQLAlchemy ORM models, Celery, React internals or vendor SDKs.
-- Deliberate deviation: the initial workflow engine is local and synchronous for the Stage 1 vertical slice.
+- Deliberate deviation: the Stage 1 workflow engine uses FastAPI background tasks rather than a Redis-backed external worker queue.
 
 ## File-Size And Anti-God-Object Review
 
@@ -171,4 +171,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, true background workflow execution semantics and complete WCAG audit coverage.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes and complete WCAG audit coverage.

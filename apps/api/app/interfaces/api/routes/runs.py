@@ -3,13 +3,16 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from app.application.report_export import export_report
 from app.application.workflow_service import WorkflowService
+from app.core.config import Settings, get_settings
+from app.domain.enums import RunState
+from app.infrastructure.workflow.background import execute_workflow_background
 from app.interfaces.api.dependencies import (
     AuthContext,
     current_context,
@@ -29,10 +32,14 @@ router = APIRouter(tags=["runs"])
 )
 def start_run(
     review_id: str,
+    background_tasks: BackgroundTasks,
     context: Annotated[AuthContext, Depends(current_context)],
     service: Annotated[WorkflowService, Depends(workflow_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunView:
-    return RunView.model_validate(service.start_run(context.user.id, review_id))
+    run = service.start_run(context.user.id, review_id, execute_immediately=False)
+    background_tasks.add_task(execute_workflow_background, run.id, settings.self_hosted_provider_mode, context.user.id)
+    return RunView.model_validate(run)
 
 
 @router.post("/runs/{run_id}/cancel", response_model=RunView, dependencies=[Depends(require_csrf)])
@@ -80,17 +87,31 @@ async def stream_events(
     events = service.list_events(context.user.id, run_id)
 
     async def event_stream() -> AsyncIterator[str]:
+        last_sequence = 0
         for event in events:
-            payload = {
-                "id": event.id,
-                "state": event.state,
-                "message": event.message,
-                "sequence": event.sequence,
-            }
-            yield f"id: {event.sequence}\ndata: {json.dumps(payload)}\n\n"
-            await asyncio.sleep(0)
+            last_sequence = event.sequence
+            yield _sse_event(event)
+        for _ in range(120):
+            run = service.get_run(context.user.id, run_id)
+            if run.state in {RunState.COMPLETED.value, RunState.FAILED.value, RunState.CANCELLED.value}:
+                break
+            await asyncio.sleep(0.25)
+            for event in service.list_events(context.user.id, run_id):
+                if event.sequence > last_sequence:
+                    last_sequence = event.sequence
+                    yield _sse_event(event)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+def _sse_event(event: Any) -> str:
+    payload = {
+        "id": event.id,
+        "state": event.state,
+        "message": event.message,
+        "sequence": event.sequence,
+    }
+    return f"id: {event.sequence}\ndata: {json.dumps(payload)}\n\n"
 
 
 @router.get("/runs/{run_id}/report", response_model=ReportView)

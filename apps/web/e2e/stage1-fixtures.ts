@@ -93,7 +93,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       return;
     }
     if (url.pathname === '/reviews/review-1/runs') {
-      await fulfilJson(route, runResponse());
+      await fulfilJson(route, runResponse('intake'));
       return;
     }
     if (url.pathname === '/runs/run-1') {
@@ -255,12 +255,12 @@ function preflightResponse() {
   };
 }
 
-function runResponse() {
+function runResponse(state = 'completed') {
   return {
     id: 'run-1',
     workspace_id: 'workspace-1',
     review_id: 'review-1',
-    state: 'completed',
+    state,
     routing_plan: { provider: 'fake', model: 'fake-valid' },
     usage: { tokens: 0 }
   };

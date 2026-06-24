@@ -227,7 +227,10 @@ class SqlRepository:
         return run
 
     def get_run(self, run_id: str) -> models.Run | None:
-        return self.session.get(models.Run, run_id)
+        run = self.session.get(models.Run, run_id)
+        if run is not None:
+            self.session.refresh(run)
+        return run
 
     def list_workflows(self, workspace_id: str) -> list[dict[str, Any]]:
         statement = (
