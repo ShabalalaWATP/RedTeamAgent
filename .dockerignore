@@ -1,0 +1,16 @@
+.git
+.mypy_cache
+.ruff_cache
+.venv
+.coverage
+.local-object-storage
+node_modules
+output
+playwright-report
+test-results
+apps/web/node_modules
+apps/web/dist
+apps/web/coverage
+apps/web/playwright-report
+apps/web/test-results
+npm-debug.log*

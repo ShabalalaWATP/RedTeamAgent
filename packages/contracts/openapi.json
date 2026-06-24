@@ -815,6 +815,174 @@
         }
       }
     },
+    "/reviews/{review_id}/sources/website": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Add Website Source",
+        "operationId": "add_website_source_reviews__review_id__sources_website_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteSourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reviews/{review_id}/sources/repository": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Add Repository Source",
+        "operationId": "add_repository_source_reviews__review_id__sources_repository_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepositorySourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reviews/{review_id}/sources/upload": {
       "post": {
         "tags": [
@@ -2197,6 +2365,73 @@
         }
       }
     },
+    "/runs/{run_id}/report/compare": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Compare Report",
+        "operationId": "compare_report_runs__run_id__report_compare_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "other_run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Other Run Id"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportComparisonView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runs/{run_id}/report/export": {
       "get": {
         "tags": [
@@ -2246,6 +2481,80 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspace_id}/evaluations/stage2": {
+      "post": {
+        "tags": [
+          "evaluations"
+        ],
+        "summary": "Run Stage2 Evaluation",
+        "operationId": "run_stage2_evaluation_workspaces__workspace_id__evaluations_stage2_post",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationResultView"
+                }
               }
             }
           },
@@ -2343,7 +2652,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -2420,6 +2729,45 @@
           "version"
         ],
         "title": "ContextPackView"
+      },
+      "EvaluationResultView": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "fixture_count": {
+            "type": "integer",
+            "title": "Fixture Count"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Metrics"
+          },
+          "adversarial_fixtures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adversarial Fixtures"
+          },
+          "live_smoke_tests": {
+            "type": "string",
+            "title": "Live Smoke Tests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "fixture_count",
+          "metrics",
+          "adversarial_fixtures",
+          "live_smoke_tests"
+        ],
+        "title": "EvaluationResultView"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2831,6 +3179,56 @@
         ],
         "title": "RegisterRequest"
       },
+      "ReportComparisonView": {
+        "properties": {
+          "left_run_id": {
+            "type": "string",
+            "title": "Left Run Id"
+          },
+          "right_run_id": {
+            "type": "string",
+            "title": "Right Run Id"
+          },
+          "changed_risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Risks"
+          },
+          "changed_assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Assumptions"
+          },
+          "changed_evidence_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Evidence Gaps"
+          },
+          "changed_recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "left_run_id",
+          "right_run_id",
+          "changed_risks",
+          "changed_assumptions",
+          "changed_evidence_gaps",
+          "changed_recommendations"
+        ],
+        "title": "ReportComparisonView"
+      },
       "ReportView": {
         "properties": {
           "id": {
@@ -2859,6 +3257,21 @@
           "data"
         ],
         "title": "ReportView"
+      },
+      "RepositorySourceRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 8,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "RepositorySourceRequest"
       },
       "ReviewCreate": {
         "properties": {
@@ -2889,6 +3302,30 @@
             },
             "type": "array",
             "title": "Focus Chips"
+          },
+          "external_research": {
+            "type": "boolean",
+            "title": "External Research",
+            "default": false
+          },
+          "private_research": {
+            "type": "boolean",
+            "title": "Private Research",
+            "default": true
+          },
+          "domain_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Allowlist"
+          },
+          "domain_blocklist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Blocklist"
           }
         },
         "type": "object",
@@ -2930,6 +3367,28 @@
             },
             "type": "array",
             "title": "Focus Chips"
+          },
+          "external_research": {
+            "type": "boolean",
+            "title": "External Research"
+          },
+          "private_research": {
+            "type": "boolean",
+            "title": "Private Research"
+          },
+          "domain_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Allowlist"
+          },
+          "domain_blocklist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Blocklist"
           }
         },
         "type": "object",
@@ -2940,7 +3399,11 @@
           "title",
           "proposal_text",
           "mode",
-          "focus_chips"
+          "focus_chips",
+          "external_research",
+          "private_research",
+          "domain_allowlist",
+          "domain_blocklist"
         ],
         "title": "ReviewView"
       },
@@ -3114,6 +3577,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -3136,6 +3606,21 @@
           "token"
         ],
         "title": "VerifyEmailRequest"
+      },
+      "WebsiteSourceRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 8,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "WebsiteSourceRequest"
       },
       "WorkflowSummaryView": {
         "properties": {

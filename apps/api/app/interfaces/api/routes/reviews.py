@@ -16,9 +16,11 @@ from app.interfaces.api.schemas import (
     ContextPackCreate,
     ContextPackView,
     PastedTextRequest,
+    RepositorySourceRequest,
     ReviewCreate,
     ReviewView,
     SourceView,
+    WebsiteSourceRequest,
     source_view,
 )
 
@@ -57,6 +59,34 @@ def add_pasted_text(
     service: Annotated[ReviewService, Depends(review_service)],
 ) -> SourceView:
     return source_view(service.add_pasted_text(context.user.id, review_id, payload.text))
+
+
+@router.post(
+    "/reviews/{review_id}/sources/website",
+    response_model=SourceView,
+    dependencies=[Depends(require_csrf), Depends(rate_limit_expensive)],
+)
+def add_website_source(
+    review_id: str,
+    payload: WebsiteSourceRequest,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ReviewService, Depends(review_service)],
+) -> SourceView:
+    return source_view(service.add_website(context.user.id, review_id, payload.url))
+
+
+@router.post(
+    "/reviews/{review_id}/sources/repository",
+    response_model=SourceView,
+    dependencies=[Depends(require_csrf), Depends(rate_limit_expensive)],
+)
+def add_repository_source(
+    review_id: str,
+    payload: RepositorySourceRequest,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ReviewService, Depends(review_service)],
+) -> SourceView:
+    return source_view(service.add_repository(context.user.id, review_id, payload.url))
 
 
 @router.post(

@@ -23,6 +23,10 @@ export type Review = {
   proposal_text: string;
   mode: 'basic' | 'standard' | 'in_depth';
   focus_chips: string[];
+  external_research: boolean;
+  private_research: boolean;
+  domain_allowlist: string[];
+  domain_blocklist: string[];
 };
 
 export type Source = {
@@ -119,6 +123,14 @@ export type RetrievedEvidence = {
   score: number;
 };
 
+export type ExternalSource = {
+  title: string;
+  url: string;
+  query: string;
+  quality_rank: number;
+  captured_at: string;
+};
+
 export type ContextPackProvenance = {
   id: string;
   name: string;
@@ -127,11 +139,44 @@ export type ContextPackProvenance = {
   markdown_sha256: string;
 };
 
+export type RiskMatrixItem = {
+  risk: string;
+  likelihood: string;
+  impact: string;
+  colour_independent_label: string;
+};
+
+export type ActionItem = {
+  id: string;
+  title: string;
+  status: string;
+  owner: string;
+  due: string | null;
+  source: string;
+};
+
+export type ReportComparison = {
+  left_run_id: string;
+  right_run_id: string;
+  changed_risks: string[];
+  changed_assumptions: string[];
+  changed_evidence_gaps: string[];
+  changed_recommendations: string[];
+};
+
+export type EvaluationResult = {
+  workspace_id: string;
+  fixture_count: number;
+  metrics: Record<string, number>;
+  adversarial_fixtures: string[];
+  live_smoke_tests: string;
+};
+
 export type ReportData = {
   title: string;
   provisional_recommendation: string;
   executive_summary: string;
-  coverage_map: { sources: number; agents: string[] };
+  coverage_map: { sources: number; agents: string[]; retrieved_evidence?: number; external_sources?: number };
   top_risks: string[];
   dependencies: string[];
   blockers: string[];
@@ -140,6 +185,18 @@ export type ReportData = {
   context_packs: ContextPackProvenance[];
   findings: ReportFinding[];
   retrieved_evidence: RetrievedEvidence[];
+  external_sources: ExternalSource[];
+  risk_matrix: RiskMatrixItem[];
+  dependency_graph: Array<{ from: string; to: string }>;
+  time_horizons: Record<string, string[]>;
+  evidence_quality: Record<string, unknown>;
+  cross_agent_disagreements: Array<{ topic: string; positions: string[] }>;
+  strongest_case_for: string;
+  strongest_case_against: string;
+  pre_mortem: string[];
+  scenarios: Record<string, string>;
+  validation_experiments: string[];
+  action_items: ActionItem[];
   sources: string[];
   methodology: string;
 };

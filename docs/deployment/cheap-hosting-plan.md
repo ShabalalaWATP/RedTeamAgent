@@ -10,7 +10,7 @@ This app is designed to red-team decision-making artefacts of any kind: projects
 - Docker Compose stack from `deploy/cheap-vps/docker-compose.prod.yml`.
 - Caddy reverse proxy with automatic HTTPS.
 - PostgreSQL with pgvector, Redis and MinIO on private Docker networks.
-- Cloudflare Registrar and Free DNS for the domain.
+- GoDaddy registration can remain in place for `redteamagent.co.uk`; use GoDaddy DNS or move nameservers to Cloudflare Free DNS.
 - Nightly off-server backups before any real user data is stored.
 
 ## Why This Is The Cheapest Sensible Shape
@@ -21,7 +21,7 @@ Current reference points:
 
 - DigitalOcean lists a 4 GiB / 80 GiB basic virtual machine at $24/month with included bandwidth on its Droplets page.
 - DigitalOcean also states that each Droplet includes outbound transfer starting from 500 GiB/month.
-- Cloudflare Registrar offers at-cost domain registration and renewal, with Free DNS, Free CDN and Free SSL.
+- Cloudflare Registrar offers at-cost domain registration and renewal for supported TLDs, with Free DNS, Free CDN and Free SSL. If the domain remains registered at GoDaddy, only the DNS records need to point to the VPS.
 - Caddy provides automatic HTTPS, including certificate provisioning, renewal and HTTP-to-HTTPS redirects.
 - Hetzner remains worth checking before purchase, but its June 2026 price adjustment means the live calculator should be used instead of relying on old instance-price examples.
 
@@ -30,8 +30,8 @@ Current reference points:
 | Item | Low-cost choice | Expected monthly cost |
 |---|---|---:|
 | VPS | 2 vCPU / 4 GiB RAM / 40-80 GiB disk | about $10-$25, depending on provider and region |
-| DNS/CDN | Cloudflare Free | $0 |
-| Domain | Cloudflare Registrar at-cost `.com` or similar | annual, varies by TLD |
+| DNS/CDN | GoDaddy DNS or Cloudflare Free | $0 beyond the domain renewal |
+| Domain | Existing `redteamagent.co.uk` at GoDaddy | already purchased, annual renewal varies |
 | TLS | Caddy automatic HTTPS | $0 |
 | Backups | Provider snapshots or external object storage | start with provider snapshot, add off-server backups before real users |
 | Email | SMTP-capable transactional mail provider | often free or low-cost at small personal/project volume |
@@ -40,11 +40,14 @@ For a first public beta, budget for roughly $25-$35/month plus the annual domain
 
 ## Domain Plan
 
-1. Buy or transfer the domain in Cloudflare Registrar.
-2. Create an `A` record for `redteamagent.example.com` pointing to the VPS IPv4 address.
-3. Set SSL/TLS mode to Full or Full strict.
-4. Keep the app on one origin first: `https://redteamagent.example.com`.
-5. Route browser API calls through `/api` so cookies remain same-site.
+1. Keep `redteamagent.co.uk` at GoDaddy unless you later want Cloudflare nameservers.
+2. Create an apex `A` record for `@` pointing to the VPS IPv4 address.
+3. If the VPS has IPv6 configured, create an apex `AAAA` record for `@` pointing to the VPS IPv6 address.
+4. Create `www` as a `CNAME` to `redteamagent.co.uk`, or as an `A` record to the same VPS IPv4 if GoDaddy DNS does not allow the preferred shape.
+5. Set `DOMAIN_NAME=redteamagent.co.uk,www.redteamagent.co.uk` in the production env used by Caddy.
+6. Set `PUBLIC_APP_URL=https://redteamagent.co.uk`.
+7. Set `CORS_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk`.
+8. Route browser API calls through `/api` so cookies remain same-site.
 
 ## VPS Setup
 
@@ -61,7 +64,7 @@ cp .env.production.example .env.production
 
 Edit `.env.production`:
 
-- Set `DOMAIN_NAME`.
+- Set `DOMAIN_NAME=redteamagent.co.uk,www.redteamagent.co.uk`.
 - Set `ACME_EMAIL`.
 - Generate `APP_SECRET_KEY`.
 - Replace database and MinIO passwords.

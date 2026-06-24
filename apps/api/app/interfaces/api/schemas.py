@@ -78,6 +78,10 @@ class ReviewCreate(BaseModel):
     proposal_text: str = Field(min_length=1)
     mode: Literal["basic", "standard", "in_depth"] = "standard"
     focus_chips: list[str] = Field(default_factory=list)
+    external_research: bool = False
+    private_research: bool = True
+    domain_allowlist: list[str] = Field(default_factory=list)
+    domain_blocklist: list[str] = Field(default_factory=list)
 
 
 class ReviewView(BaseModel):
@@ -88,11 +92,23 @@ class ReviewView(BaseModel):
     proposal_text: str
     mode: str
     focus_chips: list[str]
+    external_research: bool
+    private_research: bool
+    domain_allowlist: list[str]
+    domain_blocklist: list[str]
     model_config = ConfigDict(from_attributes=True)
 
 
 class PastedTextRequest(BaseModel):
     text: str = Field(min_length=1)
+
+
+class WebsiteSourceRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)
+
+
+class RepositorySourceRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)
 
 
 class SourceView(BaseModel):
@@ -220,6 +236,23 @@ class ReportView(BaseModel):
     run_id: str
     data: dict[str, Any]
     model_config = ConfigDict(from_attributes=True)
+
+
+class ReportComparisonView(BaseModel):
+    left_run_id: str
+    right_run_id: str
+    changed_risks: list[str]
+    changed_assumptions: list[str]
+    changed_evidence_gaps: list[str]
+    changed_recommendations: list[str]
+
+
+class EvaluationResultView(BaseModel):
+    workspace_id: str
+    fixture_count: int
+    metrics: dict[str, float]
+    adversarial_fixtures: list[str]
+    live_smoke_tests: str
 
 
 def source_view(source: Any) -> SourceView:

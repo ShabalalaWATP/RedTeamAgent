@@ -1,6 +1,8 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { AuthProvider } from '../src/app/AuthContext';
+import { EvaluationPanel } from '../src/features/providers/EvaluationPanel';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
 
 afterEach(() => {
@@ -27,6 +29,15 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
         return jsonResponse(modelRecord({ probe_result: { ok: true, source: 'deterministic_fake_probe' } }));
       }
+      if (url.includes('/evaluations/stage2') && init?.method === 'POST') {
+        return jsonResponse({
+          workspace_id: authState.workspaceId,
+          fixture_count: 10,
+          metrics: { routing_precision: 0.91, citation_validity: 0.94 },
+          adversarial_fixtures: ['malicious website instruction override'],
+          live_smoke_tests: 'disabled'
+        });
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
@@ -40,6 +51,10 @@ describe('ProviderSettings', () => {
     expect(await screen.findByText('Model catalogue synced with 1 record.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
+    expect(await screen.findByText('10 fixtures')).toBeInTheDocument();
+    expect(screen.getByText('Routing Precision')).toBeInTheDocument();
+    expect(screen.getByText('malicious website instruction override')).toBeInTheDocument();
   });
 
   it('surfaces model, profile and stored-connection failures', async () => {
@@ -72,6 +87,9 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/connections/conn-1/test') && init?.method === 'POST') {
         return jsonResponse({ message: 'probe failed' }, 503);
       }
+      if (url.includes('/evaluations/stage2') && init?.method === 'POST') {
+        return jsonResponse({ message: 'evaluation denied' }, 409);
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
@@ -96,6 +114,8 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
     await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
+    await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
+    expect(await screen.findByText('evaluation denied')).toBeInTheDocument();
   });
 
   it('surfaces adapter catalogue load failures', async () => {
@@ -126,6 +146,51 @@ describe('ProviderSettings', () => {
     renderApp('/providers');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('workspace denied');
+  });
+
+  it('keeps unauthenticated evaluation actions local', async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ message: 'unexpected' }, 500));
+    render(
+      <AuthProvider>
+        <EvaluationPanel />
+      </AuthProvider>
+    );
+
+    const button = screen.getByRole('button', { name: /run stage 2 evaluation/i }) as HTMLButtonElement;
+    button.disabled = false;
+    fireEvent.click(button);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows evaluation running state while metrics load', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem('rta.auth', JSON.stringify(authState));
+    let resolveEvaluation: (value: Response) => void = () => undefined;
+    mockFetch((url) => {
+      if (url.includes('/evaluations/stage2')) {
+        return new Promise<Response>((resolve) => {
+          resolveEvaluation = resolve;
+        });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    render(
+      <AuthProvider>
+        <EvaluationPanel />
+      </AuthProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
+    expect(screen.getByRole('button', { name: /running evaluation/i })).toBeDisabled();
+    resolveEvaluation(jsonResponse({
+      workspace_id: authState.workspaceId,
+      fixture_count: 10,
+      metrics: { routing_recall: 0.9 },
+      adversarial_fixtures: [],
+      live_smoke_tests: 'disabled'
+    }));
+    expect(await screen.findByText('Routing Recall')).toBeInTheDocument();
   });
 });
 

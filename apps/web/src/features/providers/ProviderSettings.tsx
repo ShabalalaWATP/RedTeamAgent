@@ -2,8 +2,10 @@ import { PlugZap, RefreshCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
+import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ModelProfile, ModelRecord, ProviderConnection } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { EvaluationPanel } from './EvaluationPanel';
 
 type AdapterField = {
   name: string;
@@ -19,17 +21,6 @@ type AdapterSchema = {
   fields: AdapterField[];
   default_capabilities: string[];
 };
-
-const AGENT_OPTIONS = [
-  ['evidence_context', 'Evidence and Context'],
-  ['alternative_perspectives', 'Alternative Perspectives'],
-  ['software_architecture', 'Software Architecture and Quality'],
-  ['cybersecurity_privacy', 'Cybersecurity and Privacy'],
-  ['legal_regulatory', 'Legal and Regulatory'],
-  ['policy_governance', 'Policy and Governance'],
-  ['product_user_experience', 'Product and User Experience'],
-  ['operations_delivery', 'Operations and Delivery']
-];
 
 function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
@@ -341,6 +332,7 @@ export function ProviderSettings() {
           )}
         </section>
       </div>
+      <EvaluationPanel />
     </section>
   );
 }

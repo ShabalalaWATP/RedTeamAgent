@@ -80,6 +80,10 @@ class Review(Base):
     proposal_text: Mapped[str] = mapped_column(Text)
     mode: Mapped[str] = mapped_column(String(40))
     focus_chips: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    external_research: Mapped[bool] = mapped_column(Boolean, default=False)
+    private_research: Mapped[bool] = mapped_column(Boolean, default=True)
+    domain_allowlist: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    domain_blocklist: Mapped[list[str]] = mapped_column(JsonType, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

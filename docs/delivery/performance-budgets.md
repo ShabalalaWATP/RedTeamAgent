@@ -1,16 +1,19 @@
-# Stage 1 Performance Budgets
+# Stage 2 Performance Budgets
 
 Date: 24 June 2026
 
-These budgets apply to the Stage 1 vertical slice and should be revisited before Stage 2 adds richer evidence ingestion.
+These budgets apply to the local Stage 2 release gate. They are not production service-level objectives.
 
 | Area | Budget | Current evidence |
 | --- | --- | --- |
-| Frontend JavaScript bundle | At most 400 kB before gzip | `npm run build --prefix apps/web`, 336.08 kB before gzip |
-| Frontend CSS bundle | At most 8 kB before gzip | `npm run build --prefix apps/web`, 5.94 kB before gzip |
+| Frontend JavaScript bundle | At most 450 kB before gzip | `npm run build --prefix apps/web`, 352.94 kB before gzip |
+| Frontend CSS bundle | At most 16 kB before gzip | `npm run build --prefix apps/web`, 6.23 kB before gzip |
 | Core local app shell render | Auth and dashboard visible during Playwright e2e without timeout | `npm run e2e --prefix apps/web`, passed |
 | Keyboard and click interactions | Core mocked-browser journey completes without blocked controls or timeout | `npm run e2e --prefix apps/web`, passed |
-| Report rendering | 50 findings render in less than 2 seconds in the React test environment | `npm run test:coverage --prefix apps/web`, large-report test passed |
-| Docker local health | API, web, PostgreSQL, Redis and MinIO become healthy on an isolated Compose stack | `docker compose -p redteamagent-final up -d --build`, passed |
-
-These are local release budgets, not production service-level objectives. Stage 2 should add richer budgets for OCR, repository ingestion, external research and larger reports.
+| OCR and image extraction | Deterministic local extraction returns metadata and quality warnings without external calls | `.\.venv\Scripts\python -m pytest apps\api`, passed |
+| Audio and video transcription | Deterministic local transcript includes timestamp locators and warnings within API test timeout | `.\.venv\Scripts\python -m pytest apps\api`, passed |
+| Website ingestion | Hardened fetch path applies timeout and size caps, stores a snapshot locator and blocks private targets | `.\.venv\Scripts\python -m pytest apps\api`, passed |
+| Repository indexing | Public Git paths create manifest, language summary, dependency/config index and file locators without checkout or code execution | Docker-backed workflow ingested `https://github.com/octocat/Hello-World.git` |
+| Large report rendering | 50 findings plus Stage 2 report sections render in less than 2 seconds in the React test environment | `npm run test:coverage --prefix apps/web`, passed |
+| PDF export | Export endpoint returns PDF-safe bytes during Stage 2 API tests | `.\.venv\Scripts\python -m pytest apps\api`, passed |
+| Docker local health | API, web, PostgreSQL, Redis and MinIO become healthy on an isolated Compose stack | `docker compose -p redteamagent-stage2 up -d --build`, passed |

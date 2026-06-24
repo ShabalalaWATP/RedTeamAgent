@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -34,6 +34,9 @@ describe('unauthenticated and alternate branch states', () => {
 
     renderWithAuth(<ProviderSettings />);
     await user.click(await screen.findByRole('button', { name: /test and save/i }));
+    const evaluationButton = screen.getByRole('button', { name: /run stage 2 evaluation/i }) as HTMLButtonElement;
+    evaluationButton.disabled = false;
+    fireEvent.click(evaluationButton);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     renderWithAuth(
@@ -61,7 +64,10 @@ describe('unauthenticated and alternate branch states', () => {
     expect(screen.getByText('Report loading')).toBeInTheDocument();
     const exportButton = screen.getByRole('button', { name: /markdown/i }) as HTMLButtonElement;
     exportButton.disabled = false;
-    await user.click(exportButton);
+    fireEvent.click(exportButton);
+    const pdfButton = screen.getByRole('button', { name: 'PDF' }) as HTMLButtonElement;
+    pdfButton.disabled = false;
+    fireEvent.click(pdfButton);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -113,7 +119,7 @@ describe('unauthenticated and alternate branch states', () => {
       await user.click(button);
     }
     const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
-    await user.upload(screen.getByLabelText(/upload txt/i), file);
+    await user.upload(screen.getByLabelText(/upload rich evidence/i), file);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

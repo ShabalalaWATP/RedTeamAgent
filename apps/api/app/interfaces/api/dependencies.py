@@ -9,6 +9,7 @@ from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.orm import Session
 
 from app.application.auth_service import AuthService
+from app.application.evaluation_service import EvaluationService
 from app.application.ports.notifications import EmailSender
 from app.application.project_service import ProjectService
 from app.application.provider_service import ProviderService
@@ -81,6 +82,10 @@ def auth_service(
 
 def project_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> ProjectService:
     return ProjectService(repo)
+
+
+def evaluation_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> EvaluationService:
+    return EvaluationService(repo)
 
 
 def provider_registry(settings: Annotated[Settings, Depends(get_settings)]) -> ProviderRegistry:

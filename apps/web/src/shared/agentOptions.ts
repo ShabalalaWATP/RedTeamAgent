@@ -1,0 +1,22 @@
+export const AGENT_OPTIONS = [
+  ['evidence_context', 'Evidence and Context'],
+  ['alternative_perspectives', 'Alternative Perspectives'],
+  ['software_architecture', 'Software Architecture and Quality'],
+  ['cybersecurity_privacy', 'Cybersecurity and Privacy'],
+  ['legal_regulatory', 'Legal and Regulatory'],
+  ['policy_governance', 'Policy and Governance'],
+  ['product_user_experience', 'Product and User Experience'],
+  ['operations_delivery', 'Operations and Delivery'],
+  ['comparable_products_research', 'Comparable Products Research'],
+  ['physical_systems', 'Physical Systems'],
+  ['math_statistics', 'Mathematics and Statistics'],
+  ['medical_clinical', 'Medical and Clinical'],
+  ['language_clarity', 'Language and Clarity'],
+  ['ethics_responsible_use', 'Ethics and Responsible Use'],
+  ['inclusivity_accessibility', 'Inclusivity and Accessibility'],
+  ['commercial_financial', 'Commercial and Financial'],
+  ['data_ai', 'Data and AI'],
+  ['future_second_order', 'Future and Second-Order Effects'],
+  ['environmental_sustainability', 'Environmental Sustainability'],
+  ['reputation_stakeholder', 'Reputation and Stakeholder Impact']
+] as const;

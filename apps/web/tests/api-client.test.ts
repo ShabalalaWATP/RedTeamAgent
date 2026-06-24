@@ -14,7 +14,46 @@ describe('ApiClient', () => {
         expect(init?.body).toBeInstanceOf(FormData);
         return jsonResponse({ id: 'source-1', filename: 'a.txt', content_type: 'text/plain', state: 'ingested', metadata: {}, warnings: [] });
       }
+      if (url.includes('/sources/website')) {
+        return jsonResponse({
+          id: 'source-web',
+          filename: 'example.com.html',
+          content_type: 'text/html',
+          state: 'ingested',
+          metadata: { source_kind: 'website' },
+          warnings: []
+        });
+      }
+      if (url.includes('/sources/repository')) {
+        return jsonResponse({
+          id: 'source-repo',
+          filename: 'repo.repo.txt',
+          content_type: 'text/plain',
+          state: 'ingested',
+          metadata: { source_kind: 'public_git_repository' },
+          warnings: []
+        });
+      }
       if (url.includes('/report/export')) return textResponse('# report');
+      if (url.includes('/report/compare')) {
+        return jsonResponse({
+          left_run_id: 'run-1',
+          right_run_id: 'run-2',
+          changed_risks: ['risk'],
+          changed_assumptions: [],
+          changed_evidence_gaps: [],
+          changed_recommendations: ['action']
+        });
+      }
+      if (url.includes('/evaluations/stage2')) {
+        return jsonResponse({
+          workspace_id: 'workspace-1',
+          fixture_count: 10,
+          metrics: { routing_precision: 0.91 },
+          adversarial_fixtures: ['malicious PDF prompt injection'],
+          live_smoke_tests: 'disabled'
+        });
+      }
       if (url.includes('/workspaces/workspace-1/workflows')) {
         return jsonResponse([
           {
@@ -99,6 +138,42 @@ describe('ApiClient', () => {
             blockers: [],
             assumptions: [],
             evidence_gaps: [],
+            external_sources: [
+              {
+                title: 'External source',
+                url: 'https://example.com',
+                query: 'Decision research',
+                quality_rank: 1,
+                captured_at: '2026-06-24T00:00:00Z'
+              }
+            ],
+            risk_matrix: [
+              {
+                risk: 'Risk',
+                likelihood: 'medium',
+                impact: 'high',
+                colour_independent_label: 'M/H'
+              }
+            ],
+            dependency_graph: [{ from: 'Evidence', to: 'Owner' }],
+            time_horizons: { near: ['Close gaps'] },
+            evidence_quality: { retrieval_score: 1 },
+            cross_agent_disagreements: [{ topic: 'Timing', positions: ['Wait', 'Proceed'] }],
+            strongest_case_for: 'Proceed with controls.',
+            strongest_case_against: 'Evidence gaps remain.',
+            pre_mortem: ['Owner gap causes failure.'],
+            scenarios: { base: 'Narrow launch.' },
+            validation_experiments: ['Run rehearsal.'],
+            action_items: [
+              {
+                id: 'action-1',
+                title: 'Assign owner',
+                status: 'open',
+                owner: 'Unassigned',
+                due: null,
+                source: 'proposal.md:1'
+              }
+            ],
             findings: [],
             sources: [],
             methodology: 'Method'
@@ -109,6 +184,8 @@ describe('ApiClient', () => {
     });
     const file = new File(['hello'], 'a.txt', { type: 'text/plain' });
     await expect(client.uploadSource('csrf', 'review-1', file)).resolves.toMatchObject({ state: 'ingested' });
+    await expect(client.addWebsiteSource('csrf', 'review-1', 'https://example.com')).resolves.toMatchObject({ id: 'source-web' });
+    await expect(client.addRepositorySource('csrf', 'review-1', 'https://github.com/a/b')).resolves.toMatchObject({ id: 'source-repo' });
     await expect(client.updateProject('csrf', 'project-1', 'Updated', 'Changed')).resolves.toMatchObject({ title: 'Updated' });
     await expect(client.deleteProject('csrf', 'project-1')).resolves.toBeUndefined();
     await expect(client.getRun('run-1')).resolves.toMatchObject({ state: 'completed' });
@@ -126,7 +203,10 @@ describe('ApiClient', () => {
     await expect(client.listProfiles('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listWorkflows('workspace-1')).resolves.toHaveLength(1);
     await expect(client.report('run-1')).resolves.toMatchObject({ title: 'Title' });
+    await expect(client.compareReport('run-1', 'run-2')).resolves.toMatchObject({ changed_risks: ['risk'] });
     await expect(client.exportReport('run-1', 'markdown')).resolves.toBe('# report');
+    await expect(client.exportReportPdf('run-1')).resolves.toMatchObject({ size: 8 });
+    await expect(client.runStage2Evaluation('csrf', 'workspace-1')).resolves.toMatchObject({ fixture_count: 10 });
   });
 
   it('surfaces server and non-json errors', async () => {

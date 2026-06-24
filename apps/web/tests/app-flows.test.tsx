@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { contextPackResponse, modelResponse, reportResponse, runResponse } from './app-flow-fixtures';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
 
 afterEach(() => {
@@ -185,6 +186,12 @@ describe('RedTeamAgent app flows', () => {
     let contextPacks: unknown[] = [];
     mockFetch((url, init) => {
       if (url.includes('/projects/project-1/reviews') && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          external_research: true,
+          private_research: true,
+          domain_allowlist: ['example.com'],
+          domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
+        });
         return jsonResponse({
           id: 'review-1',
           workspace_id: authState.workspaceId,
@@ -192,11 +199,45 @@ describe('RedTeamAgent app flows', () => {
           title: 'Checkout provider migration',
           proposal_text: 'proposal',
           mode: 'standard',
-          focus_chips: ['security']
+          focus_chips: ['security'],
+          external_research: true,
+          private_research: true,
+          domain_allowlist: ['example.com'],
+          domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
         });
       }
       if (url.includes('/sources/text')) {
         return jsonResponse({ id: 'source-1', filename: 'proposal.md', content_type: 'text/markdown', state: 'ingested', metadata: {}, warnings: [] });
+      }
+      if (url.includes('/sources/website')) {
+        return jsonResponse({
+          id: 'source-web',
+          filename: 'example.com.html',
+          content_type: 'text/html',
+          state: 'ingested',
+          metadata: { source_kind: 'website' },
+          warnings: ['DNS revalidation recorded']
+        });
+      }
+      if (url.includes('/sources/repository')) {
+        return jsonResponse({
+          id: 'source-repo',
+          filename: 'repo.repo.txt',
+          content_type: 'text/plain',
+          state: 'ingested',
+          metadata: { source_kind: 'public_git_repository' },
+          warnings: []
+        });
+      }
+      if (url.includes('/sources/upload')) {
+        return jsonResponse({
+          id: 'source-voice',
+          filename: 'voice-note.txt',
+          content_type: 'text/plain',
+          state: 'ingested',
+          metadata: { transcript_quality: 'fallback' },
+          warnings: []
+        });
       }
       if (url.includes('/context-packs?')) return jsonResponse(contextPacks);
       if (url.endsWith('/context-packs') && init?.method === 'POST') {
@@ -205,7 +246,13 @@ describe('RedTeamAgent app flows', () => {
         contextPacks = [contextPackResponse(body)];
         return jsonResponse(contextPacks[0]);
       }
-      if (url.includes('/preflight')) return jsonResponse({ selected_agents: [{ key: 'cybersecurity_privacy' }], external_research: false });
+      if (url.includes('/preflight')) {
+        return jsonResponse({
+          selected_agents: [{ key: 'cybersecurity_privacy' }],
+          external_research: true,
+          research_policy: { private_mode: true, domain_allowlist: ['example.com'] }
+        });
+      }
       if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.includes('/runs/run-1/events')) return jsonResponse([{ id: 'event-1', state: 'completed', message: 'done', sequence: 1 }]);
@@ -213,14 +260,25 @@ describe('RedTeamAgent app flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByLabelText(/enable external research/i));
+    await user.clear(screen.getByLabelText(/domain allow-list/i));
+    await user.type(screen.getByLabelText(/domain allow-list/i), 'example.com');
     await user.click(screen.getByRole('button', { name: /create review/i }));
     await user.click(await screen.findByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByText('proposal.md')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /snapshot website/i }));
+    expect(await screen.findByText('example.com.html')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /ingest repository/i }));
+    expect(await screen.findByText('repo.repo.txt')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /record voice note/i }));
+    expect(await screen.findByText('voice-note.txt')).toBeInTheDocument();
+    expect(screen.getByText(/fallback note submitted/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(await screen.findByText('Version 1')).toBeInTheDocument();
     expect(screen.getByText('policy_governance')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /preflight/i }));
     expect(await screen.findByText(/cybersecurity_privacy/i)).toBeInTheDocument();
+    expect(screen.getByText(/domain_allowlist/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /run review/i }));
     await waitFor(() => expect(screen.getByText(/Report preview/i)).toBeInTheDocument());
   });
@@ -228,6 +286,10 @@ describe('RedTeamAgent app flows', () => {
   it('loads report data, filters findings and exports markdown', async () => {
     storeAuth();
     const user = userEvent.setup();
+    const createObjectUrl = vi.fn(() => 'blob:report');
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
     const fetchMock = mockFetch((url, init) => {
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-2', 'completed'));
@@ -235,16 +297,34 @@ describe('RedTeamAgent app flows', () => {
       if (url.includes('/runs/run-2/events')) return jsonResponse([]);
       if (url.includes('/runs/run-2/report')) return jsonResponse({ data: reportResponse() });
       if (url.includes('/events')) return jsonResponse([{ id: 'event-1', state: 'completed', message: 'done', sequence: 1 }]);
+      if (url.includes('/report/compare')) {
+        return jsonResponse({
+          left_run_id: 'run-1',
+          right_run_id: 'run-previous',
+          changed_risks: ['Legacy risk removed'],
+          changed_assumptions: [],
+          changed_evidence_gaps: ['New evidence gap'],
+          changed_recommendations: []
+        });
+      }
       if (url.includes('/report/export')) return textResponse('# Exported report');
       if (url.includes('/report')) return jsonResponse({ data: reportResponse() });
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/runs/run-1');
     expect(await screen.findByText('Checkout migration')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /risk matrix/i })).toBeInTheDocument();
+    expect(screen.getByText('Owner gap causes failure.')).toBeInTheDocument();
+    expect(screen.getByText('External source')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'medium' }));
-    expect(screen.getByText('Medium risk')).toBeInTheDocument();
+    expect(screen.getAllByText('Medium risk').length).toBeGreaterThan(0);
     await user.click(screen.getAllByRole('button', { name: /markdown/i })[0]);
     expect(await screen.findByLabelText(/export output/i)).toHaveValue('# Exported report');
+    await user.click(screen.getByRole('button', { name: 'PDF' }));
+    expect(await screen.findByLabelText(/export output/i)).toHaveValue('PDF export generated (17 bytes).');
+    await user.type(screen.getByLabelText(/other run id/i), 'run-previous');
+    await user.click(screen.getByRole('button', { name: /compare reports/i }));
+    expect(await screen.findByText('Legacy risk removed')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /retry run/i }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/reviews/review-1/runs'), expect.anything()));
   });
@@ -300,68 +380,3 @@ describe('RedTeamAgent app flows', () => {
     expect(screen.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
   });
 });
-
-function modelResponse() {
-  return {
-    id: 'model-1',
-    workspace_id: authState.workspaceId,
-    provider_connection_id: 'conn-1',
-    model_identifier: 'fake-reviewer',
-    capabilities: ['text', 'structured_output', 'streaming'],
-    provenance: 'manual',
-    verified: true,
-    probe_result: { ok: true, source: 'manual' }
-  };
-}
-
-function contextPackResponse(body: Record<string, string>) {
-  return {
-    id: 'pack-1',
-    workspace_id: authState.workspaceId,
-    name: body.name,
-    agent_key: body.agent_key,
-    markdown: body.markdown,
-    version: 1
-  };
-}
-
-function runResponse(id: string, state: string) {
-  return {
-    id,
-    workspace_id: authState.workspaceId,
-    review_id: 'review-1',
-    state,
-    routing_plan: {},
-    usage: {}
-  };
-}
-
-function reportResponse() {
-  return {
-    title: 'Checkout migration',
-    provisional_recommendation: 'Proceed with controls',
-    executive_summary: 'Summary',
-    coverage_map: { sources: 1, agents: ['cybersecurity_privacy'] },
-    top_risks: ['Risk'],
-    dependencies: [],
-    blockers: [],
-    assumptions: [],
-    evidence_gaps: [],
-    sources: ['source'],
-    methodology: 'Method',
-    findings: [
-      {
-        id: 'finding-1',
-        title: 'Medium risk',
-        severity: 'medium',
-        confidence: 'high',
-        agent: 'operations_delivery',
-        category: 'delivery',
-        evidence_type: 'source',
-        evidence_label: 'source:1',
-        summary: 'Needs owner',
-        recommended_action: 'Assign owner'
-      }
-    ]
-  };
-}

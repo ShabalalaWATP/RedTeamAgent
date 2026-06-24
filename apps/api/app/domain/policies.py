@@ -5,16 +5,33 @@ import socket
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from app.domain.agents import SPECIALIST_REGISTRY
 from app.domain.enums import AgentKey, ReviewMode, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, ProviderPolicyError, ValidationFailure
 
 WRITE_ROLES = {WorkspaceRole.OWNER, WorkspaceRole.ADMINISTRATOR, WorkspaceRole.MEMBER}
 ADMIN_ROLES = {WorkspaceRole.OWNER, WorkspaceRole.ADMINISTRATOR}
 ALLOWED_UPLOADS = {
-    "text/plain": ".txt",
-    "text/markdown": ".md",
-    "application/pdf": ".pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "text/plain": (".txt",),
+    "text/markdown": (".md", ".markdown"),
+    "text/csv": (".csv",),
+    "application/pdf": (".pdf",),
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (".docx",),
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": (".pptx",),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (".xlsx",),
+    "image/png": (".png",),
+    "image/jpeg": (".jpg", ".jpeg"),
+    "image/webp": (".webp",),
+    "audio/mpeg": (".mp3",),
+    "audio/wav": (".wav",),
+    "audio/webm": (".webm",),
+    "audio/mp4": (".m4a", ".mp4"),
+    "video/mp4": (".mp4",),
+    "video/webm": (".webm",),
+    "video/quicktime": (".mov",),
+    "application/zip": (".zip",),
+    "application/x-tar": (".tar",),
+    "application/gzip": (".tar.gz", ".tgz"),
 }
 BLOCKED_METADATA_HOSTS = {"169.254.169.254", "metadata.google.internal"}
 
@@ -46,27 +63,23 @@ def validate_upload(content_type: str, filename: str, size: int, max_size: int) 
     safe_name = filename.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
     if safe_name != filename or ".." in safe_name:
         raise ValidationFailure("Filename is not safe.")
-    expected_suffix = ALLOWED_UPLOADS.get(content_type)
-    if expected_suffix is None:
+    expected_suffixes = ALLOWED_UPLOADS.get(content_type)
+    if expected_suffixes is None:
         raise ValidationFailure("Unsupported file type.")
-    if not safe_name.lower().endswith(expected_suffix):
+    if not safe_name.lower().endswith(expected_suffixes):
         raise ValidationFailure("File extension does not match content type.")
     return safe_name
 
 
 def route_agents(mode: ReviewMode, focus_chips: list[str]) -> RouteDecision:
-    selected = [AgentKey.EVIDENCE_CONTEXT, AgentKey.CYBERSECURITY_PRIVACY, AgentKey.PRODUCT_UX]
     lower_focus = " ".join(focus_chips).lower()
-    if mode is not ReviewMode.BASIC:
-        selected.extend([AgentKey.SOFTWARE_ARCHITECTURE, AgentKey.OPERATIONS_DELIVERY])
-    if mode is ReviewMode.IN_DEPTH or "legal" in lower_focus:
-        selected.append(AgentKey.LEGAL_REGULATORY)
-    if "policy" in lower_focus or mode is ReviewMode.IN_DEPTH:
-        selected.append(AgentKey.POLICY_GOVERNANCE)
+    selected: list[AgentKey] = []
+    for agent in SPECIALIST_REGISTRY:
+        if _mode_allows(mode, agent.minimum_mode) or any(term in lower_focus for term in agent.focus_terms):
+            selected.append(agent.key)
     if mode is ReviewMode.IN_DEPTH:
-        selected.append(AgentKey.ALTERNATIVE_PERSPECTIVES)
-
-    ordered = list(dict.fromkeys(selected))
+        selected = [agent.key for agent in SPECIALIST_REGISTRY]
+    ordered = list(dict.fromkeys(selected or [AgentKey.EVIDENCE_CONTEXT]))
     excluded = {
         agent: "Not required for selected mode or focus."
         for agent in AgentKey
@@ -79,6 +92,12 @@ def route_agents(mode: ReviewMode, focus_chips: list[str]) -> RouteDecision:
     }
     budget, challenge_passes, report_depth = budgets[mode]
     return RouteDecision(ordered, excluded, budget, challenge_passes, report_depth)
+
+
+def _mode_allows(mode: ReviewMode, minimum_mode: str) -> bool:
+    order = {ReviewMode.BASIC: 0, ReviewMode.STANDARD: 1, ReviewMode.IN_DEPTH: 2}
+    required = {"basic": 0, "standard": 1, "in_depth": 2}
+    return order[mode] >= required[minimum_mode]
 
 
 def assert_capability_route(

@@ -1,8 +1,8 @@
 # RedTeamAgent
 
-RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build completes the Stage 1 foundation vertical slice: registration, workspace creation, projects, previous workflow history, reviews, source ingestion, agent context packs, provider routing, deterministic fake-provider review runs and evidence-linked reports.
+RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build completes the Stage 2 rich-evidence milestone: registration, workspace creation, projects, previous workflow history, reviews, rich source ingestion, external research controls, full specialist routing, provider diversity hooks, deterministic evaluation and advanced evidence-linked reports.
 
-The current implementation follows Stage 1 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-1-completion-report.md` for passed checks, residual risks and the current readiness decision. Stage 2 and Stage 3 remain intentionally out of scope.
+The current implementation follows Stage 2 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-2-completion-report.md` for passed checks, residual risks and the current readiness decision. Stage 3 remains intentionally out of scope.
 
 ## Local Setup
 
@@ -63,26 +63,47 @@ If Playwright browser installation is unavailable locally but Chromium already e
 
 ## Provider Configuration
 
-Provider connections are created from adapter schemas exposed by the API. Stage 1 includes:
+Provider connections are created from adapter schemas exposed by the API. Stage 2 includes:
 
 - deterministic fake provider for local demos and tests;
 - OpenAI text-generation adapter schema;
 - Anthropic text-generation adapter schema;
 - Google Gemini text-generation adapter schema;
-- generic OpenAI-compatible adapter schema with endpoint validation.
+- generic OpenAI-compatible adapter schema with endpoint validation;
+- Azure OpenAI and Azure AI endpoint adapter schemas;
+- Amazon Bedrock and Google Vertex AI adapter schemas;
+- Ollama, vLLM and approved multi-provider gateway adapter schemas.
 
 Credentials are encrypted server-side and write-only from the browser perspective. The API never returns stored provider credentials to the browser.
-Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 1 uses adapter-maintained catalogue snapshots by default and supports opt-in live catalogue checks where configured.
+Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 2 capability records cover text generation, structured output, streaming, tool use, image input, embeddings, transcription and reranking where an adapter claims support.
+
+## Stage 2 Inputs And Research
+
+Reviews support pasted text plus TXT, Markdown, PDF, DOCX, PPTX, CSV, XLSX, PNG, JPEG, WebP, common audio, common video, ZIP and TAR uploads. Browser-recorded voice notes, public website URLs and public Git repository URLs can also be submitted as sources. Rich extraction records locators such as PDF pages, document paragraphs, slides, spreadsheet cells, OCR blocks, timestamps, website snapshots and code file line ranges.
+
+The local deterministic extraction path records OCR and transcription quality warnings but does not claim human-grade recognition accuracy. Large-source limits are enforced for file size, extracted text length, page-like units, repository file count, website fetch size and request timeout.
+
+External research is explicit per review. Private research mode avoids proprietary or sensitive source text in search queries. Domain allow and block lists constrain search-provider output, and external source records are cited separately from user-provided evidence with query, URL, access date, excerpt and quality score.
+
+Advanced reports include a risk matrix that does not rely on colour alone, dependency relationships, time horizons, evidence quality, cross-agent disagreements, strongest case for and against, pre-mortem, plausible scenarios, validation experiments, action tracking, report comparison and PDF export.
 
 ## Cheap Hosting Plan
 
 Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deployment plan. The repository includes a production-oriented Docker Compose and Caddy setup under `deploy/cheap-vps/`.
 
+For `redteamagent.co.uk`, keep the GoDaddy domain registration if preferred and point DNS to the VPS:
+
+- apex `A` record: `@` to the VPS IPv4 address;
+- optional apex `AAAA` record: `@` to the VPS IPv6 address if the server is configured for IPv6;
+- `www` record: `CNAME` to `redteamagent.co.uk` or an `A` record to the same VPS IPv4;
+- Caddy hostnames: `redteamagent.co.uk,www.redteamagent.co.uk`;
+- app URLs: `PUBLIC_APP_URL=https://redteamagent.co.uk` and `CORS_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk`.
+
 ## Known Limitations
 
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
-- Live provider credentials are optional. Real provider adapters support structured text-generation calls, but the local Stage 1 workflow defaults to the deterministic fake provider for repeatable tests and demos.
-- Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Workflow execution uses FastAPI background tasks for the Stage 1 vertical slice. A Redis-backed external worker queue remains a production hardening item.
+- Live provider credentials are optional. Real provider adapters support structured text-generation calls, but the local workflow defaults to the deterministic fake provider for repeatable tests and demos.
+- OCR, transcription, website search and Git ingestion use deterministic local implementations for Stage 2 CI. Production-grade live connectors need provider credentials, monitoring and operational policy before real confidential workloads.
+- Workflow execution uses FastAPI background tasks for the Stage 2 local slice. A Redis-backed external worker queue remains a production hardening item.
 - The WCAG result is a repository release gate, not a third-party certification.
-- Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.
+- Reports are decision-support artefacts, not legal, medical, financial, security, privacy, engineering or delivery sign-off.

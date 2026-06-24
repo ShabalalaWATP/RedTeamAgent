@@ -255,6 +255,7 @@ describe('edge UI flows', () => {
       if (url.includes('/sources/upload')) {
         return jsonResponse({ id: 'source-2', filename: 'bad.pdf', content_type: 'application/pdf', state: 'failed', metadata: {}, warnings: ['No text'] });
       }
+      if (url.includes('/sources/website')) return jsonResponse({ message: 'website blocked' }, 400);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/projects/project-1/reviews/new');
@@ -262,14 +263,16 @@ describe('edge UI flows', () => {
     await user.type(screen.getByLabelText(/^title$/i), 'Changed title');
     await user.clear(screen.getByLabelText(/^proposal$/i));
     await user.type(screen.getByLabelText(/^proposal$/i), 'changed proposal');
-    await user.selectOptions(screen.getByLabelText(/mode/i), 'basic');
+    await user.selectOptions(screen.getByLabelText(/^mode$/i), 'basic');
     await user.clear(screen.getByLabelText(/focus chips/i));
     await user.type(screen.getByLabelText(/focus chips/i), 'ops');
     await user.click(screen.getByRole('button', { name: /create review/i }));
     const file = new File(['bad'], 'bad.pdf', { type: 'application/pdf' });
-    await user.upload(screen.getByLabelText(/upload txt/i), file);
+    await user.upload(screen.getByLabelText(/upload rich evidence/i), file);
     expect(await screen.findByText('bad.pdf')).toBeInTheDocument();
     expect(screen.getByText('failed')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /snapshot website/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('website blocked');
   });
 
   it('shows review creation errors', async () => {

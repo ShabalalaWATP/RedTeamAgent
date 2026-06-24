@@ -194,6 +194,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/{review_id}/sources/website": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Website Source */
+        post: operations["add_website_source_reviews__review_id__sources_website_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{review_id}/sources/repository": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Repository Source */
+        post: operations["add_repository_source_reviews__review_id__sources_repository_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/{review_id}/sources/upload": {
         parameters: {
             query?: never;
@@ -298,6 +332,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/providers/connections/{connection_id}/models/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Models */
+        post: operations["sync_models_providers_connections__connection_id__models_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/models": {
         parameters: {
             query?: never;
@@ -310,6 +361,23 @@ export interface paths {
         put?: never;
         /** Create Model */
         post: operations["create_model_providers_models_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/models/{model_id}/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe Model */
+        post: operations["probe_model_providers_models__model_id__probe_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -453,6 +521,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/report/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare Report */
+        get: operations["compare_report_runs__run_id__report_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/report/export": {
         parameters: {
             query?: never;
@@ -464,6 +549,23 @@ export interface paths {
         get: operations["export_runs__run_id__report_export_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/evaluations/stage2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Stage2 Evaluation */
+        post: operations["run_stage2_evaluation_workspaces__workspace_id__evaluations_stage2_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -504,10 +606,7 @@ export interface components {
         };
         /** Body_upload_source_reviews__review_id__sources_upload_post */
         Body_upload_source_reviews__review_id__sources_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** ContextPackCreate */
@@ -535,6 +634,21 @@ export interface components {
             markdown: string;
             /** Version */
             version: number;
+        };
+        /** EvaluationResultView */
+        EvaluationResultView: {
+            /** Workspace Id */
+            workspace_id: string;
+            /** Fixture Count */
+            fixture_count: number;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Adversarial Fixtures */
+            adversarial_fixtures: string[];
+            /** Live Smoke Tests */
+            live_smoke_tests: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -588,6 +702,10 @@ export interface components {
             provenance: string;
             /** Verified */
             verified: boolean;
+            /** Probe Result */
+            probe_result?: {
+                [key: string]: unknown;
+            };
         };
         /** PasswordResetConfirmRequest */
         PasswordResetConfirmRequest: {
@@ -717,6 +835,21 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** ReportComparisonView */
+        ReportComparisonView: {
+            /** Left Run Id */
+            left_run_id: string;
+            /** Right Run Id */
+            right_run_id: string;
+            /** Changed Risks */
+            changed_risks: string[];
+            /** Changed Assumptions */
+            changed_assumptions: string[];
+            /** Changed Evidence Gaps */
+            changed_evidence_gaps: string[];
+            /** Changed Recommendations */
+            changed_recommendations: string[];
+        };
         /** ReportView */
         ReportView: {
             /** Id */
@@ -729,6 +862,11 @@ export interface components {
             data: {
                 [key: string]: unknown;
             };
+        };
+        /** RepositorySourceRequest */
+        RepositorySourceRequest: {
+            /** Url */
+            url: string;
         };
         /** ReviewCreate */
         ReviewCreate: {
@@ -744,6 +882,20 @@ export interface components {
             mode: "basic" | "standard" | "in_depth";
             /** Focus Chips */
             focus_chips?: string[];
+            /**
+             * External Research
+             * @default false
+             */
+            external_research: boolean;
+            /**
+             * Private Research
+             * @default true
+             */
+            private_research: boolean;
+            /** Domain Allowlist */
+            domain_allowlist?: string[];
+            /** Domain Blocklist */
+            domain_blocklist?: string[];
         };
         /** ReviewView */
         ReviewView: {
@@ -761,6 +913,14 @@ export interface components {
             mode: string;
             /** Focus Chips */
             focus_chips: string[];
+            /** External Research */
+            external_research: boolean;
+            /** Private Research */
+            private_research: boolean;
+            /** Domain Allowlist */
+            domain_allowlist: string[];
+            /** Domain Blocklist */
+            domain_blocklist: string[];
         };
         /** RunEventView */
         RunEventView: {
@@ -835,11 +995,20 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** VerifyEmailRequest */
         VerifyEmailRequest: {
             /** Token */
             token: string;
+        };
+        /** WebsiteSourceRequest */
+        WebsiteSourceRequest: {
+            /** Url */
+            url: string;
         };
         /** WorkflowSummaryView */
         WorkflowSummaryView: {
@@ -1365,6 +1534,84 @@ export interface operations {
             };
         };
     };
+    add_website_source_reviews__review_id__sources_website_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_repository_source_reviews__review_id__sources_repository_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepositorySourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_source_reviews__review_id__sources_upload_post: {
         parameters: {
             query?: never;
@@ -1638,6 +1885,41 @@ export interface operations {
             };
         };
     };
+    sync_models_providers_connections__connection_id__models_sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                connection_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_models_providers_models_get: {
         parameters: {
             query: {
@@ -1687,6 +1969,41 @@ export interface operations {
                 "application/json": components["schemas"]["ModelCreate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probe_model_providers_models__model_id__probe_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                model_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -2013,6 +2330,41 @@ export interface operations {
             };
         };
     };
+    compare_report_runs__run_id__report_compare_get: {
+        parameters: {
+            query: {
+                other_run_id: string;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportComparisonView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     export_runs__run_id__report_export_get: {
         parameters: {
             query: {
@@ -2035,6 +2387,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_stage2_evaluation_workspaces__workspace_id__evaluations_stage2_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                workspace_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"];
                 };
             };
             /** @description Validation Error */

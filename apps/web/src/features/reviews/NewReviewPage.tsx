@@ -1,20 +1,16 @@
-import { BookOpen, FileUp, Play, ShieldQuestion } from 'lucide-react';
+import { BookOpen, Play, ShieldQuestion } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
+import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ContextPack, Review, Source } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { SourceIntakePanel } from './SourceIntakePanel';
+import { Stage2ReviewSettings } from './Stage2ReviewSettings';
 
 const DEFAULT_PROPOSAL = 'Adopt the proposal with staged validation, named owners, evidence checks and rollback criteria.';
 const DEFAULT_CONTEXT = '# Governance\nUse source-linked claims and show assumptions.';
-const AGENT_OPTIONS = [
-  { key: 'policy_governance', label: 'Policy governance' },
-  { key: 'cybersecurity_privacy', label: 'Cybersecurity privacy' },
-  { key: 'operations_delivery', label: 'Operations delivery' },
-  { key: 'product_user_experience', label: 'Product user experience' },
-  { key: 'alternative_perspectives', label: 'Alternative perspectives' }
-];
 
 export function NewReviewPage() {
   const { projectId } = useParams();
@@ -24,6 +20,10 @@ export function NewReviewPage() {
   const [proposal, setProposal] = useState(DEFAULT_PROPOSAL);
   const [mode, setMode] = useState<'basic' | 'standard' | 'in_depth'>('standard');
   const [focus, setFocus] = useState('security, policy, UX');
+  const [externalResearch, setExternalResearch] = useState(false);
+  const [privateResearch, setPrivateResearch] = useState(true);
+  const [allowlist, setAllowlist] = useState('');
+  const [blocklist, setBlocklist] = useState('localhost, 127.0.0.1, 169.254.169.254');
   const [review, setReview] = useState<Review | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [contextPacks, setContextPacks] = useState<ContextPack[]>([]);
@@ -34,6 +34,7 @@ export function NewReviewPage() {
   const [contextError, setContextError] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -59,7 +60,11 @@ export function NewReviewPage() {
         title,
         proposal_text: proposal,
         mode,
-        focus_chips: focus.split(',').map((chip) => chip.trim()).filter(Boolean)
+        focus_chips: toList(focus),
+        external_research: externalResearch,
+        private_research: privateResearch,
+        domain_allowlist: toList(allowlist),
+        domain_blocklist: toList(blocklist)
       });
       setReview(next);
     } catch (err) {
@@ -70,15 +75,31 @@ export function NewReviewPage() {
   const addText = async () => {
     /* v8 ignore next -- the add-text button is disabled until a review exists. */
     if (!auth || !review) return;
-    const source = await api.addTextSource(auth.csrfToken, review.id, proposal);
-    setSources((current) => [source, ...current]);
+    await addSource(() => api.addTextSource(auth.csrfToken, review.id, proposal));
   };
 
-  const upload = async (file: File | undefined) => {
+  const upload = async (file: File) => {
     /* v8 ignore next -- uploads are ignored until a review and file are present. */
-    if (!auth || !review || !file) return;
-    const source = await api.uploadSource(auth.csrfToken, review.id, file);
-    setSources((current) => [source, ...current]);
+    if (!auth || !review) return;
+    await addSource(() => api.uploadSource(auth.csrfToken, review.id, file));
+  };
+
+  const addWebsite = async (url: string) => {
+    await addSource(() => api.addWebsiteSource(auth!.csrfToken, review!.id, url.trim()));
+  };
+
+  const addRepository = async (url: string) => {
+    await addSource(() => api.addRepositorySource(auth!.csrfToken, review!.id, url.trim()));
+  };
+
+  const addSource = async (operation: () => Promise<Source>) => {
+    setSourceError(null);
+    try {
+      const source = await operation();
+      setSources((current) => [source, ...current]);
+    } catch (err) {
+      setSourceError((err as Error).message);
+    }
   };
 
   const addContextPack = async () => {
@@ -145,11 +166,7 @@ export function NewReviewPage() {
             <ErrorState message={error} />
             <div className="row">
               <Button type="button" variant="primary" onClick={createReview}>Create review</Button>
-              <Button type="button" onClick={addText} disabled={!review}>Add pasted text</Button>
             </div>
-            <Field label="Upload TXT, Markdown, PDF or DOCX">
-              <input type="file" onChange={(event) => void upload(event.target.files?.[0])} />
-            </Field>
           </form>
           <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
             <div className="section-title">
@@ -162,8 +179,8 @@ export function NewReviewPage() {
               </Field>
               <Field label="Agent">
                 <select value={contextAgent} onChange={(event) => setContextAgent(event.target.value)}>
-                  {AGENT_OPTIONS.map((agent) => (
-                    <option value={agent.key} key={agent.key}>{agent.label}</option>
+                  {AGENT_OPTIONS.map(([key, label]) => (
+                    <option value={key} key={key}>{label}</option>
                   ))}
                 </select>
               </Field>
@@ -201,21 +218,29 @@ export function NewReviewPage() {
               </div>
             )}
           </form>
+          <Stage2ReviewSettings
+            externalResearch={externalResearch}
+            privateResearch={privateResearch}
+            allowlist={allowlist}
+            blocklist={blocklist}
+            onExternalResearch={setExternalResearch}
+            onPrivateResearch={setPrivateResearch}
+            onAllowlist={setAllowlist}
+            onBlocklist={setBlocklist}
+          />
         </div>
-        <aside className="panel stack">
-          <h2>Sources and preflight</h2>
-          {sources.length === 0 ? (
-            <EmptyState title="No evidence yet" body="Add text or upload a supported document." />
-          ) : (
-            <div className="list">
-              {sources.map((source) => (
-                <article className="list-item" key={source.id}>
-                  <span><FileUp size={16} /> {source.filename}</span>
-                  <Status tone={source.state === 'ingested' ? 'ok' : 'bad'}>{source.state}</Status>
-                </article>
-              ))}
-            </div>
-          )}
+        <aside className="stack">
+          <SourceIntakePanel
+            disabled={!review}
+            sources={sources}
+            error={sourceError}
+            onAddText={addText}
+            onUpload={upload}
+            onWebsite={addWebsite}
+            onRepository={addRepository}
+          />
+          <section className="panel stack" aria-labelledby="preflight-heading">
+          <h2 id="preflight-heading">Preflight</h2>
           <div className="row">
             <Button type="button" onClick={runPreflight} disabled={!review}><ShieldQuestion size={16} /> Preflight</Button>
             <Button type="button" variant="primary" onClick={startRun} disabled={!review}><Play size={16} /> Run review</Button>
@@ -225,6 +250,7 @@ export function NewReviewPage() {
           ) : (
             <p className="muted">Preflight shows sources, selected agents, exclusions, provider route and warnings.</p>
           )}
+          </section>
         </aside>
       </div>
     </section>
@@ -234,4 +260,8 @@ export function NewReviewPage() {
 function preview(markdown: string) {
   const firstLine = markdown.split(/\r?\n/).find((line) => line.trim());
   return firstLine ? firstLine.replace(/^#+\s*/, '') : 'Markdown context';
+}
+
+function toList(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
 }

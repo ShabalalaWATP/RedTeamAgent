@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import initialise_database
 from app.interfaces.api.errors import install_error_handlers
-from app.interfaces.api.routes import auth, projects, providers, reviews, runs
+from app.interfaces.api.routes import auth, evaluations, projects, providers, reviews, runs
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(reviews.router)
     app.include_router(providers.router)
     app.include_router(runs.router)
+    app.include_router(evaluations.router)
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:

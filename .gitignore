@@ -25,3 +25,4 @@ output/
 minio-data/
 postgres-data/
 redis-data/
+.local-object-storage/

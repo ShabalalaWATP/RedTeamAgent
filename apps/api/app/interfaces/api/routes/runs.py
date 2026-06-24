@@ -8,7 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
-from app.application.report_export import export_report
+from app.application.report_export import export_report_bytes
 from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.domain.enums import RunState
@@ -20,7 +20,7 @@ from app.interfaces.api.dependencies import (
     require_csrf,
     workflow_service,
 )
-from app.interfaces.api.schemas import ReportView, RunEventView, RunView, WorkflowSummaryView
+from app.interfaces.api.schemas import ReportComparisonView, ReportView, RunEventView, RunView, WorkflowSummaryView
 
 router = APIRouter(tags=["runs"])
 
@@ -123,6 +123,16 @@ def get_report(
     return ReportView.model_validate(service.get_report(context.user.id, run_id))
 
 
+@router.get("/runs/{run_id}/report/compare", response_model=ReportComparisonView)
+def compare_report(
+    run_id: str,
+    other_run_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[WorkflowService, Depends(workflow_service)],
+) -> ReportComparisonView:
+    return ReportComparisonView.model_validate(service.compare_reports(context.user.id, run_id, other_run_id))
+
+
 @router.get("/runs/{run_id}/report/export")
 def export(
     run_id: str,
@@ -131,6 +141,7 @@ def export(
     service: Annotated[WorkflowService, Depends(workflow_service)],
 ) -> Response:
     report = service.get_report(context.user.id, run_id)
-    content = export_report(report.data, fmt)
-    media_type = "application/json" if fmt == "json" else "text/html" if fmt == "html" else "text/markdown"
-    return PlainTextResponse(content, media_type=media_type)
+    content, media_type = export_report_bytes(report.data, fmt)
+    if fmt == "pdf":
+        return Response(content, media_type=media_type)
+    return PlainTextResponse(content.decode("utf-8"), media_type=media_type)

@@ -5,6 +5,8 @@ import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import type { ReportData, Run } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Status } from '../../shared/ui';
+import { AdvancedReportSections } from './AdvancedReportSections';
+import { ReportComparisonPanel } from './ReportComparisonPanel';
 
 type RunEvent = {
   id: string;
@@ -83,9 +85,27 @@ export function ReportPage() {
   }, [report, severity]);
 
   const exportReport = async (fmt: 'markdown' | 'json' | 'html') => {
-    /* v8 ignore next -- export buttons are rendered on run routes where runId is present. */
+    /* v8 ignore next */
     if (!runId) return;
-    setExportText(await api.exportReport(runId, fmt));
+    setError(null);
+    try {
+      setExportText(await api.exportReport(runId, fmt));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const exportPdf = async () => {
+    /* v8 ignore next */
+    if (!runId) return;
+    setError(null);
+    try {
+      const blob = await api.exportReportPdf(runId);
+      triggerPdfDownload(blob, `${runId}-report.pdf`);
+      setExportText(`PDF export generated (${blob.size} bytes).`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const cancelRun = async () => {
@@ -124,107 +144,133 @@ export function ReportPage() {
       </div>
       <ErrorState message={error} />
       <div className="grid">
-        <section className="panel stack">
-          {report ? (
-            <>
-              <h2>{report.title}</h2>
-              <p>{report.executive_summary}</p>
-              <Status tone="info">{report.provisional_recommendation}</Status>
-              <div className="filters" aria-label="Report filters">
-                <Filter size={16} />
-                {['all', 'low', 'medium', 'high', 'critical'].map((value) => (
-                  <Button key={value} onClick={() => setSeverity(value)}>{value}</Button>
-                ))}
-              </div>
-              <div className="list">
-                {findings.map((finding) => (
-                  <article className="list-item" key={finding.id}>
-                    <div>
-                      <strong>{finding.title}</strong>
-                      <p className="muted">{finding.summary}</p>
-                      <small>Evidence: {finding.evidence_label}</small>
-                      {finding.evidence_excerpt ? <p className="muted">{finding.evidence_excerpt}</p> : null}
-                    </div>
-                    <div className="stack">
-                      <Status tone={finding.severity === 'medium' ? 'warn' : 'info'}>{finding.severity}</Status>
-                      <Status tone="ok">{finding.confidence}</Status>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <h3>Methodology</h3>
-              <p className="muted">{report.methodology}</p>
-            </>
-          ) : (
-            <EmptyState title="Report loading" body="Run progress and report data will appear here." />
-          )}
-        </section>
-        <aside className="panel stack">
-          <h2>Run timeline</h2>
-          <ol className="timeline">
-            {events.map((event) => (
-              <li key={event.id}>
-                <strong>{event.state}</strong>
-                <p className="muted">{event.message}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="row">
-            <Button onClick={() => void cancelRun()} disabled={!canCancel}>
-              <StopCircle size={16} /> Cancel run
-            </Button>
-            <Button onClick={() => void retryRun()} disabled={!run}>
-              <RotateCcw size={16} /> Retry run
-            </Button>
-          </div>
-          <div className="row">
-            <Button onClick={() => void exportReport('markdown')} disabled={!report}><Download size={16} /> Markdown</Button>
-            <Button onClick={() => void exportReport('json')} disabled={!report}>JSON</Button>
-            <Button onClick={() => void exportReport('html')} disabled={!report}>HTML</Button>
-          </div>
-          {exportText ? <textarea readOnly rows={8} value={exportText} aria-label="Export output" /> : null}
-          <h3>Evidence gaps</h3>
-          {(report?.evidence_gaps.length ?? 0) === 0 ? (
-            <p className="muted">No open evidence gaps recorded for this run.</p>
-          ) : (
-            <ul>{report?.evidence_gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
-          )}
-          <h3>Retrieved evidence</h3>
-          {(report?.retrieved_evidence?.length ?? 0) === 0 ? (
-            <p className="muted">No source excerpts were retrieved for this run.</p>
-          ) : (
-            <div className="list">
-              {report?.retrieved_evidence?.map((item) => (
-                <article className="list-item" key={item.locator}>
-                  <div>
-                    <strong>{item.locator}</strong>
-                    <p className="muted">{item.excerpt}</p>
-                    <small>{item.source_filename}</small>
-                  </div>
-                  <Status tone="info">{item.score.toFixed(2)}</Status>
-                </article>
+        <div className="stack">
+          <section className="panel stack">
+            {report ? (
+              <>
+                <h2>{report.title}</h2>
+                <p>{report.executive_summary}</p>
+                <Status tone="info">{report.provisional_recommendation}</Status>
+                <div className="filters" aria-label="Report filters">
+                  <Filter size={16} />
+                  {['all', 'low', 'medium', 'high', 'critical'].map((value) => (
+                    <Button key={value} onClick={() => setSeverity(value)}>{value}</Button>
+                  ))}
+                </div>
+                <div className="list" aria-label="Findings">
+                  {findings.map((finding) => (
+                    <article className="list-item" key={finding.id}>
+                      <div>
+                        <strong>{finding.title}</strong>
+                        <p className="muted">{finding.summary}</p>
+                        <small>Evidence: {finding.evidence_label}</small>
+                        {finding.evidence_excerpt ? <p className="muted">{finding.evidence_excerpt}</p> : null}
+                      </div>
+                      <div className="stack">
+                        <Status tone={finding.severity === 'medium' ? 'warn' : 'info'}>{finding.severity}</Status>
+                        <Status tone="ok">{finding.confidence}</Status>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <h3>Methodology</h3>
+                <p className="muted">{report.methodology}</p>
+              </>
+            ) : (
+              <EmptyState title="Report loading" body="Run progress and report data will appear here." />
+            )}
+          </section>
+          {report ? <AdvancedReportSections report={report} /> : null}
+        </div>
+        <aside className="stack">
+          <section className="panel stack">
+            <h2>Run timeline</h2>
+            <ol className="timeline">
+              {events.map((event) => (
+                <li key={event.id}>
+                  <strong>{event.state}</strong>
+                  <p className="muted">{event.message}</p>
+                </li>
               ))}
+            </ol>
+            <div className="row">
+              <Button onClick={() => void cancelRun()} disabled={!canCancel}>
+                <StopCircle size={16} /> Cancel run
+              </Button>
+              <Button onClick={() => void retryRun()} disabled={!run}>
+                <RotateCcw size={16} /> Retry run
+              </Button>
             </div>
-          )}
-          <h3>Context packs</h3>
-          {(report?.context_packs?.length ?? 0) === 0 ? (
-            <p className="muted">No context packs recorded for this run.</p>
-          ) : (
-            <div className="list">
-              {report?.context_packs?.map((pack) => (
-                <article className="list-item" key={pack.id}>
-                  <div>
-                    <strong>{pack.name}</strong>
-                    <p className="muted">{pack.agent_key}</p>
-                    <small>SHA-256: {pack.markdown_sha256.slice(0, 12)}</small>
-                  </div>
-                  <Status tone="ok">Version {pack.version}</Status>
-                </article>
-              ))}
+            <div className="row">
+              <Button onClick={() => void exportReport('markdown')} disabled={!report}><Download size={16} /> Markdown</Button>
+              <Button onClick={() => void exportReport('json')} disabled={!report}>JSON</Button>
+              <Button onClick={() => void exportReport('html')} disabled={!report}>HTML</Button>
+              <Button onClick={() => void exportPdf()} disabled={!report}>PDF</Button>
             </div>
-          )}
+            {exportText ? <textarea readOnly rows={8} value={exportText} aria-label="Export output" /> : null}
+          </section>
+          {report ? <ReportComparisonPanel runId={runId} /> : null}
+          <EvidencePanel report={report} />
         </aside>
       </div>
     </section>
   );
+}
+
+function EvidencePanel({ report }: { report: ReportData | null }) {
+  return (
+    <section className="panel stack">
+      <h2>Evidence record</h2>
+      <h3>Evidence gaps</h3>
+      {(report?.evidence_gaps.length ?? 0) === 0 ? (
+        <p className="muted">No open evidence gaps recorded for this run.</p>
+      ) : (
+        <ul>{report?.evidence_gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+      )}
+      <h3>Retrieved evidence</h3>
+      {(report?.retrieved_evidence?.length ?? 0) === 0 ? (
+        <p className="muted">No source excerpts were retrieved for this run.</p>
+      ) : (
+        <div className="list">
+          {report?.retrieved_evidence?.map((item) => (
+            <article className="list-item" key={item.locator}>
+              <div>
+                <strong>{item.locator}</strong>
+                <p className="muted">{item.excerpt}</p>
+                <small>{item.source_filename}</small>
+              </div>
+              <Status tone="info">{item.score.toFixed(2)}</Status>
+            </article>
+          ))}
+        </div>
+      )}
+      <h3>Context packs</h3>
+      {(report?.context_packs?.length ?? 0) === 0 ? (
+        <p className="muted">No context packs recorded for this run.</p>
+      ) : (
+        <div className="list">
+          {report?.context_packs?.map((pack) => (
+            <article className="list-item" key={pack.id}>
+              <div>
+                <strong>{pack.name}</strong>
+                <p className="muted">{pack.agent_key}</p>
+                <small>SHA-256: {pack.markdown_sha256.slice(0, 12)}</small>
+              </div>
+              <Status tone="ok">Version {pack.version}</Status>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function triggerPdfDownload(blob: Blob, filename: string) {
+  if (typeof document === 'undefined' || typeof URL.createObjectURL !== 'function') return;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }

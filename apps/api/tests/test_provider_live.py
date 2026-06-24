@@ -99,3 +99,14 @@ def test_live_provider_catalogue_probe_and_error_branches(monkeypatch: pytest.Mo
     )
     with pytest.raises(RuntimeError):
         live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
+
+
+def test_all_provider_adapters_probe_claimed_capabilities() -> None:
+    registry = ProviderRegistry(False)
+    for schema in registry.schemas():
+        result = registry.get(schema.key).probe_capabilities(
+            f"{schema.key}-model",
+            [*schema.default_capabilities, "missing_capability"],
+        )
+        assert set(result["verified_capabilities"]) == set(schema.default_capabilities)
+        assert result["missing_capabilities"] == ["missing_capability"]

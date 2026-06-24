@@ -1,9 +1,13 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../src/app/AuthContext';
+import { AdvancedReportSections } from '../src/features/reports/AdvancedReportSections';
+import { ReportComparisonPanel } from '../src/features/reports/ReportComparisonPanel';
 import { ReportPage } from '../src/features/reports/ReportPage';
+import type { ReportData } from '../src/shared/types';
+import { largeReportResponse, reportResponse, runResponse } from './report-fixtures';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
 
 class FakeEventSource {
@@ -105,6 +109,105 @@ describe('ReportPage run controls', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('cancel denied');
     await user.click(screen.getByRole('button', { name: /retry run/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('retry denied');
+  });
+
+  it('surfaces report comparison and export failures', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/report/compare')) return jsonResponse({ message: 'comparison denied' }, 409);
+      if (url.includes('/report/export?fmt=markdown')) return jsonResponse({ message: 'markdown denied' }, 500);
+      if (url.includes('/report/export?fmt=pdf')) return jsonResponse({ message: 'pdf denied' }, 500);
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: reportResponse() });
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/runs/run-1');
+
+    expect(await screen.findByText('Streamed report')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Markdown' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('markdown denied');
+    await user.click(screen.getByRole('button', { name: 'PDF' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('pdf denied');
+    await user.type(screen.getByLabelText(/other run id/i), 'run-previous');
+    await user.click(screen.getByRole('button', { name: /compare reports/i }));
+    expect(await screen.findByText('comparison denied')).toBeInTheDocument();
+  });
+
+  it('keeps PDF export usable when object URLs are unavailable', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: undefined });
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/report/export?fmt=pdf')) return new Response('PDF bytes', { status: 200 });
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: reportResponse() });
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/runs/run-1');
+
+    expect(await screen.findByText('Streamed report')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'PDF' }));
+    expect(await screen.findByLabelText(/export output/i)).toHaveValue('PDF export generated (9 bytes).');
+  });
+
+  it('does not compare reports without a current run id', async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ message: 'unexpected' }, 500));
+    render(<ReportComparisonPanel runId={undefined} />);
+
+    fireEvent.change(screen.getByLabelText(/other run id/i), { target: { value: 'run-previous' } });
+    const button = screen.getByRole('button', { name: /compare reports/i }) as HTMLButtonElement;
+    button.disabled = false;
+    fireEvent.click(button);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not compare reports without another run id', async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ message: 'unexpected' }, 500));
+    render(<ReportComparisonPanel runId="run-1" />);
+
+    const button = screen.getByRole('button', { name: /compare reports/i }) as HTMLButtonElement;
+    button.disabled = false;
+    fireEvent.click(button);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('renders completed action status without relying on colour', () => {
+    const report: ReportData = {
+      ...reportResponse(),
+      external_sources: [],
+      action_items: [
+        {
+          id: 'action-done',
+          title: 'Owner assigned',
+          status: 'closed',
+          owner: 'Delivery lead',
+          due: null,
+          source: 'proposal.md:1'
+        }
+      ],
+      pre_mortem: ['Failure path recorded.'],
+      validation_experiments: ['Run evidence check.'],
+      risk_matrix: [],
+      dependency_graph: [],
+      time_horizons: {},
+      evidence_quality: {},
+      cross_agent_disagreements: [],
+      strongest_case_for: '',
+      strongest_case_against: '',
+      scenarios: {}
+    };
+
+    render(<AdvancedReportSections report={report} />);
+
+    expect(screen.getByText('closed')).toBeInTheDocument();
+    expect(screen.getByText('No matrix entries')).toBeInTheDocument();
   });
 
   it('updates the run snapshot and timeline after successful cancellation', async () => {
@@ -237,76 +340,3 @@ describe('ReportPage run controls', () => {
     });
   });
 });
-
-function runResponse(state: string) {
-  return {
-    id: 'run-1',
-    workspace_id: authState.workspaceId,
-    review_id: 'review-1',
-    state,
-    routing_plan: {},
-    usage: {}
-  };
-}
-
-function largeReportResponse() {
-  const base = reportResponse();
-  return {
-    ...base,
-    findings: Array.from({ length: 50 }, (_item, index) => ({
-      ...base.findings[0],
-      id: `finding-${index + 1}`,
-      title: `Finding ${index + 1}`,
-      severity: index % 2 === 0 ? 'medium' : 'high'
-    }))
-  };
-}
-
-function reportResponse() {
-  return {
-    title: 'Streamed report',
-    provisional_recommendation: 'Proceed with controls',
-    executive_summary: 'Summary',
-    coverage_map: { sources: 1, agents: [] },
-    top_risks: [],
-    dependencies: [],
-    blockers: [],
-    assumptions: [],
-    evidence_gaps: [],
-    retrieved_evidence: [
-      {
-        source_id: 'source-1',
-        source_filename: 'proposal.md',
-        locator: 'proposal.md:1',
-        excerpt: 'Named owner evidence.',
-        score: 1.25
-      }
-    ],
-    context_packs: [
-      {
-        id: 'pack-1',
-        name: 'Architecture policy',
-        agent_key: 'software_architecture',
-        version: 1,
-        markdown_sha256: 'abcdef1234567890'
-      }
-    ],
-    sources: [],
-    methodology: 'Method',
-    findings: [
-      {
-        id: 'finding-1',
-        title: 'Owner needed',
-        severity: 'low',
-        confidence: 'medium',
-        agent: 'operations_delivery',
-        category: 'delivery',
-        evidence_type: 'source',
-        evidence_label: 'proposal.md:1',
-        evidence_excerpt: 'Named owner evidence.',
-        summary: 'Assign an owner.',
-        recommended_action: 'Assign owner'
-      }
-    ]
-  };
-}

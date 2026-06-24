@@ -286,6 +286,28 @@ textarea { resize: vertical; }
   color: var(--muted);
 }
 
+.metric-grid,
+.matrix-grid,
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.metric-tile {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--field-bg);
+}
+
+.warning-text {
+  color: var(--warn);
+}
+
 .timeline {
   display: grid;
   gap: 8px;

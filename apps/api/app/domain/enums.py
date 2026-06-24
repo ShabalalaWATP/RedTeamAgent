@@ -45,15 +45,15 @@ class AgentKey(StrEnum):
     POLICY_GOVERNANCE = "policy_governance"
     PRODUCT_UX = "product_ux"
     OPERATIONS_DELIVERY = "operations_delivery"
-
-
-AGENT_LABELS: dict[AgentKey, str] = {
-    AgentKey.EVIDENCE_CONTEXT: "Evidence and Context Agent",
-    AgentKey.ALTERNATIVE_PERSPECTIVES: "Alternative Perspectives Agent",
-    AgentKey.SOFTWARE_ARCHITECTURE: "Software Architecture and Quality Agent",
-    AgentKey.CYBERSECURITY_PRIVACY: "Cybersecurity and Privacy Agent",
-    AgentKey.LEGAL_REGULATORY: "Legal and Regulatory Agent",
-    AgentKey.POLICY_GOVERNANCE: "Internal Policy and Governance Agent",
-    AgentKey.PRODUCT_UX: "Product and User Experience Agent",
-    AgentKey.OPERATIONS_DELIVERY: "Operations and Delivery Agent",
-}
+    COMPARABLE_PRODUCTS_RESEARCH = "comparable_products_research"
+    PHYSICAL_SYSTEMS = "physical_systems"
+    MATH_STATISTICS = "math_statistics"
+    MEDICAL_CLINICAL = "medical_clinical"
+    LANGUAGE_CLARITY = "language_clarity"
+    ETHICS_RESPONSIBLE_USE = "ethics_responsible_use"
+    INCLUSIVITY_ACCESSIBILITY = "inclusivity_accessibility"
+    COMMERCIAL_FINANCIAL = "commercial_financial"
+    DATA_AI = "data_ai"
+    FUTURE_SECOND_ORDER = "future_second_order"
+    ENVIRONMENTAL_SUSTAINABILITY = "environmental_sustainability"
+    REPUTATION_STAKEHOLDER = "reputation_stakeholder"

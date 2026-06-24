@@ -35,3 +35,15 @@ class ProviderAdapter(Protocol):
         credentials: dict[str, str] | None = None,
         model_identifier: str | None = None,
     ) -> dict[str, Any]: ...
+
+
+class EmbeddingProvider(Protocol):
+    def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+
+class TranscriptionProvider(Protocol):
+    def transcribe(self, media: bytes, content_type: str) -> list[dict[str, Any]]: ...
+
+
+class RerankProvider(Protocol):
+    def rerank(self, query: str, candidates: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]: ...
