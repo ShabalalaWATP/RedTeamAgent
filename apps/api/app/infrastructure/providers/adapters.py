@@ -186,6 +186,9 @@ class ProviderRegistry:
     def schemas(self) -> list[AdapterSchema]:
         return [adapter.schema for adapter in self._adapters.values()]
 
+    def adapters(self) -> list[ProviderAdapter]:
+        return list(self._adapters.values())
+
     def get(self, key: str) -> ProviderAdapter:
         return self._adapters[key]
 
@@ -201,11 +204,10 @@ def _stage2_adapters() -> dict[str, ProviderAdapter]:
                 [
                     AdapterField("api_key", "API key", True, True, "password"),
                     AdapterField("endpoint_url", "Endpoint URL", False, True, "url"),
-                    AdapterField("deployment", "Deployment", False, True),
                 ],
                 common,
             ),
-            [{"model_identifier": "azure-openai-configured-deployment"}],
+            [{"model_identifier": "gpt-4.1-mini"}, {"model_identifier": "gpt-4.1"}],
         ),
         "azure_ai_endpoint": _static("azure_ai_endpoint", "Azure AI model endpoint", common),
         "amazon_bedrock": _static("amazon_bedrock", "Amazon Bedrock", common),

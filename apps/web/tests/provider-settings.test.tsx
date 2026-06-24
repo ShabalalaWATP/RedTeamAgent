@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../src/app/AuthContext';
@@ -12,6 +12,52 @@ afterEach(() => {
 });
 
 describe('ProviderSettings', () => {
+  it('saves the selected provider model and refreshes models automatically', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.includes('/providers/adapters')) {
+        return jsonResponse([
+          adapterSchema(),
+          {
+            key: 'openai',
+            label: 'OpenAI',
+            fields: [],
+            default_capabilities: ['text'],
+            catalogue_models: [
+              { model_identifier: 'gpt-5.5', capabilities: ['text'] },
+              { model_identifier: 'gpt-fast', capabilities: ['text', 'streaming'] }
+            ]
+          }
+        ]);
+      }
+      if (url.includes('/providers/connections?')) return jsonResponse([]);
+      if (url.includes('/providers/models?')) return jsonResponse([]);
+      if (url.includes('/providers/profiles?')) return jsonResponse([]);
+      if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
+        return jsonResponse([modelRecord({ model_identifier: 'fake-fast' })]);
+      }
+      if (url.includes('/providers/connections') && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          adapter: 'openai',
+          config: { model_identifier: 'gpt-fast' }
+        });
+        return jsonResponse(providerConnection());
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderProviderSettings();
+
+    const providerForm = (await screen.findByRole('heading', { name: /connect an ai provider/i }))
+      .closest('form') as HTMLElement;
+    await user.selectOptions(within(providerForm).getByLabelText(/ai provider/i), 'openai');
+    expect(await within(providerForm).findByText('gpt-fast')).toBeInTheDocument();
+    await user.selectOptions(within(providerForm).getAllByRole('combobox')[1], 'gpt-fast');
+    await user.click(screen.getByRole('button', { name: /test and save/i }));
+    expect(await screen.findByText('Provider connection saved. 1 model available.')).toBeInTheDocument();
+  });
+
   it('tests stored connections and renders model catalogue state', async () => {
     storeAuth();
     const user = userEvent.setup();
@@ -30,6 +76,8 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
         return jsonResponse(modelRecord({ probe_result: { ok: true, source: 'deterministic_fake_probe' } }));
       }
+      if (url.includes('/providers/models') && init?.method === 'POST') return jsonResponse(modelRecord());
+      if (url.includes('/providers/profiles') && init?.method === 'POST') return jsonResponse(modelProfile());
       if (url.includes('/evaluations/stage2') && init?.method === 'POST') {
         return jsonResponse({
           workspace_id: authState.workspaceId,
@@ -45,16 +93,21 @@ describe('ProviderSettings', () => {
     renderProviderSettings();
 
     expect(await screen.findByLabelText(/ai provider/i)).toBeInTheDocument();
+    expect(screen.getAllByText('fake-reviewer').length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
     expect(screen.getByText(/not a url/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/connection name/i)).not.toBeInTheDocument();
     await openDisclosure(user, /model routing and agent assignment/i);
     expect(await screen.findByText('No capabilities recorded.')).toBeInTheDocument();
     expect(screen.getByText(/fallback allowed/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /register model/i }));
+    expect(await screen.findByText('Model record saved with visible capability provenance.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /assign profile/i }));
+    expect(await screen.findByText('Model profile assigned to agent.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByText('Stored connection test passed.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
-    expect(await screen.findByText('Model catalogue synced with 1 record.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /refresh models/i }));
+    expect(await screen.findByText('Model list refreshed with 1 model.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
     await openDisclosure(user, /evaluation tools/i);
@@ -104,13 +157,18 @@ describe('ProviderSettings', () => {
 
     await openDisclosure(user, /model routing and agent assignment/i);
     expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
+    const manualForm = screen.getByRole('heading', { name: /manual model record/i }).closest('form') as HTMLElement;
+    await user.selectOptions(within(manualForm).getAllByRole('combobox')[1], 'backup-reviewer');
     await user.clear(screen.getByLabelText(/capabilities/i));
     await user.type(screen.getByLabelText(/capabilities/i), 'text, json, ');
     await user.clear(screen.getByLabelText(/provenance/i));
     await user.type(screen.getByLabelText(/provenance/i), 'manual override');
-    await user.selectOptions(screen.getByLabelText(/provider connection/i), 'conn-1');
+    await user.selectOptions(screen.getByLabelText(/^provider connection$/i), 'conn-1');
     await user.selectOptions(screen.getByLabelText(/^model record$/i), 'model-2');
-    fireEvent.submit(screen.getByLabelText(/model identifier/i).closest('form') as HTMLFormElement);
+    await user.click(screen.getByLabelText(/capability probe verified/i));
+    await user.selectOptions(screen.getByLabelText(/^agent$/i), 'policy_governance');
+    await user.click(screen.getByLabelText(/explicitly pin/i));
+    fireEvent.submit(screen.getByLabelText(/capabilities/i).closest('form') as HTMLFormElement);
     fireEvent.submit(screen.getByLabelText(/profile name/i).closest('form') as HTMLFormElement);
     await user.click(screen.getByRole('button', { name: /register model/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('model denied');
@@ -118,7 +176,7 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('profile denied');
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('probe failed');
-    await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
+    await user.click(screen.getByRole('button', { name: /refresh models/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
     await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
@@ -215,12 +273,14 @@ async function openDisclosure(user: ReturnType<typeof userEvent.setup>, name: Re
   await user.click(await screen.findByText(name));
 }
 
-function adapterSchema() {
+function adapterSchema(overrides: Record<string, unknown> = {}) {
   return {
     key: 'fake',
     label: 'Deterministic fake provider',
     fields: [{ name: 'scenario', label: 'Scenario', secret: false, required: false, input_type: 'text' }],
-    default_capabilities: ['text']
+    default_capabilities: ['text'],
+    catalogue_models: [{ model_identifier: 'fake-reviewer', capabilities: ['text'] }],
+    ...overrides
   };
 }
 

@@ -340,5 +340,5 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function EntityList({ items, empty }: { items: string[]; empty: string }) {
   if (items.length === 0) return <EmptyState title="Empty" body={empty} />;
-  return <ul className="enterprise-list">{items.map((item) => <li key={item}>{item}</li>)}</ul>;
+  return <ul className="enterprise-list">{items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>;
 }

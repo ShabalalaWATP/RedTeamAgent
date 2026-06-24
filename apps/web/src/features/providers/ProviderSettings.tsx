@@ -6,33 +6,12 @@ import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ModelProfile, ModelRecord, ProviderConnection } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 import { EvaluationPanel } from './EvaluationPanel';
+import { ModelDropdown } from './ModelDropdown';
+import { adapterFieldHint, capabilitiesForModel, modelOptionKey, modelOptionsForConnection, modelOptionsForSchema, preferredModelIdentifier, schemaForConnection, type AdapterSchema } from './providerCatalogue';
 import './providers.css';
-
-type AdapterField = {
-  name: string;
-  label: string;
-  secret: boolean;
-  required: boolean;
-  input_type: string;
-};
-
-type AdapterSchema = {
-  key: string;
-  label: string;
-  fields: AdapterField[];
-  default_capabilities: string[];
-};
 
 function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
-}
-
-function adapterFieldHint(field: AdapterField) {
-  if (field.secret) return 'Stored server-side only. The browser never receives it back.';
-  if (field.input_type === 'url' || field.name.includes('url') || field.name.includes('endpoint')) {
-    return 'Provider endpoint URL. Leave this to admins configuring self-hosted or compatible providers.';
-  }
-  return undefined;
 }
 
 type ProviderSettingsProps = {
@@ -46,6 +25,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const [models, setModels] = useState<ModelRecord[]>([]);
   const [profiles, setProfiles] = useState<ModelProfile[]>([]);
   const [selected, setSelected] = useState('fake');
+  const [defaultModelIdentifier, setDefaultModelIdentifier] = useState('fake-reviewer');
   const [name, setName] = useState('Fake local provider');
   const [values, setValues] = useState<Record<string, string>>({ scenario: 'valid' });
   const [modelConnectionId, setModelConnectionId] = useState('');
@@ -86,6 +66,28 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   }, [auth?.workspaceId]);
 
   const schema = schemas.find((item) => item.key === selected);
+  const defaultModelOptions = modelOptionsForSchema(schema);
+  const modelConnection = connections.find((connection) => connection.id === modelConnectionId);
+  const manualModelSchema = schemaForConnection(schemas, modelConnection);
+  const manualModelOptions = modelOptionsForConnection(schemas, models, modelConnection);
+  const defaultModelOptionKey = modelOptionKey(defaultModelOptions);
+  const manualModelOptionKey = modelOptionKey(manualModelOptions);
+
+  useEffect(() => {
+    if (defaultModelOptions.length === 0) return;
+    setDefaultModelIdentifier((current) => preferredModelIdentifier(defaultModelOptions, current));
+  }, [defaultModelOptionKey]);
+
+  useEffect(() => {
+    if (manualModelOptions.length === 0) return;
+    const nextIdentifier = preferredModelIdentifier(manualModelOptions, modelIdentifier);
+    setModelIdentifier(nextIdentifier);
+    setCapabilities(capabilitiesForModel(
+      manualModelOptions,
+      nextIdentifier,
+      manualModelSchema?.default_capabilities ?? []
+    ).join(', '));
+  }, [manualModelOptionKey, manualModelSchema?.key]);
 
   const createConnection = async () => {
     if (!auth || !schema) return;
@@ -96,6 +98,9 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     const config = Object.fromEntries(
       schema.fields.filter((field) => !field.secret).map((field) => [field.name, values[field.name] ?? ''])
     );
+    if (defaultModelOptions.some((model) => model.model_identifier === defaultModelIdentifier)) {
+      config.model_identifier = defaultModelIdentifier;
+    }
     try {
       const connection = await api.createProviderConnection(auth.csrfToken, {
         workspace_id: auth.workspaceId,
@@ -104,9 +109,11 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
         config,
         credentials
       });
-      setResult('Provider connection saved and tested. Credentials were not returned to the browser.');
+      const synced = await api.syncModels(auth.csrfToken, connection.id);
+      setResult(`Provider connection saved. ${synced.length} model${synced.length === 1 ? '' : 's'} available.`);
       await loadWorkspaceData();
       setModelConnectionId(connection.id);
+      setProfileModelId(synced[0]?.id ?? '');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -164,13 +171,13 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     }
   };
 
-  const syncCatalogue = async (connectionId: string) => {
+  const refreshModels = async (connectionId: string) => {
     /* v8 ignore next -- saved connection actions are unavailable until authenticated workspace data loads. */
     if (!auth) return;
     setError(null);
     try {
       const synced = await api.syncModels(auth.csrfToken, connectionId);
-      setResult(`Model catalogue synced with ${synced.length} record${synced.length === 1 ? '' : 's'}.`);
+      setResult(`Model list refreshed with ${synced.length} model${synced.length === 1 ? '' : 's'}.`);
       await loadWorkspaceData();
     } catch (err) {
       setError((err as Error).message);
@@ -215,6 +222,13 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
               {schemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
             </select>
           </Field>
+          <Field label="Model" hint="Available models reported by the selected provider.">
+            <ModelDropdown
+              value={defaultModelIdentifier}
+              options={defaultModelOptions}
+              onChange={setDefaultModelIdentifier}
+            />
+          </Field>
           <Field
             label="Display name"
             hint="An internal label for admins, for example 'OpenAI production'. This is not a URL."
@@ -251,8 +265,8 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
                     <Button type="button" onClick={() => void testConnection(connection.id)}>
                       <RefreshCcw size={16} /> Test
                     </Button>
-                    <Button type="button" onClick={() => void syncCatalogue(connection.id)}>
-                      Sync catalogue
+                    <Button type="button" onClick={() => void refreshModels(connection.id)}>
+                      Refresh models
                     </Button>
                   </div>
                 </article>
@@ -276,8 +290,20 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
                 {connections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name}</option>)}
               </select>
             </Field>
-            <Field label="Model identifier" hint="Provider model name, for example gpt-4.1-mini or claude-sonnet.">
-              <input value={modelIdentifier} onChange={(event) => setModelIdentifier(event.target.value)} />
+            <Field label="Model" hint="Choose from the selected provider connection's discovered model list.">
+              <ModelDropdown
+                value={modelIdentifier}
+                options={manualModelOptions}
+                disabled={!modelConnectionId}
+                onChange={(next) => {
+                  setModelIdentifier(next);
+                  setCapabilities(capabilitiesForModel(
+                    manualModelOptions,
+                    next,
+                    manualModelSchema?.default_capabilities ?? []
+                  ).join(', '));
+                }}
+              />
             </Field>
             <Field label="Capabilities" hint="Comma-separated provider-neutral capabilities.">
               <input value={capabilities} onChange={(event) => setCapabilities(event.target.value)} />

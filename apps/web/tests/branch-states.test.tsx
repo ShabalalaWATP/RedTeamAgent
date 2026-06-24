@@ -95,8 +95,8 @@ describe('unauthenticated and alternate branch states', () => {
     expect(await screen.findByText(/credentials stored/i)).toBeInTheDocument();
     await user.click(screen.getByText(/model routing and agent assignment/i));
     expect(screen.getByText('No probe recorded')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
-    expect(await screen.findByText('Model catalogue synced with 2 records.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /refresh models/i }));
+    expect(await screen.findByText('Model list refreshed with 2 models.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe needs review/i)).toBeInTheDocument();
   });
@@ -228,6 +228,9 @@ describe('unauthenticated and alternate branch states', () => {
       if (url.includes('/providers/connections?')) return jsonResponse([]);
       if (url.includes('/providers/models?')) return jsonResponse([]);
       if (url.includes('/providers/profiles?')) return jsonResponse([]);
+      if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
+        return jsonResponse([]);
+      }
       if (url.includes('/providers/connections') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
           adapter: 'custom',

@@ -120,6 +120,9 @@ def test_provider_routes_lists_and_failures(client: TestClient) -> None:
     adapters = client.get("/providers/adapters")
     assert adapters.status_code == 200
     assert any(item["key"] == "openai_compatible" for item in adapters.json())
+    azure = next(item for item in adapters.json() if item["key"] == "azure_openai")
+    assert all(field["name"] != "deployment" for field in azure["fields"])
+    assert [item["model_identifier"] for item in azure["catalogue_models"]] == ["gpt-4.1-mini", "gpt-4.1"]
 
     missing_secret = client.post(
         "/providers/connections",

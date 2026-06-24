@@ -1243,6 +1243,8 @@ export interface components {
         AuthResponse: {
             user: components["schemas"]["UserView"];
             workspace: components["schemas"]["WorkspaceView"];
+            /** Workspace Role */
+            workspace_role?: string | null;
             /** Csrf Token */
             csrf_token?: string | null;
             /** Verification Token */

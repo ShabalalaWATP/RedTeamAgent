@@ -52,7 +52,15 @@ function mockSettingsEndpoints() {
   mockFetch((url) => {
     const path = new URL(url).pathname;
     if (path === '/providers/adapters') {
-      return jsonResponse([{ key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] }]);
+      return jsonResponse([
+        {
+          key: 'fake',
+          label: 'Fake',
+          fields: [],
+          default_capabilities: ['text'],
+          catalogue_models: [{ model_identifier: 'fake-reviewer', capabilities: ['text'] }]
+        }
+      ]);
     }
     if (path === '/providers/connections') return jsonResponse([]);
     if (path === '/providers/models') return jsonResponse([]);

@@ -74,6 +74,7 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
   await expect(page.getByLabel('AI provider')).toBeVisible();
   await expect(page.getByLabel('Display name')).toBeVisible();
+  await expect(page.getByText('Available models reported by the selected provider.')).toBeVisible();
   await expect(page.getByText(/not a URL/i)).toBeVisible();
   await expect(page.getByText('Model routing and agent assignment')).toBeVisible();
   await expect(page.getByText('Evaluation tools')).toBeVisible();

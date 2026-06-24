@@ -205,7 +205,10 @@ export function adapterSchemas() {
       key: 'fake',
       label: 'Fake local provider',
       fields: [{ name: 'scenario', label: 'Scenario', secret: false, required: true, input_type: 'text' }],
-      default_capabilities: ['text', 'structured_output', 'streaming']
+      default_capabilities: ['text', 'structured_output', 'streaming'],
+      catalogue_models: [
+        { model_identifier: 'fake-reviewer', capabilities: ['text', 'structured_output', 'streaming'] }
+      ]
     }
   ];
 }

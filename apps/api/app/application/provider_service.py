@@ -27,12 +27,13 @@ class ProviderService:
     def adapter_schemas(self) -> list[dict[str, Any]]:
         return [
             {
-                "key": schema.key,
-                "label": schema.label,
-                "fields": [field.__dict__ for field in schema.fields],
-                "default_capabilities": schema.default_capabilities,
+                "key": adapter.schema.key,
+                "label": adapter.schema.label,
+                "fields": [field.__dict__ for field in adapter.schema.fields],
+                "default_capabilities": adapter.schema.default_capabilities,
+                "catalogue_models": self._catalogue_preview(adapter),
             }
-            for schema in self.registry.schemas()
+            for adapter in self.registry.adapters()
         ]
 
     def create_connection(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
@@ -232,3 +233,17 @@ class ProviderService:
     @staticmethod
     def _dict_value(value: object) -> dict[str, Any]:
         return value if isinstance(value, dict) else {}
+
+    def _catalogue_preview(self, adapter: ProviderAdapter) -> list[dict[str, Any]]:
+        try:
+            catalogue = adapter.catalogue_models({}, {})
+        except Exception:
+            return []
+        return [
+            {
+                "model_identifier": str(item["model_identifier"]),
+                "capabilities": self._string_list(item.get("capabilities", adapter.schema.default_capabilities)),
+            }
+            for item in catalogue
+            if "model_identifier" in item
+        ]
