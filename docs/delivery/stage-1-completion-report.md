@@ -21,6 +21,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Text source creation plus TXT, Markdown, PDF and DOCX upload/extraction support.
 - Context pack creation, listing and review-page assignment UI with visible agent key and version.
 - Completed runs capture assigned context-pack id, name, agent key, version and Markdown SHA-256 in routing and report provenance.
+- Cross-workspace IDOR matrix coverage denies unauthorised access across project, review, source, context pack, provider, model, profile, run, event, report and workflow routes.
 - Provider adapter schemas for fake, OpenAI, Anthropic, Google Gemini and generic OpenAI-compatible adapters.
 - Provider credential submission is write-only from the browser perspective.
 - Manual model registration with visible capability provenance and verification status.
@@ -41,7 +42,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
 - True long-running background execution and in-flight cancellation are still limited by the synchronous local workflow engine.
-- Full CRUD and IDOR coverage for every workspace-owned resource is not complete.
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
 - Visual-regression baselines are screenshots, not an automated baseline suite.
 - WCAG coverage includes an automated Playwright axe smoke check, not a complete WCAG 2.2 AA audit.
@@ -52,7 +52,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 - Provider endpoint validation blocks loopback, private, link-local and cloud metadata routes in hosted mode unless self-hosted mode is explicitly enabled.
 - Stored provider credentials are never returned by provider connection responses.
-- Object-level workspace checks are covered for representative project, review, source, context pack, run and report paths.
+- Object-level workspace checks cover the full Stage 1 route matrix for project, review, source, context pack, provider, model, profile, run, event, report and workflow paths.
 - Prompt-injection-style source text is treated as untrusted evidence in tests and cannot override deterministic routing or report quality gates.
 - The report footer was changed from a fixed overlay to normal document flow after visual verification showed it covering report content.
 - Frontend dev-tooling advisories were resolved by pinning patched transitive dependencies for Vite/esbuild and OpenAPI YAML parsing.
@@ -63,8 +63,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Test Results
 
-- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 22 tests.
-- Backend coverage: pytest-cov, 97.37 percent total coverage.
+- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 23 tests.
+- Backend coverage: pytest-cov, 97.43 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.
@@ -159,8 +159,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Secure-By-Design Acceptance Test Result
 
-- Representative tests cover tenant isolation, object-level authorisation, upload handling, prompt-injection resistance, provider endpoint validation, schema failure and credential write-only behaviour.
-- Full IDOR/resource matrix coverage remains incomplete and is release-blocking before Stage 1 can be called done.
+- Tests cover tenant isolation, object-level authorisation, the Stage 1 IDOR route matrix, upload handling, prompt-injection resistance, provider endpoint validation, schema failure and credential write-only behaviour.
 
 ## Recommended Next Step
 
