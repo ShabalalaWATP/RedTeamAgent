@@ -1,0 +1,17 @@
+flowchart TB
+  browser["Browser\nuntrusted client"] --> api["FastAPI API\ntrusted boundary"]
+  api --> session["HttpOnly session store"]
+  api --> db["PostgreSQL\nworkspace data"]
+  api --> redis["Redis\nrun events and queue"]
+  api --> minio["MinIO/S3\nsource originals"]
+  api --> providers["External model providers\ncontrolled egress"]
+  uploads["Uploaded sources\nuntrusted evidence"] --> api
+  providers --> api
+  api --> browser
+
+  classDef untrusted fill:#3b1f24,stroke:#f87171,color:#fff
+  classDef trusted fill:#172033,stroke:#60a5fa,color:#fff
+  classDef store fill:#14251c,stroke:#34d399,color:#fff
+  class browser,uploads,providers untrusted
+  class api,session trusted
+  class db,redis,minio store

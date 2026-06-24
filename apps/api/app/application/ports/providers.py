@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+
+@dataclass(frozen=True)
+class AdapterField:
+    name: str
+    label: str
+    secret: bool
+    required: bool
+    input_type: str = "text"
+
+
+@dataclass(frozen=True)
+class AdapterSchema:
+    key: str
+    label: str
+    fields: list[AdapterField]
+    default_capabilities: list[str]
+
+
+class ProviderAdapter(Protocol):
+    schema: AdapterSchema
+
+    def test_connection(self, config: dict[str, Any], credentials: dict[str, str]) -> dict[str, Any]: ...
+    def generate_structured(self, prompt: str, schema_name: str) -> dict[str, Any]: ...

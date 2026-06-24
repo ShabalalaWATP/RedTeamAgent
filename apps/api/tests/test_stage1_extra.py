@@ -1,0 +1,236 @@
+from __future__ import annotations
+
+from io import BytesIO
+from typing import Any
+
+import pytest
+from docx import Document
+from fastapi.testclient import TestClient
+from pypdf import PdfWriter
+
+from app.application.report_export import export_report
+from app.domain.exceptions import ValidationFailure
+from app.infrastructure.auth.security import PasswordService, TokenService
+from app.infrastructure.ingestion.extractors import SourceExtractor
+from app.infrastructure.storage import object_storage
+from app.infrastructure.storage.object_storage import LocalObjectStorage, S3ObjectStorage
+from tests.conftest import csrf_headers, register_verified
+from tests.test_stage1_api import create_project_review
+
+
+def test_auth_error_branches(client: TestClient) -> None:
+    weak = client.post("/auth/register", json={"email": "weak@example.com", "password": "too-short"})
+    assert weak.status_code == 422
+
+    first = client.post(
+        "/auth/register",
+        json={"email": "dup@example.com", "password": "correct horse battery"},
+    )
+    assert first.status_code == 200
+    duplicate = client.post(
+        "/auth/register",
+        json={"email": "dup@example.com", "password": "correct horse battery"},
+    )
+    assert duplicate.status_code == 409
+
+    unverified = client.post(
+        "/auth/login",
+        json={"email": "dup@example.com", "password": "correct horse battery"},
+    )
+    assert unverified.status_code == 401
+    bad_verify = client.post("/auth/verify-email", json={"token": "bad"})
+    assert bad_verify.status_code == 401
+    missing_reset = client.post("/auth/password-reset/request", json={"email": "missing@example.com"})
+    assert missing_reset.status_code == 200
+    assert missing_reset.json()["reset_token"] == ""
+    bad_reset = client.post(
+        "/auth/password-reset/confirm",
+        json={"token": "bad", "password": "correct horse battery"},
+    )
+    assert bad_reset.status_code == 401
+
+
+def test_me_project_lists_updates_deletes_and_cancel(client: TestClient) -> None:
+    auth = register_verified(client, "routes@example.com")
+    ids = create_project_review(client, auth)
+
+    assert client.get("/auth/me").status_code == 200
+    projects = client.get(f"/projects?workspace_id={auth['workspace_id']}")
+    assert projects.status_code == 200
+    assert projects.json()[0]["id"] == ids["project_id"]
+
+    updated = client.put(
+        f"/projects/{ids['project_id']}",
+        headers=csrf_headers(auth),
+        json={"title": "Updated", "description": "Updated description"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Updated"
+
+    reviews = client.get(f"/projects/{ids['project_id']}/reviews")
+    assert reviews.status_code == 200
+    assert reviews.json()[0]["id"] == ids["review_id"]
+
+    uploaded = client.post(
+        f"/reviews/{ids['review_id']}/sources/upload",
+        headers=csrf_headers(auth),
+        files={"file": ("notes.txt", b"plain source", "text/plain")},
+    )
+    assert uploaded.status_code == 200
+
+    run = client.post(f"/reviews/{ids['review_id']}/runs", headers=csrf_headers(auth))
+    assert run.status_code == 200
+    cancelled = client.post(f"/runs/{run.json()['id']}/cancel", headers=csrf_headers(auth))
+    assert cancelled.status_code == 200
+    assert cancelled.json()["state"] == "completed"
+
+    deleted = client.delete(f"/projects/{ids['project_id']}", headers=csrf_headers(auth))
+    assert deleted.status_code == 204
+
+
+def test_provider_routes_lists_and_failures(client: TestClient) -> None:
+    auth = register_verified(client, "provider@example.com")
+    adapters = client.get("/providers/adapters")
+    assert adapters.status_code == 200
+    assert any(item["key"] == "openai_compatible" for item in adapters.json())
+
+    missing_secret = client.post(
+        "/providers/connections",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "adapter": "openai",
+            "name": "OpenAI",
+            "config": {},
+            "credentials": {},
+        },
+    )
+    assert missing_secret.status_code == 422
+
+    fake = client.post(
+        "/providers/connections",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "adapter": "fake",
+            "name": "Fake",
+            "config": {},
+            "credentials": {},
+        },
+    )
+    assert fake.status_code == 200
+    listed = client.get(f"/providers/connections?workspace_id={auth['workspace_id']}")
+    assert listed.status_code == 200
+    assert listed.json()[0]["id"] == fake.json()["id"]
+    tested = client.post(f"/providers/connections/{fake.json()['id']}/test", headers=csrf_headers(auth))
+    assert tested.status_code == 200
+
+    model = client.post(
+        "/providers/models",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "provider_connection_id": fake.json()["id"],
+            "model_identifier": "fake",
+            "capabilities": ["text"],
+        },
+    )
+    assert model.status_code == 200
+    assert client.get(f"/providers/models?workspace_id={auth['workspace_id']}").json()[0]["id"] == model.json()["id"]
+
+    profile = client.post(
+        "/providers/profiles",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "name": "Fake profile",
+            "agent_key": "evidence_context",
+            "model_record_id": model.json()["id"],
+        },
+    )
+    assert profile.status_code == 200
+    profiles = client.get(f"/providers/profiles?workspace_id={auth['workspace_id']}")
+    assert profiles.json()[0]["id"] == profile.json()["id"]
+
+
+def test_extractor_storage_and_token_services(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    extractor = SourceExtractor()
+    text_result = extractor.extract("a.txt", "text/plain", b"hello")
+    assert text_result.chunks[0].text == "hello"
+    with pytest.raises(ValidationFailure):
+        extractor.extract("bad.bin", "application/octet-stream", b"bad")
+
+    pdf_buffer = BytesIO()
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    writer.write(pdf_buffer)
+    pdf_result = extractor.extract("a.pdf", "application/pdf", pdf_buffer.getvalue())
+    assert pdf_result.metadata["pages"] == 1
+    assert pdf_result.warnings
+
+    docx_buffer = BytesIO()
+    doc = Document()
+    doc.add_paragraph("DOCX evidence")
+    doc.save(docx_buffer)
+    docx_result = extractor.extract(
+        "a.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        docx_buffer.getvalue(),
+    )
+    assert docx_result.chunks[0].text == "DOCX evidence"
+
+    local = LocalObjectStorage(tmp_path)
+    local.put("one/two.txt", b"content", "text/plain")
+    assert local.get("one/two.txt") == b"content"
+
+    class FakeBody:
+        def read(self) -> bytes:
+            return b"s3"
+
+    class FakeS3Client:
+        def create_bucket(self, Bucket: str) -> None:
+            self.bucket = Bucket
+
+        def put_object(self, **kwargs: object) -> None:
+            self.object = kwargs
+
+        def get_object(self, **kwargs: object) -> dict[str, object]:
+            return {"Body": FakeBody()}
+
+    fake_client = FakeS3Client()
+    monkeypatch.setattr(object_storage.boto3, "client", lambda *args, **kwargs: fake_client)
+    settings = type(
+        "Settings",
+        (),
+        {
+            "s3_bucket": "bucket",
+            "s3_endpoint_url": "https://s3.example.test",
+            "s3_access_key_id": "id",
+            "s3_secret_access_key": "secret",
+        },
+    )()
+    s3 = S3ObjectStorage(settings)
+    s3.put("key", b"value", "text/plain")
+    assert s3.get("key") == b"s3"
+
+    passwords = PasswordService()
+    password_hash = passwords.hash("correct horse battery")
+    assert passwords.verify(password_hash, "correct horse battery") is True
+    assert passwords.verify(password_hash, "wrong") is False
+
+    tokens = TokenService("test-secret-key-for-tokens")
+    token = tokens.sign("purpose", "value")
+    assert tokens.verify("purpose", token, 60) == "value"
+    with pytest.raises(ValueError):
+        tokens.verify("other", token, 60)
+
+
+def test_export_report_defaults_to_markdown() -> None:
+    data = {
+        "title": "Title",
+        "provisional_recommendation": "Proceed",
+        "executive_summary": "Summary",
+        "findings": [{"severity": "low", "title": "Risk", "confidence": "medium", "evidence_label": "source"}],
+        "methodology": "Method",
+    }
+    assert export_report(data, "unknown").startswith("# Title")
