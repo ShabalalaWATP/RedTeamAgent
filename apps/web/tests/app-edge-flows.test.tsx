@@ -72,7 +72,7 @@ describe('edge UI flows', () => {
 
     storeAuth();
     renderProviderSettings();
-    fireEvent.submit((await screen.findByLabelText(/adapter/i)).closest('form') as HTMLFormElement);
+    fireEvent.submit((await screen.findByLabelText(/ai provider/i)).closest('form') as HTMLFormElement);
     expect(screen.getByRole('heading', { name: 'AI providers' })).toBeInTheDocument();
     cleanup();
 
@@ -148,11 +148,12 @@ describe('edge UI flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderProviderSettings();
-    await user.selectOptions(await screen.findByLabelText(/adapter/i), 'openai');
+    await user.selectOptions(await screen.findByLabelText(/ai provider/i), 'openai');
     expect(screen.getByLabelText(/api key/i)).toHaveAttribute('type', 'password');
     await user.type(screen.getByLabelText(/api key/i), 'secret-value');
-    await user.clear(screen.getByLabelText(/connection name/i));
-    await user.type(screen.getByLabelText(/connection name/i), 'OpenAI test');
+    expect(screen.getByText(/not a url/i)).toBeInTheDocument();
+    await user.clear(screen.getByLabelText(/display name/i));
+    await user.type(screen.getByLabelText(/display name/i), 'OpenAI test');
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('missing key');
   });
@@ -360,7 +361,6 @@ describe('edge UI flows', () => {
     renderApp('/workflows');
     expect(await screen.findByRole('alert')).toHaveTextContent('history unavailable');
   });
-
   it('shows non-completed workflow history without top risks', async () => {
     storeAuth();
     mockFetch((url) => {

@@ -8,14 +8,19 @@ afterEach(() => {
 });
 
 describe('admin settings route', () => {
-  it('renders AI providers and workspace administration as one admin view', async () => {
+  it('renders AI provider setup and collapsed admin controls as one admin view', async () => {
     storeAuth();
     mockSettingsEndpoints();
     renderApp('/settings');
 
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AI providers' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Workspace administration' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/ai provider/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
+    expect(screen.getByText(/not a url/i)).toBeInTheDocument();
+    expect(screen.getByText('Model routing and agent assignment')).toBeInTheDocument();
+    expect(screen.getByText('Evaluation tools')).toBeInTheDocument();
+    expect(screen.getAllByText('Workspace administration').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /providers/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /enterprise/i })).not.toBeInTheDocument();

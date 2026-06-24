@@ -1,5 +1,6 @@
 import { EnterprisePage } from '../enterprise/EnterprisePage';
 import { ProviderSettings } from '../providers/ProviderSettings';
+import './settings.css';
 
 export function SettingsPage() {
   return (
@@ -12,7 +13,13 @@ export function SettingsPage() {
       </div>
       <div className="settings-stack">
         <ProviderSettings embedded />
-        <EnterprisePage embedded />
+        <details className="settings-disclosure">
+          <summary>
+            <span>Workspace administration</span>
+            <small>Members, governance, audit, API tokens, webhooks and retention controls.</small>
+          </summary>
+          <EnterprisePage embedded />
+        </details>
       </div>
     </section>
   );

@@ -44,6 +44,11 @@ describe('ProviderSettings', () => {
 
     renderProviderSettings();
 
+    expect(await screen.findByLabelText(/ai provider/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
+    expect(screen.getByText(/not a url/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/connection name/i)).not.toBeInTheDocument();
+    await openDisclosure(user, /model routing and agent assignment/i);
     expect(await screen.findByText('No capabilities recorded.')).toBeInTheDocument();
     expect(screen.getByText(/fallback allowed/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^test$/i }));
@@ -52,6 +57,7 @@ describe('ProviderSettings', () => {
     expect(await screen.findByText('Model catalogue synced with 1 record.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
+    await openDisclosure(user, /evaluation tools/i);
     await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
     expect(await screen.findByText('10 fixtures')).toBeInTheDocument();
     expect(screen.getByText('Routing Precision')).toBeInTheDocument();
@@ -96,13 +102,14 @@ describe('ProviderSettings', () => {
 
     renderProviderSettings();
 
+    await openDisclosure(user, /model routing and agent assignment/i);
     expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
     await user.clear(screen.getByLabelText(/capabilities/i));
     await user.type(screen.getByLabelText(/capabilities/i), 'text, json, ');
-    await user.clear(screen.getByLabelText(/^provenance$/i));
-    await user.type(screen.getByLabelText(/^provenance$/i), 'manual override');
+    await user.clear(screen.getByLabelText(/provenance/i));
+    await user.type(screen.getByLabelText(/provenance/i), 'manual override');
     await user.selectOptions(screen.getByLabelText(/provider connection/i), 'conn-1');
-    await user.selectOptions(screen.getByLabelText(/model record/i), 'model-2');
+    await user.selectOptions(screen.getByLabelText(/^model record$/i), 'model-2');
     fireEvent.submit(screen.getByLabelText(/model identifier/i).closest('form') as HTMLFormElement);
     fireEvent.submit(screen.getByLabelText(/profile name/i).closest('form') as HTMLFormElement);
     await user.click(screen.getByRole('button', { name: /register model/i }));
@@ -115,6 +122,7 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
     await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
+    await openDisclosure(user, /evaluation tools/i);
     await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
     expect(await screen.findByText('evaluation denied')).toBeInTheDocument();
   });
@@ -201,6 +209,10 @@ function renderProviderSettings() {
       <ProviderSettings />
     </AuthProvider>
   );
+}
+
+async function openDisclosure(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
+  await user.click(await screen.findByText(name));
 }
 
 function adapterSchema() {

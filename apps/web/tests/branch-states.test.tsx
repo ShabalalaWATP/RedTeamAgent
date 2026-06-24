@@ -34,6 +34,7 @@ describe('unauthenticated and alternate branch states', () => {
 
     renderWithAuth(<ProviderSettings />);
     await user.click(await screen.findByRole('button', { name: /test and save/i }));
+    await user.click(screen.getByText(/evaluation tools/i));
     const evaluationButton = screen.getByRole('button', { name: /run stage 2 evaluation/i }) as HTMLButtonElement;
     evaluationButton.disabled = false;
     fireEvent.click(evaluationButton);
@@ -92,6 +93,7 @@ describe('unauthenticated and alternate branch states', () => {
     renderWithAuth(<ProviderSettings />);
 
     expect(await screen.findByText(/credentials stored/i)).toBeInTheDocument();
+    await user.click(screen.getByText(/model routing and agent assignment/i));
     expect(screen.getByText('No probe recorded')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
     expect(await screen.findByText('Model catalogue synced with 2 records.')).toBeInTheDocument();
@@ -145,6 +147,7 @@ describe('unauthenticated and alternate branch states', () => {
     sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
     renderWithAuth(<ProviderSettings />);
     expect(await screen.findByText('No connections')).toBeInTheDocument();
+    await user.click(screen.getByText(/model routing and agent assignment/i));
     for (const name of [/register model/i, /assign profile/i]) {
       const button = screen.getByRole('button', { name }) as HTMLButtonElement;
       button.disabled = false;
@@ -237,7 +240,7 @@ describe('unauthenticated and alternate branch states', () => {
     });
     sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
     renderWithAuth(<ProviderSettings />);
-    await user.selectOptions(await screen.findByLabelText(/adapter/i), 'custom');
+    await user.selectOptions(await screen.findByLabelText(/ai provider/i), 'custom');
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(await screen.findByText(/provider connection saved/i)).toBeInTheDocument();
   });

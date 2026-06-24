@@ -72,9 +72,12 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await page.goto('/settings');
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
-  await expect(page.getByText('manual · verified')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Workspace administration' })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Model comparison' }).getByText('fake-reviewer')).toBeVisible();
+  await expect(page.getByLabel('AI provider')).toBeVisible();
+  await expect(page.getByLabel('Display name')).toBeVisible();
+  await expect(page.getByText(/not a URL/i)).toBeVisible();
+  await expect(page.getByText('Model routing and agent assignment')).toBeVisible();
+  await expect(page.getByText('Evaluation tools')).toBeVisible();
+  await expect(page.locator('summary', { hasText: 'Workspace administration' })).toBeVisible();
   await verifyScreen(page, `settings${suffix}`);
 }
 

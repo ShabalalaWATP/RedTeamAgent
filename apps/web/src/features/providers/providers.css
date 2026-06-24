@@ -1,0 +1,12 @@
+.provider-setup-note {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field-bg);
+  padding: 14px 16px;
+}
+
+.provider-primary-grid {
+  margin-top: 4px;
+}
