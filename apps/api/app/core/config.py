@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     self_hosted_provider_mode: bool = False
     cors_origins: str = "http://localhost:5173"
     max_upload_bytes: int = 10 * 1024 * 1024
+    public_app_url: str = "http://localhost:5173"
+    mail_delivery: str = "local"
+    mail_from: str = "RedTeamAgent <noreply@localhost>"
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
     hosted_provider_base_urls: tuple[str, ...] = (
         "https://api.openai.com",
         "https://api.anthropic.com",

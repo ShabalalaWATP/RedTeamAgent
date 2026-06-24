@@ -67,7 +67,7 @@ Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deploym
 
 ## Known Limitations
 
-- Email verification and password reset use development tokens in local mode rather than a mail provider.
+- Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
 - Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration and capability metadata.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
 - Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes, true background workflow execution semantics, visual-regression baselines, complete WCAG audit coverage and full Docker runtime verification.

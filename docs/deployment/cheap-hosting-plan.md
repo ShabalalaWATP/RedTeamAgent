@@ -34,7 +34,7 @@ Current reference points:
 | Domain | Cloudflare Registrar at-cost `.com` or similar | annual, varies by TLD |
 | TLS | Caddy automatic HTTPS | $0 |
 | Backups | Provider snapshots or external object storage | start with provider snapshot, add off-server backups before real users |
-| Email | Transactional mail provider | defer until production email verification replaces local tokens |
+| Email | SMTP-capable transactional mail provider | often free or low-cost at small personal/project volume |
 
 For a first public beta, budget for roughly $25-$35/month plus the annual domain. A lower-cost VPS may work for a single-user demo, but 4 GiB RAM is the safer floor because PostgreSQL, Redis, MinIO, the API and the web server are co-located.
 
@@ -67,6 +67,9 @@ Edit `.env.production`:
 - Replace database and MinIO passwords.
 - Set `COOKIE_SECURE=true`.
 - Set `CORS_ORIGINS=https://your-domain`.
+- Set `PUBLIC_APP_URL=https://your-domain`.
+- Set `MAIL_DELIVERY=smtp`.
+- Set `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `SMTP_STARTTLS`.
 
 Then deploy:
 
@@ -103,9 +106,9 @@ When the app has more than one real user or stores material confidential data:
 
 1. Move PostgreSQL to a managed Postgres provider or a separate private database host.
 2. Move object storage from local MinIO to managed S3-compatible storage.
-3. Replace development email tokens with transactional email.
-4. Add uptime monitoring, log redaction, automated backups and restore drills.
-5. Move provider secrets into a managed secret store or encrypted volume strategy.
+3. Add uptime monitoring, log redaction, automated backups and restore drills.
+4. Move provider secrets into a managed secret store or encrypted volume strategy.
+5. Add a dedicated mail domain, SPF, DKIM and DMARC records before higher-volume public use.
 
 ## Source Links
 

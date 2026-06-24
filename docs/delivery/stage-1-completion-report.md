@@ -12,7 +12,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 - FastAPI modular-monolith backend with domain, application, interface-adapter and infrastructure boundaries.
 - React, TypeScript, Vite frontend with feature-oriented modules and generated OpenAPI client.
-- Registration, email verification token, login, logout and password-reset request flow.
+- Registration, email verification, login, logout and password-reset request flow.
+- Production-mode SMTP delivery sends verification and password-reset links without returning raw tokens in API responses.
 - Argon2id password hashing, HttpOnly session cookie and CSRF header checks.
 - Personal workspace creation for registered users.
 - Project creation, update, delete and project listing APIs plus frontend controls for authorised workspaces.
@@ -37,7 +38,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Incomplete DoD Items
 
-- Email verification and password reset are local-token development flows, not mail-provider-backed production flows.
 - Live model catalogue sync from provider APIs is not complete.
 - Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
@@ -63,8 +63,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Test Results
 
-- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 23 tests.
-- Backend coverage: pytest-cov, 97.43 percent total coverage.
+- Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 25 tests.
+- Backend coverage: pytest-cov, 97.51 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.

@@ -9,6 +9,7 @@ from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.orm import Session
 
 from app.application.auth_service import AuthService
+from app.application.ports.notifications import EmailSender
 from app.application.project_service import ProjectService
 from app.application.provider_service import ProviderService
 from app.application.review_service import ReviewService
@@ -19,6 +20,7 @@ from app.domain.exceptions import AuthenticationError, RateLimitExceeded
 from app.infrastructure.auth.security import PasswordService, TokenService
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
+from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
 from app.infrastructure.providers.adapters import ProviderRegistry
 from app.infrastructure.storage.object_storage import LocalObjectStorage
 
@@ -60,12 +62,20 @@ def token_service(settings: Annotated[Settings, Depends(get_settings)]) -> Token
     return TokenService(settings.app_secret_key)
 
 
+def email_sender(settings: Annotated[Settings, Depends(get_settings)]) -> EmailSender:
+    if settings.mail_delivery == "smtp":
+        return SmtpEmailSender(settings)
+    return NullEmailSender()
+
+
 def auth_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     passwords: Annotated[PasswordService, Depends(password_service)],
     tokens: Annotated[TokenService, Depends(token_service)],
+    sender: Annotated[EmailSender, Depends(email_sender)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthService:
-    return AuthService(repo, passwords, tokens)
+    return AuthService(repo, passwords, tokens, sender, settings.public_app_url, settings.is_local)
 
 
 def project_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> ProjectService:

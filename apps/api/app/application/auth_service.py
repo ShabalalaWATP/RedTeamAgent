@@ -2,15 +2,27 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.ports.notifications import EmailSender
 from app.application.ports.repositories import RepositoryPorts
 from app.domain.exceptions import AuthenticationError, ConflictError, NotFoundError, ValidationFailure
 
 
 class AuthService:
-    def __init__(self, repo: RepositoryPorts, password_service: Any, token_service: Any) -> None:
+    def __init__(
+        self,
+        repo: RepositoryPorts,
+        password_service: Any,
+        token_service: Any,
+        email_sender: EmailSender,
+        public_app_url: str,
+        expose_tokens: bool,
+    ) -> None:
         self.repo = repo
         self.passwords = password_service
         self.tokens = token_service
+        self.email_sender = email_sender
+        self.public_app_url = public_app_url.rstrip("/")
+        self.expose_tokens = expose_tokens
 
     def register(self, email: str, password: str) -> dict[str, Any]:
         self._validate_password(password)
@@ -19,9 +31,10 @@ class AuthService:
         user = self.repo.create_user(email, self.passwords.hash(password))
         workspace = self.repo.create_personal_workspace(user.id, user.email)
         token = self.tokens.sign("verify-email", user.id)
+        self._send_verification_email(user.email, token)
         self.repo.audit(workspace.id, user.id, "auth.registered", {"email": user.email})
         self.repo.commit()
-        return {"user": user, "workspace": workspace, "verification_token": token}
+        return {"user": user, "workspace": workspace, "verification_token": token if self.expose_tokens else None}
 
     def verify_email(self, token: str) -> None:
         try:
@@ -56,9 +69,10 @@ class AuthService:
         if user is None:
             return {"reset_token": ""}
         token = self.tokens.sign("password-reset", user.id)
+        self._send_password_reset_email(user.email, token)
         self.repo.audit(None, user.id, "auth.password_reset_requested", {})
         self.repo.commit()
-        return {"reset_token": token}
+        return {"reset_token": token if self.expose_tokens else ""}
 
     def confirm_password_reset(self, token: str, password: str) -> None:
         self._validate_password(password)
@@ -76,3 +90,19 @@ class AuthService:
     def _validate_password(password: str) -> None:
         if len(password) < 12:
             raise ValidationFailure("Password must be at least 12 characters.")
+
+    def _send_verification_email(self, email: str, token: str) -> None:
+        link = f"{self.public_app_url}/auth?verification_token={token}"
+        self.email_sender.send(
+            email,
+            "Verify your RedTeamAgent email",
+            f"Verify your RedTeamAgent account:\n\n{link}\n",
+        )
+
+    def _send_password_reset_email(self, email: str, token: str) -> None:
+        link = f"{self.public_app_url}/auth?reset_token={token}"
+        self.email_sender.send(
+            email,
+            "Reset your RedTeamAgent password",
+            f"Reset your RedTeamAgent password:\n\n{link}\n",
+        )
