@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import JSON as JsonType
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -107,7 +108,7 @@ class EvidenceChunk(Base):
     workspace_id: Mapped[str] = mapped_column(String(36), index=True)
     locator: Mapped[str] = mapped_column(String(260))
     text: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float]] = mapped_column(JsonType, default=list)
+    embedding: Mapped[list[float]] = mapped_column(Vector(16))
 
 
 class ContextPack(Base):

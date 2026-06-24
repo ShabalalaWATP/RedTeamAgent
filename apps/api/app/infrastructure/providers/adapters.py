@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from app.application.ports.providers import AdapterField, AdapterSchema, ProviderAdapter
-from app.domain.policies import validate_provider_endpoint
+from app.infrastructure.providers.live import (
+    AnthropicProviderAdapter,
+    GeminiProviderAdapter,
+    OpenAICompatibleProviderAdapter,
+    OpenAIProviderAdapter,
+)
 
 
 class FakeProviderAdapter:
@@ -41,7 +46,15 @@ class FakeProviderAdapter:
             "source": "deterministic_fake_probe",
         }
 
-    def generate_structured(self, prompt: str, schema_name: str) -> dict[str, Any]:
+    def generate_structured(
+        self,
+        prompt: str,
+        schema_name: str,
+        config: dict[str, Any] | None = None,
+        credentials: dict[str, str] | None = None,
+        model_identifier: str | None = None,
+    ) -> dict[str, Any]:
+        del config, credentials, model_identifier
         if "invalid_schema" in prompt:
             return {"invalid": True}
         return {
@@ -59,62 +72,11 @@ class FakeProviderAdapter:
         }
 
 
-class StaticProviderAdapter:
-    def __init__(
-        self,
-        schema: AdapterSchema,
-        catalogue: list[dict[str, Any]] | None = None,
-        self_hosted_mode: bool = False,
-    ) -> None:
-        self.schema = schema
-        self.catalogue = catalogue or []
-        self.self_hosted_mode = self_hosted_mode
-
-    def test_connection(self, config: dict[str, Any], credentials: dict[str, str]) -> dict[str, Any]:
-        if "endpoint_url" in config:
-            validate_provider_endpoint(str(config["endpoint_url"]), self.self_hosted_mode)
-        missing = [
-            field.name
-            for field in self.schema.fields
-            if field.secret and field.required and not credentials.get(field.name)
-        ]
-        return {"ok": not missing, "missing": missing, "capabilities": self.schema.default_capabilities}
-
-    def catalogue_models(self, config: dict[str, Any], credentials: dict[str, str]) -> list[dict[str, Any]]:
-        del config, credentials
-        return [
-            {
-                "model_identifier": item["model_identifier"],
-                "capabilities": item.get("capabilities", self.schema.default_capabilities),
-                "provenance": f"adapter_catalogue:{self.schema.key}",
-                "verified": False,
-                "probe_result": {"ok": None, "source": "static_adapter_catalogue"},
-            }
-            for item in self.catalogue
-        ]
-
-    def probe_capabilities(self, model_identifier: str, capabilities: list[str]) -> dict[str, Any]:
-        available = set(self.schema.default_capabilities)
-        requested = set(capabilities)
-        missing = sorted(requested - available)
-        return {
-            "ok": not missing,
-            "model_identifier": model_identifier,
-            "verified_capabilities": sorted(requested & available),
-            "missing_capabilities": missing,
-            "source": "static_adapter_probe",
-        }
-
-    def generate_structured(self, prompt: str, schema_name: str) -> dict[str, Any]:
-        del prompt, schema_name
-        raise RuntimeError("Live provider generation is disabled in Stage 1 local mode.")
-
-
 class ProviderRegistry:
     def __init__(self, self_hosted_mode: bool = False) -> None:
         self._adapters: dict[str, ProviderAdapter] = {
             "fake": FakeProviderAdapter(),
-            "openai": StaticProviderAdapter(
+            "openai": OpenAIProviderAdapter(
                 AdapterSchema(
                     key="openai",
                     label="OpenAI",
@@ -126,7 +88,7 @@ class ProviderRegistry:
                     {"model_identifier": "gpt-5.4-mini"},
                 ],
             ),
-            "anthropic": StaticProviderAdapter(
+            "anthropic": AnthropicProviderAdapter(
                 AdapterSchema(
                     key="anthropic",
                     label="Anthropic",
@@ -138,7 +100,7 @@ class ProviderRegistry:
                     {"model_identifier": "claude-haiku-4-5"},
                 ],
             ),
-            "google_gemini": StaticProviderAdapter(
+            "google_gemini": GeminiProviderAdapter(
                 AdapterSchema(
                     key="google_gemini",
                     label="Google Gemini",
@@ -150,7 +112,7 @@ class ProviderRegistry:
                     {"model_identifier": "gemini-3-flash"},
                 ],
             ),
-            "openai_compatible": StaticProviderAdapter(
+            "openai_compatible": OpenAICompatibleProviderAdapter(
                 AdapterSchema(
                     key="openai_compatible",
                     label="Generic OpenAI-compatible",

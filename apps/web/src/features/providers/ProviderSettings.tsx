@@ -109,6 +109,7 @@ export function ProviderSettings() {
   };
 
   const createModel = async () => {
+    /* v8 ignore next -- defensive guard; the register button is disabled until a connection is selected. */
     if (!auth || !modelConnectionId) return;
     setError(null);
     try {
@@ -129,6 +130,7 @@ export function ProviderSettings() {
   };
 
   const createProfile = async () => {
+    /* v8 ignore next -- defensive guard; the assign button is disabled until a model is selected. */
     if (!auth || !profileModelId) return;
     setError(null);
     try {
@@ -147,6 +149,7 @@ export function ProviderSettings() {
   };
 
   const testConnection = async (connectionId: string) => {
+    /* v8 ignore next -- saved connection actions are unavailable until authenticated workspace data loads. */
     if (!auth) return;
     setError(null);
     try {
@@ -158,6 +161,7 @@ export function ProviderSettings() {
   };
 
   const syncCatalogue = async (connectionId: string) => {
+    /* v8 ignore next -- saved connection actions are unavailable until authenticated workspace data loads. */
     if (!auth) return;
     setError(null);
     try {
@@ -170,6 +174,7 @@ export function ProviderSettings() {
   };
 
   const probeModel = async (modelId: string) => {
+    /* v8 ignore next -- model actions are unavailable until authenticated workspace data loads. */
     if (!auth) return;
     setError(null);
     try {

@@ -16,6 +16,7 @@ def export_report(data: dict[str, Any], fmt: str) -> str:
 def _markdown(data: dict[str, Any]) -> str:
     findings = data.get("findings", [])
     context_packs = data.get("context_packs", [])
+    retrieved_evidence = data.get("retrieved_evidence", [])
     lines = [
         f"# {data['title']}",
         "",
@@ -34,6 +35,12 @@ def _markdown(data: dict[str, Any]) -> str:
                 f"  - Evidence: {finding['evidence_label']}",
             ]
         )
+        if finding.get("evidence_excerpt"):
+            lines.append(f"  - Excerpt: {finding['evidence_excerpt']}")
+    if retrieved_evidence:
+        lines.extend(["", "## Retrieved Evidence"])
+        for item in retrieved_evidence:
+            lines.append(f"- {item['locator']}: {item['excerpt']}")
     if context_packs:
         lines.extend(["", "## Context Packs"])
         for pack in context_packs:

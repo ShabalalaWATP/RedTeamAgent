@@ -115,6 +115,7 @@ def test_no_source_report_and_quality_gate_branches(client: TestClient) -> None:
     assert run.status_code == 200
     report = client.get(f"/runs/{run.json()['id']}/report")
     assert report.json()["data"]["findings"][0]["evidence_type"] == "assumption"
+    assert report.json()["data"]["retrieved_evidence"] == []
     assert report.json()["data"]["blockers"]
 
     with pytest.raises(QualityGateError):

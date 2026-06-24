@@ -107,12 +107,24 @@ const contextPackProvenanceSchema = z.object({
   markdown_sha256: z.string()
 });
 
+const retrievedEvidenceSchema = z.object({
+  source_id: z.string(),
+  source_filename: z.string(),
+  locator: z.string(),
+  excerpt: z.string(),
+  score: z.number()
+});
+
 const reportSchema = z.object({
   data: z.object({
     title: z.string(),
     provisional_recommendation: z.string(),
     executive_summary: z.string(),
-    coverage_map: z.object({ sources: z.number(), agents: z.array(z.string()) }),
+    coverage_map: z.object({
+      sources: z.number(),
+      agents: z.array(z.string()),
+      retrieved_evidence: z.number().optional()
+    }),
     top_risks: z.array(z.string()),
     dependencies: z.array(z.string()),
     blockers: z.array(z.string()),
@@ -120,6 +132,7 @@ const reportSchema = z.object({
     evidence_gaps: z.array(z.string()),
     context_packs: z.array(contextPackProvenanceSchema).default([]),
     findings: z.array(z.record(z.string(), z.unknown())),
+    retrieved_evidence: z.array(retrievedEvidenceSchema).default([]),
     sources: z.array(z.string()),
     methodology: z.string()
   })

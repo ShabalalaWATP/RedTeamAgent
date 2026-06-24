@@ -68,12 +68,14 @@ export function NewReviewPage() {
   };
 
   const addText = async () => {
+    /* v8 ignore next -- the add-text button is disabled until a review exists. */
     if (!auth || !review) return;
     const source = await api.addTextSource(auth.csrfToken, review.id, proposal);
     setSources((current) => [source, ...current]);
   };
 
   const upload = async (file: File | undefined) => {
+    /* v8 ignore next -- uploads are ignored until a review and file are present. */
     if (!auth || !review || !file) return;
     const source = await api.uploadSource(auth.csrfToken, review.id, file);
     setSources((current) => [source, ...current]);
@@ -98,11 +100,13 @@ export function NewReviewPage() {
   };
 
   const runPreflight = async () => {
+    /* v8 ignore next -- the preflight button is disabled until a review exists. */
     if (!review) return;
     setPreflight(await api.preflight(review.id));
   };
 
   const startRun = async () => {
+    /* v8 ignore next -- the run button is disabled until a review exists. */
     if (!auth || !review) return;
     const run = await api.startRun(auth.csrfToken, review.id);
     navigate(`/runs/${run.id}`);

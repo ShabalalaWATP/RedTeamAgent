@@ -17,6 +17,7 @@ from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.domain.exceptions import AuthenticationError, RateLimitExceeded
+from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.security import PasswordService, TokenService
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
@@ -89,8 +90,9 @@ def provider_registry(settings: Annotated[Settings, Depends(get_settings)]) -> P
 def provider_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProviderService:
-    return ProviderService(repo, registry)
+    return ProviderService(repo, registry, FernetCredentialVault(settings.app_secret_key))
 
 
 def review_service(

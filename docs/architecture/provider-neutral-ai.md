@@ -19,4 +19,6 @@ Adapters are registered by name and expose configuration schemas that the fronte
 - `google_gemini`: native Gemini text-generation schema.
 - `openai_compatible`: generic endpoint-compatible schema with SSRF-aware endpoint validation.
 
-Live credentials are optional for Stage 1. The fake provider is the default local route. Stage 1 catalogue sync uses adapter-maintained snapshots and durable probe records; direct live provider API sync should wait for a production credential-encryption strategy.
+Live credentials are optional for Stage 1. The fake provider is the default local route. OpenAI, Anthropic, Google Gemini and OpenAI-compatible adapters can issue live structured text-generation calls when server-side encrypted credentials and a model identifier are supplied. Catalogue sync uses adapter-maintained snapshots by default and can opt into live provider catalogue calls with `live_catalogue` configuration.
+
+Provider credentials are encrypted at rest with a Fernet vault derived from `APP_SECRET_KEY`, decrypted only server-side and never returned to the browser.

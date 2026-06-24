@@ -47,6 +47,7 @@ See `trust-boundaries.mmd`.
 - File type, size and filename validation.
 - Random object keys for source originals.
 - Adapter endpoint validation with explicit self-hosted exception.
+- Server-side provider credential encryption and write-only browser responses.
 - Strict specialist output schemas and bounded fake-provider repair/failure paths.
 - Structured report quality gate.
 - Tests for tenant isolation, upload handling, prompt injection, endpoint validation and schema failure.

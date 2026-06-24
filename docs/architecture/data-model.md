@@ -9,7 +9,7 @@
 - `Project`: workspace-owned review container.
 - `Review`: project-owned proposal review with mode and focus chips.
 - `Source`: uploaded or pasted evidence with extraction state, warnings, object key and metadata.
-- `EvidenceChunk`: extracted text with locators and retrieval metadata.
+- `EvidenceChunk`: extracted text with locators and a pgvector-compatible 16-dimension retrieval embedding.
 - `ContextPack`: versioned Markdown context assigned to an agent.
 - `ProviderConnection`: write-only provider credential and adapter configuration.
 - `ModelRecord`: model capability snapshot, provenance, verification state and durable probe result.

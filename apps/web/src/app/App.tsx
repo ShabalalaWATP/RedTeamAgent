@@ -9,6 +9,7 @@ import { NewReviewPage } from '../features/reviews/NewReviewPage';
 import { WorkflowHistory } from '../features/workflows/WorkflowHistory';
 import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
+import './theme.css';
 import './styles.css';
 
 function Layout() {

@@ -152,6 +152,90 @@ describe('ReportPage run controls', () => {
     await user.click(screen.getByRole('button', { name: /retry run/i }));
     expect(fetchMock.mock.calls.every(([, init]) => init?.method !== 'POST')).toBe(true);
   });
+
+  it('handles stream events before the initial run snapshot and ignores late loads after unmount', async () => {
+    storeAuth();
+    vi.stubGlobal('EventSource', FakeEventSource);
+    let resolveRun: (value: Response) => void = () => undefined;
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') {
+        return new Promise<Response>((resolve) => {
+          resolveRun = resolve;
+        });
+      }
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: reportResponse() });
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    const rendered = renderApp('/runs/run-1');
+    act(() => {
+      FakeEventSource.instances[0].emit({ id: 'event-early', state: 'framing', message: 'early', sequence: 1 });
+    });
+    expect(await screen.findByText('early')).toBeInTheDocument();
+    rendered.unmount();
+    await act(async () => {
+      resolveRun(jsonResponse(runResponse('completed')));
+    });
+  });
+
+  it('renders and filters a 50 finding report within the Stage 1 budget', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: largeReportResponse() });
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    const started = performance.now();
+    renderApp('/runs/run-1');
+
+    expect(await screen.findByText('Finding 50')).toBeInTheDocument();
+    expect(performance.now() - started).toBeLessThan(2000);
+    await user.click(screen.getByRole('button', { name: 'high' }));
+    expect(screen.getByText('Finding 2')).toBeInTheDocument();
+    expect(screen.queryByText('Finding 1')).not.toBeInTheDocument();
+  });
+
+  it('ignores late report and run errors after unmount', async () => {
+    storeAuth();
+    let resolveReport: (value: Response) => void = () => undefined;
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/runs/run-1/report')) {
+        return new Promise<Response>((resolve) => {
+          resolveReport = resolve;
+        });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    const rendered = renderApp('/runs/run-1');
+    await screen.findByText('completed');
+    rendered.unmount();
+    await act(async () => {
+      resolveReport(jsonResponse({ data: reportResponse() }));
+    });
+
+    let rejectRun: (reason: Error) => void = () => undefined;
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') {
+        return new Promise<Response>((_resolve, reject) => {
+          rejectRun = reject;
+        });
+      }
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    const second = renderApp('/runs/run-1');
+    second.unmount();
+    await act(async () => {
+      rejectRun(new Error('late failure'));
+    });
+  });
 });
 
 function runResponse(state: string) {
@@ -162,6 +246,19 @@ function runResponse(state: string) {
     state,
     routing_plan: {},
     usage: {}
+  };
+}
+
+function largeReportResponse() {
+  const base = reportResponse();
+  return {
+    ...base,
+    findings: Array.from({ length: 50 }, (_item, index) => ({
+      ...base.findings[0],
+      id: `finding-${index + 1}`,
+      title: `Finding ${index + 1}`,
+      severity: index % 2 === 0 ? 'medium' : 'high'
+    }))
   };
 }
 
@@ -176,6 +273,15 @@ function reportResponse() {
     blockers: [],
     assumptions: [],
     evidence_gaps: [],
+    retrieved_evidence: [
+      {
+        source_id: 'source-1',
+        source_filename: 'proposal.md',
+        locator: 'proposal.md:1',
+        excerpt: 'Named owner evidence.',
+        score: 1.25
+      }
+    ],
     context_packs: [
       {
         id: 'pack-1',
@@ -187,6 +293,20 @@ function reportResponse() {
     ],
     sources: [],
     methodology: 'Method',
-    findings: []
+    findings: [
+      {
+        id: 'finding-1',
+        title: 'Owner needed',
+        severity: 'low',
+        confidence: 'medium',
+        agent: 'operations_delivery',
+        category: 'delivery',
+        evidence_type: 'source',
+        evidence_label: 'proposal.md:1',
+        evidence_excerpt: 'Named owner evidence.',
+        summary: 'Assign an owner.',
+        recommended_action: 'Assign owner'
+      }
+    ]
   };
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.ports.credentials import CredentialVault
 from app.application.ports.providers import ProviderAdapter
 from app.application.ports.repositories import RepositoryPorts
 from app.domain.enums import WorkspaceRole
@@ -10,9 +11,10 @@ from app.domain.policies import require_admin
 
 
 class ProviderService:
-    def __init__(self, repo: RepositoryPorts, registry: Any) -> None:
+    def __init__(self, repo: RepositoryPorts, registry: Any, credential_vault: CredentialVault) -> None:
         self.repo = repo
         self.registry = registry
+        self.credential_vault = credential_vault
 
     def adapter_schemas(self) -> list[dict[str, Any]]:
         return [
@@ -38,7 +40,7 @@ class ProviderService:
                 "adapter": data["adapter"],
                 "name": data["name"],
                 "config": data.get("config", {}),
-                "encrypted_credentials": self._seal(data.get("credentials", {})),
+                "encrypted_credentials": self.credential_vault.seal(data.get("credentials", {})),
             },
         )
         self.repo.audit(workspace_id, user_id, "provider.connection_created", {"adapter": data["adapter"]})
@@ -55,7 +57,7 @@ class ProviderService:
             raise NotFoundError("Provider connection not found.")
         self._role(user_id, connection.workspace_id)
         adapter = self._adapter(connection.adapter)
-        return adapter.test_connection(connection.config, {"api_key": "__stored__"})
+        return adapter.test_connection(connection.config, self._credentials(connection.encrypted_credentials))
 
     def sync_models(self, user_id: str, connection_id: str) -> list[Any]:
         connection = self.repo.get_provider_connection(connection_id)
@@ -64,7 +66,7 @@ class ProviderService:
         require_admin(self._role(user_id, connection.workspace_id))
         adapter = self._adapter(connection.adapter)
         synced: list[Any] = []
-        for item in adapter.catalogue_models(connection.config, {"api_key": "__stored__"}):
+        for item in adapter.catalogue_models(connection.config, self._credentials(connection.encrypted_credentials)):
             data = {
                 "provider_connection_id": connection.id,
                 "model_identifier": str(item["model_identifier"]),
@@ -161,9 +163,11 @@ class ProviderService:
             raise AuthorisationError("Workspace access denied.")
         return WorkspaceRole(role)
 
-    @staticmethod
-    def _seal(credentials: dict[str, str]) -> dict[str, str]:
-        return {key: f"stored:{len(value)}" for key, value in credentials.items() if value}
+    def _credentials(self, sealed_credentials: dict[str, str]) -> dict[str, str]:
+        try:
+            return self.credential_vault.unseal(sealed_credentials)
+        except ValueError as exc:
+            raise ValidationFailure("Stored provider credentials could not be decrypted.") from exc
 
     @staticmethod
     def _connection_view(connection: Any) -> dict[str, Any]:

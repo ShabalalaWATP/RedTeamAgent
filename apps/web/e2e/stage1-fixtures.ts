@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, type Route } from '@playwright/test';
 
 const apiHeaders = {
@@ -78,6 +77,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (url.pathname === '/reviews/review-1/sources/text') {
       await fulfilJson(route, sourceResponse());
+      return;
+    }
+    if (url.pathname === '/reviews/review-1/sources/upload') {
+      await fulfilJson(route, sourceResponse('launch-notes.md'));
       return;
     }
     if (url.pathname === '/context-packs' && request.method() === 'GET') {
@@ -184,15 +187,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
 export async function signIn(page: Page) {
   await page.goto('/auth');
   await page.getByRole('button', { name: 'Register' }).click();
+  await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
   await page.getByRole('button', { name: 'Verify email' }).click();
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
-}
-
-export async function assertNoSeriousA11yIssues(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious');
-  expect(serious).toEqual([]);
 }
 
 export function projectResponse() {
@@ -235,10 +233,10 @@ function reviewResponse() {
   };
 }
 
-function sourceResponse() {
+function sourceResponse(filename = 'proposal.txt') {
   return {
     id: 'source-1',
-    filename: 'proposal.txt',
+    filename,
     content_type: 'text/plain',
     state: 'ingested',
     metadata: { locator: 'source-1:line-1' },
@@ -313,7 +311,17 @@ function reportResponse() {
         confidence: 'medium',
         category: 'evidence',
         agent: 'cybersecurity_privacy',
-        evidence_label: 'source-1:line-1'
+        evidence_label: 'proposal.txt:1',
+        evidence_excerpt: 'Adopt the proposal with staged validation, named owners and rollback criteria.'
+      }
+    ],
+    retrieved_evidence: [
+      {
+        source_id: 'source-1',
+        source_filename: 'proposal.txt',
+        locator: 'proposal.txt:1',
+        excerpt: 'Adopt the proposal with staged validation, named owners and rollback criteria.',
+        score: 2.14
       }
     ],
     sources: ['proposal.txt'],

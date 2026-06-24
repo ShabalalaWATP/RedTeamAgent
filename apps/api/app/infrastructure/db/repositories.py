@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import RunState, SourceState, WorkspaceRole
 from app.infrastructure.auth.security import new_session_expiry
 from app.infrastructure.db import models
+from app.infrastructure.search.evidence_search import EvidenceCandidate, embedding_for_text, rank_candidates
 
 
 class SqlRepository:
@@ -160,9 +161,44 @@ class SqlRepository:
                     workspace_id=workspace_id,
                     locator=chunk["locator"],
                     text=chunk["text"],
-                    embedding=[0.0, 0.0, 0.0],
+                    embedding=embedding_for_text(chunk["text"]),
                 )
             )
+
+    def search_evidence_chunks(
+        self, workspace_id: str, review_id: str, query: str, limit: int
+    ) -> list[dict[str, object]]:
+        rows = self._evidence_rows(workspace_id, review_id, query, max(limit * 4, limit))
+        candidates = [
+            EvidenceCandidate(
+                source_id=source.id,
+                source_filename=source.filename,
+                locator=chunk.locator,
+                text=chunk.text,
+                embedding=[float(value) for value in chunk.embedding],
+            )
+            for chunk, source in rows
+        ]
+        return rank_candidates(candidates, query, limit)
+
+    def _evidence_rows(self, workspace_id: str, review_id: str, query: str, limit: int) -> list[Any]:
+        statement = (
+            select(models.EvidenceChunk, models.Source)
+            .join(models.Source, models.Source.id == models.EvidenceChunk.source_id)
+            .where(models.EvidenceChunk.workspace_id == workspace_id, models.Source.review_id == review_id)
+        )
+        if self.session.get_bind().dialect.name == "postgresql" and query.strip():
+            ts_query = func.websearch_to_tsquery("english", query)
+            vector = func.to_tsvector("english", models.EvidenceChunk.text)
+            query_embedding = embedding_for_text(query)
+            ranked = statement.where(vector.op("@@")(ts_query)).order_by(
+                desc(func.ts_rank_cd(vector, ts_query)),
+                models.EvidenceChunk.embedding.cosine_distance(query_embedding),
+            )
+            rows = list(self.session.execute(ranked.limit(limit)).all())
+            if rows:
+                return rows
+        return list(self.session.execute(statement.limit(limit)).all())
 
     def create_context_pack(self, workspace_id: str, data: dict[str, Any]) -> models.ContextPack:
         pack = models.ContextPack(workspace_id=workspace_id, **data)

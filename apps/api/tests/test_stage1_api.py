@@ -136,9 +136,14 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report.status_code == 200, report.text
     report_data = report.json()["data"]
     assert report_data["findings"][0]["evidence_type"] == "source"
+    assert report_data["findings"][0]["evidence_label"] == "proposal.md:1"
+    assert "support coverage" in report_data["findings"][0]["evidence_excerpt"]
+    assert report_data["retrieved_evidence"][0]["locator"] == "proposal.md:1"
+    assert "support coverage" in report_data["retrieved_evidence"][0]["excerpt"]
+    assert report_data["coverage_map"]["retrieved_evidence"] == 1
     assert "professional sign-off" in report_data["assumptions"][0]
     assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
-    assert "context-pack version snapshot" in report_data["methodology"]
+    assert "hybrid evidence retrieval" in report_data["methodology"]
 
     workflows = client.get(f"/workspaces/{auth['workspace_id']}/workflows")
     assert workflows.status_code == 200, workflows.text
@@ -155,6 +160,7 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert json.loads(exported_json.text)["title"] == "Checkout migration"
     exported_markdown = client.get(f"/runs/{run.json()['id']}/report/export?fmt=markdown").text
     assert exported_markdown.startswith("#")
+    assert "## Retrieved Evidence" in exported_markdown
     assert "## Context Packs" in exported_markdown
     assert "<html>" in client.get(f"/runs/{run.json()['id']}/report/export?fmt=html").text
 

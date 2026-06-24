@@ -125,18 +125,23 @@ class WorkflowService:
     def _compose_report(self, review: Any, run_id: str, routing_plan: dict[str, Any]) -> dict[str, Any]:
         sources = self.repo.list_sources(review.id)
         source_labels = [f"{source.filename}:{source.id}" for source in sources]
-        evidence_label = source_labels[0] if source_labels else "assumption"
+        evidence_query = " ".join([review.title, review.proposal_text, *review.focus_chips])
+        retrieved_evidence = self.repo.search_evidence_chunks(review.workspace_id, review.id, evidence_query, 5)
+        primary_evidence = retrieved_evidence[0] if retrieved_evidence else None
+        evidence_label = str(primary_evidence["locator"]) if primary_evidence else "assumption"
+        evidence_type = "source" if primary_evidence else "assumption"
         context_packs = self._safe_list(routing_plan.get("context_packs", []))
         findings = [
             {
                 "id": "finding-1",
                 "title": "Review evidence needs explicit ownership before launch.",
                 "severity": "medium",
-                "confidence": "high" if sources else "low",
+                "confidence": "high" if primary_evidence else "low",
                 "agent": "operations_delivery",
                 "category": "delivery",
-                "evidence_type": "source" if sources else "assumption",
+                "evidence_type": evidence_type,
                 "evidence_label": evidence_label,
+                "evidence_excerpt": str(primary_evidence["excerpt"]) if primary_evidence else "",
                 "summary": "The proposal should assign owners for validation, rollout and operational follow-up.",
                 "recommended_action": "Assign named owners and acceptance criteria for each high-risk dependency.",
             }
@@ -146,12 +151,16 @@ class WorkflowService:
             "title": review.title,
             "provisional_recommendation": "Proceed with controls and validation before irreversible rollout.",
             "executive_summary": "The review found manageable risk with evidence gaps that need active closure.",
-            "coverage_map": {"sources": len(sources), "agents": routing_plan["selected_agents"]},
+            "coverage_map": {
+                "sources": len(sources),
+                "agents": routing_plan["selected_agents"],
+                "retrieved_evidence": len(retrieved_evidence),
+            },
             "top_risks": [finding["title"] for finding in findings],
             "dependencies": ["Provider routing policy", "Evidence quality", "Operational ownership"],
-            "blockers": [] if sources else ["No ingested evidence was available."],
+            "blockers": [] if primary_evidence else ["No retrievable evidence was available."],
             "assumptions": ["Report is decision support and not professional sign-off."],
-            "evidence_gaps": [] if sources else ["No source-backed evidence was ingested."],
+            "evidence_gaps": [] if primary_evidence else ["No source-backed evidence was retrieved."],
             "specialist_findings": [
                 {"agent": key, "label": AGENT_LABELS[AgentKey(key)]}
                 for key in routing_plan["selected_agents"]
@@ -159,11 +168,12 @@ class WorkflowService:
             ],
             "context_packs": context_packs,
             "findings": findings,
+            "retrieved_evidence": retrieved_evidence,
             "recommended_actions": [finding["recommended_action"] for finding in findings],
             "sources": source_labels,
             "methodology": (
-                "Deterministic fake-provider Stage 1 workflow with source-linked quality gate "
-                "and context-pack version snapshot."
+                "Deterministic fake-provider Stage 1 workflow with hybrid evidence retrieval, "
+                "source-linked quality gate and context-pack version snapshot."
             ),
         }
 

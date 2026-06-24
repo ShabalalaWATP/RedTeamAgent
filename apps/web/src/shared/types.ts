@@ -106,8 +106,17 @@ export type ReportFinding = {
   category: string;
   evidence_type: string;
   evidence_label: string;
+  evidence_excerpt: string;
   summary: string;
   recommended_action: string;
+};
+
+export type RetrievedEvidence = {
+  source_id: string;
+  source_filename: string;
+  locator: string;
+  excerpt: string;
+  score: number;
 };
 
 export type ContextPackProvenance = {
@@ -130,6 +139,7 @@ export type ReportData = {
   evidence_gaps: string[];
   context_packs: ContextPackProvenance[];
   findings: ReportFinding[];
+  retrieved_evidence: RetrievedEvidence[];
   sources: string[];
   methodology: string;
 };

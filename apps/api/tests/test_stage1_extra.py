@@ -13,6 +13,7 @@ from app.application.workflow_service import WorkflowService
 from app.core.database import SessionLocal
 from app.domain.exceptions import ValidationFailure
 from app.infrastructure.auth.security import PasswordService, TokenService
+from app.infrastructure.db import models
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
 from app.infrastructure.providers.adapters import ProviderRegistry
@@ -186,6 +187,58 @@ def test_provider_routes_lists_and_failures(client: TestClient) -> None:
     assert profile.status_code == 200
     profiles = client.get(f"/providers/profiles?workspace_id={auth['workspace_id']}")
     assert profiles.json()[0]["id"] == profile.json()["id"]
+
+
+def test_provider_credentials_are_encrypted_and_reused(client: TestClient) -> None:
+    auth = register_verified(client, "provider-credentials@example.com")
+    created = client.post(
+        "/providers/connections",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "adapter": "openai",
+            "name": "OpenAI",
+            "config": {},
+            "credentials": {"api_key": "sk-live-test-value"},
+        },
+    )
+    assert created.status_code == 200, created.text
+    assert created.json()["has_credentials"] is True
+    assert "credentials" not in created.json()
+
+    with SessionLocal() as session:
+        connection = session.get(models.ProviderConnection, created.json()["id"])
+        assert connection is not None
+        sealed = connection.encrypted_credentials["api_key"]
+        assert sealed != "sk-live-test-value"
+        assert "sk-live-test-value" not in sealed
+
+    tested = client.post(f"/providers/connections/{created.json()['id']}/test", headers=csrf_headers(auth))
+    assert tested.status_code == 200, tested.text
+    assert tested.json()["ok"] is True
+
+
+def test_tampered_provider_credentials_fail_closed(client: TestClient) -> None:
+    auth = register_verified(client, "tampered-provider@example.com")
+    created = client.post(
+        "/providers/connections",
+        headers=csrf_headers(auth),
+        json={
+            "workspace_id": auth["workspace_id"],
+            "adapter": "openai",
+            "name": "OpenAI",
+            "config": {},
+            "credentials": {"api_key": "sk-live-test-value"},
+        },
+    )
+    assert created.status_code == 200, created.text
+    with SessionLocal() as session:
+        connection = session.get(models.ProviderConnection, created.json()["id"])
+        assert connection is not None
+        connection.encrypted_credentials = {"api_key": "tampered"}
+        session.commit()
+    tested = client.post(f"/providers/connections/{created.json()['id']}/test", headers=csrf_headers(auth))
+    assert tested.status_code == 422
 
 
 def test_extractor_storage_and_token_services(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:

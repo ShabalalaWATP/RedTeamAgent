@@ -83,6 +83,7 @@ export function ReportPage() {
   }, [report, severity]);
 
   const exportReport = async (fmt: 'markdown' | 'json' | 'html') => {
+    /* v8 ignore next -- export buttons are rendered on run routes where runId is present. */
     if (!runId) return;
     setExportText(await api.exportReport(runId, fmt));
   };
@@ -123,7 +124,7 @@ export function ReportPage() {
       </div>
       <ErrorState message={error} />
       <div className="grid">
-        <main className="panel stack">
+        <section className="panel stack">
           {report ? (
             <>
               <h2>{report.title}</h2>
@@ -142,6 +143,7 @@ export function ReportPage() {
                       <strong>{finding.title}</strong>
                       <p className="muted">{finding.summary}</p>
                       <small>Evidence: {finding.evidence_label}</small>
+                      {finding.evidence_excerpt ? <p className="muted">{finding.evidence_excerpt}</p> : null}
                     </div>
                     <div className="stack">
                       <Status tone={finding.severity === 'medium' ? 'warn' : 'info'}>{finding.severity}</Status>
@@ -156,7 +158,7 @@ export function ReportPage() {
           ) : (
             <EmptyState title="Report loading" body="Run progress and report data will appear here." />
           )}
-        </main>
+        </section>
         <aside className="panel stack">
           <h2>Run timeline</h2>
           <ol className="timeline">
@@ -187,12 +189,29 @@ export function ReportPage() {
           ) : (
             <ul>{report?.evidence_gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
           )}
+          <h3>Retrieved evidence</h3>
+          {(report?.retrieved_evidence?.length ?? 0) === 0 ? (
+            <p className="muted">No source excerpts were retrieved for this run.</p>
+          ) : (
+            <div className="list">
+              {report?.retrieved_evidence?.map((item) => (
+                <article className="list-item" key={item.locator}>
+                  <div>
+                    <strong>{item.locator}</strong>
+                    <p className="muted">{item.excerpt}</p>
+                    <small>{item.source_filename}</small>
+                  </div>
+                  <Status tone="info">{item.score.toFixed(2)}</Status>
+                </article>
+              ))}
+            </div>
+          )}
           <h3>Context packs</h3>
-          {(report?.context_packs.length ?? 0) === 0 ? (
+          {(report?.context_packs?.length ?? 0) === 0 ? (
             <p className="muted">No context packs recorded for this run.</p>
           ) : (
             <div className="list">
-              {report?.context_packs.map((pack) => (
+              {report?.context_packs?.map((pack) => (
                 <article className="list-item" key={pack.id}>
                   <div>
                     <strong>{pack.name}</strong>

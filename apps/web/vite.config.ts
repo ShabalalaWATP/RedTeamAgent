@@ -14,6 +14,7 @@ export default defineConfig({
       exclude: ['src/main.tsx', 'src/api/openapi.ts', 'src/test/**'],
       thresholds: {
         statements: 95,
+        branches: 95,
         functions: 95,
         lines: 95
       }

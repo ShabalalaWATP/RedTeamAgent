@@ -1,8 +1,8 @@
 # RedTeamAgent
 
-RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build is a Stage 1 foundation vertical slice: registration, workspace creation, projects, previous workflow history, reviews, source ingestion, agent context packs, provider routing, deterministic fake-provider review runs and evidence-linked reports.
+RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build completes the Stage 1 foundation vertical slice: registration, workspace creation, projects, previous workflow history, reviews, source ingestion, agent context packs, provider routing, deterministic fake-provider review runs and evidence-linked reports.
 
-The current implementation follows Stage 1 from `docs/codex-three-stage-goals.md`, but it is not yet a complete Stage 1 release. See `docs/delivery/stage-1-completion-report.md` for passed checks and remaining release-blocking gaps. Stage 2 and Stage 3 are intentionally out of scope until Stage 1 gates pass.
+The current implementation follows Stage 1 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-1-completion-report.md` for passed checks, residual risks and the current readiness decision. Stage 2 and Stage 3 remain intentionally out of scope.
 
 ## Local Setup
 
@@ -71,8 +71,8 @@ Provider connections are created from adapter schemas exposed by the API. Stage 
 - Google Gemini text-generation adapter schema;
 - generic OpenAI-compatible adapter schema with endpoint validation.
 
-Credentials are write-only. The API never returns stored provider credentials to the browser.
-Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 1 uses adapter-maintained catalogue snapshots rather than replaying stored secrets against live provider APIs.
+Credentials are encrypted server-side and write-only from the browser perspective. The API never returns stored provider credentials to the browser.
+Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 1 uses adapter-maintained catalogue snapshots by default and supports opt-in live catalogue checks where configured.
 
 ## Cheap Hosting Plan
 
@@ -81,8 +81,8 @@ Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deploym
 ## Known Limitations
 
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
-- Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration, adapter-backed catalogue snapshots and capability metadata.
+- Live provider credentials are optional. Real provider adapters support structured text-generation calls, but the local Stage 1 workflow defaults to the deterministic fake provider for repeatable tests and demos.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Full Stage 1 release gates are not all implemented yet. Remaining gaps include hybrid retrieval, live text-generation provider adapters and complete WCAG audit coverage.
 - Workflow execution uses FastAPI background tasks for the Stage 1 vertical slice. A Redis-backed external worker queue remains a production hardening item.
+- The WCAG result is a repository release gate, not a third-party certification.
 - Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.

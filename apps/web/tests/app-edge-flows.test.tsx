@@ -1,5 +1,7 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
+import { useAuth } from '../src/app/AuthContext';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
 
@@ -196,6 +198,44 @@ describe('edge UI flows', () => {
     expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
   });
 
+  it('handles missing local auth tokens from register and login responses', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/register')) {
+        return jsonResponse({
+          user: { id: 'user-1', email: 'alex@example.com', is_verified: false },
+          workspace: { id: 'workspace-1', name: 'Personal workspace' }
+        });
+      }
+      if (url.includes('/auth/login')) {
+        return jsonResponse({
+          user: { id: 'user-1', email: 'alex@example.com', is_verified: true },
+          workspace: { id: 'workspace-1', name: 'Personal workspace' }
+        });
+      }
+      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/auth');
+    await user.click(screen.getByRole('button', { name: /register/i }));
+    expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /verify email/i })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /log in/i }));
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(sessionStorage.getItem('rta.auth')).toContain('"csrfToken":""');
+  });
+
+  it('throws when auth context is used outside its provider', () => {
+    function BrokenAuthConsumer() {
+      useAuth();
+      return null;
+    }
+
+    expect(() => {
+      renderWithNoProvider(<BrokenAuthConsumer />);
+    }).toThrow('useAuth must be used inside AuthProvider');
+  });
+
   it('uploads a source from the review composer and shows failed state', async () => {
     storeAuth();
     const user = userEvent.setup();
@@ -321,4 +361,37 @@ describe('edge UI flows', () => {
     renderApp('/workflows');
     expect(await screen.findByRole('alert')).toHaveTextContent('history unavailable');
   });
+
+  it('shows non-completed workflow history without top risks', async () => {
+    storeAuth();
+    mockFetch((url) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) {
+        return jsonResponse([
+          {
+            id: 'run-2',
+            workspace_id: authState.workspaceId,
+            review_id: 'review-2',
+            review_title: 'Policy review',
+            project_id: 'project-1',
+            project_title: 'Policy',
+            mode: 'in_depth',
+            state: 'failed',
+            created_at: '2026-06-24T00:00:00Z',
+            selected_agents: ['policy_governance'],
+            top_risks: [],
+            finding_count: 0,
+            has_report: false
+          }
+        ]);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/workflows');
+    expect(await screen.findByText('No top risks recorded yet.')).toBeInTheDocument();
+    expect(screen.getByText('failed')).toBeInTheDocument();
+  });
 });
+
+function renderWithNoProvider(element: ReactElement) {
+  return render(element);
+}
