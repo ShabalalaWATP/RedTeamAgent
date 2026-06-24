@@ -5,6 +5,7 @@ export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8
 export const authSchema = z.object({
   user: z.object({ id: z.string(), email: z.string(), is_verified: z.boolean() }),
   workspace: z.object({ id: z.string(), name: z.string() }),
+  workspace_role: z.string().nullable().optional(),
   csrf_token: z.string().nullable().optional(),
   verification_token: z.string().nullable().optional(),
   reset_token: z.string().nullable().optional()

@@ -6324,6 +6324,17 @@
           "workspace": {
             "$ref": "#/components/schemas/WorkspaceView"
           },
+          "workspace_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Role"
+          },
           "csrf_token": {
             "anyOf": [
               {

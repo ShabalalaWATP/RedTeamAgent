@@ -26,7 +26,11 @@ function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
-export function ProviderSettings() {
+type ProviderSettingsProps = {
+  embedded?: boolean;
+};
+
+export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const { auth } = useAuth();
   const [schemas, setSchemas] = useState<AdapterSchema[]>([]);
   const [connections, setConnections] = useState<ProviderConnection[]>([]);
@@ -178,10 +182,10 @@ export function ProviderSettings() {
   };
 
   return (
-    <section className="screen">
+    <section className={embedded ? 'settings-block stack' : 'screen'}>
       <div className="screen-header">
         <div>
-          <h1>Provider settings</h1>
+          {embedded ? <h2>AI providers</h2> : <h1>AI providers</h1>}
           <p className="muted">Manage provider connections, model capabilities and agent model profiles.</p>
         </div>
         <Status tone="warn">Credentials write-only</Status>

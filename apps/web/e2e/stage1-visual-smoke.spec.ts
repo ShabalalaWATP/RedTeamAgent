@@ -69,15 +69,13 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await expect(page.getByText('Checkout provider migration')).toBeVisible();
   await verifyScreen(page, `workflows${suffix}`);
 
-  await page.goto('/providers');
-  await expect(page.getByRole('heading', { name: 'Provider settings' })).toBeVisible();
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
   await expect(page.getByText('manual · verified')).toBeVisible();
-  await verifyScreen(page, `providers${suffix}`);
-
-  await page.goto('/enterprise');
-  await expect(page.getByRole('heading', { name: 'Enterprise' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Workspace administration' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Model comparison' }).getByText('fake-reviewer')).toBeVisible();
-  await verifyScreen(page, `enterprise${suffix}`);
+  await verifyScreen(page, `settings${suffix}`);
 }
 
 test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, testInfo) => {
@@ -94,8 +92,7 @@ test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, 
       await auditNewReview(page);
       await auditReport(page);
       await auditWorkflows(page);
-      await auditProviders(page);
-      await auditEnterprise(page);
+      await auditSettings(page);
     }
   }
 });
@@ -146,15 +143,9 @@ async function auditWorkflows(page: Page) {
   await auditCurrentScreen(page);
 }
 
-async function auditProviders(page: Page) {
-  await page.goto('/providers');
-  await expect(page.getByRole('heading', { name: 'Provider settings' })).toBeVisible();
-  await auditCurrentScreen(page);
-}
-
-async function auditEnterprise(page: Page) {
-  await page.goto('/enterprise');
-  await expect(page.getByRole('heading', { name: 'Enterprise' })).toBeVisible();
+async function auditSettings(page: Page) {
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await auditCurrentScreen(page);
 }
 

@@ -9,11 +9,12 @@ export const authState = {
   email: 'owner@example.com',
   workspaceId: 'workspace-1',
   workspaceName: "owner@example.com's workspace",
+  workspaceRole: 'owner',
   csrfToken: 'csrf-token'
 };
 
-export function storeAuth() {
-  sessionStorage.setItem('rta.auth', JSON.stringify(authState));
+export function storeAuth(overrides: Partial<typeof authState> = {}) {
+  sessionStorage.setItem('rta.auth', JSON.stringify({ ...authState, ...overrides }));
 }
 
 export function renderApp(path = '/dashboard') {

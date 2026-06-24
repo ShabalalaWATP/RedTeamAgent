@@ -119,7 +119,7 @@ class EnterpriseOperationsService:
         }
 
     def model_comparison(self, user_id: str, workspace_id: str) -> dict[str, Any]:
-        require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        require_workspace_admin(self.repo.membership_role(workspace_id, user_id))
         return {
             "workspace_id": workspace_id,
             "models": [self._model_row(model) for model in self.repo.list_model_records(workspace_id)],

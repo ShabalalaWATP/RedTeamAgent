@@ -34,7 +34,12 @@ class AuthService:
         self._send_verification_email(user.email, token)
         self.repo.audit(workspace.id, user.id, "auth.registered", {"email": user.email})
         self.repo.commit()
-        return {"user": user, "workspace": workspace, "verification_token": token if self.expose_tokens else None}
+        return {
+            "user": user,
+            "workspace": workspace,
+            "workspace_role": self.repo.membership_role(workspace.id, user.id),
+            "verification_token": token if self.expose_tokens else None,
+        }
 
     def verify_email(self, token: str) -> None:
         try:
@@ -55,9 +60,16 @@ class AuthService:
             raise AuthenticationError("Email must be verified before login.")
         session = self.repo.create_session(user.id, csrf_token)
         workspace = self.repo.list_workspaces(user.id)[0]
+        workspace_role = self.repo.membership_role(workspace.id, user.id)
         self.repo.audit(workspace.id, user.id, "auth.login", {})
         self.repo.commit()
-        return {"user": user, "session": session, "csrf_token": csrf_token, "workspace": workspace}
+        return {
+            "user": user,
+            "session": session,
+            "csrf_token": csrf_token,
+            "workspace": workspace,
+            "workspace_role": workspace_role,
+        }
 
     def logout(self, session_id: str, user_id: str | None) -> None:
         self.repo.delete_session(session_id)

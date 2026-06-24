@@ -14,7 +14,16 @@ function readStoredAuth(): AuthState | null {
   const raw = sessionStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as AuthState;
+    const parsed = JSON.parse(raw) as Partial<AuthState>;
+    if (!parsed.userId || !parsed.email || !parsed.workspaceId || !parsed.workspaceName) return null;
+    return {
+      userId: parsed.userId,
+      email: parsed.email,
+      workspaceId: parsed.workspaceId,
+      workspaceName: parsed.workspaceName,
+      workspaceRole: parsed.workspaceRole ?? 'member',
+      csrfToken: parsed.csrfToken ?? ''
+    };
   } catch {
     sessionStorage.removeItem(STORAGE_KEY);
     return null;

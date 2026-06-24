@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../src/app/AuthContext';
 import { EvaluationPanel } from '../src/features/providers/EvaluationPanel';
-import { authState, jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
+import { ProviderSettings } from '../src/features/providers/ProviderSettings';
+import { authState, jsonResponse, mockFetch, storeAuth } from './test-utils';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -41,7 +42,7 @@ describe('ProviderSettings', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
-    renderApp('/providers');
+    renderProviderSettings();
 
     expect(await screen.findByText('No capabilities recorded.')).toBeInTheDocument();
     expect(screen.getByText(/fallback allowed/i)).toBeInTheDocument();
@@ -93,7 +94,7 @@ describe('ProviderSettings', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
-    renderApp('/providers');
+    renderProviderSettings();
 
     expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
     await user.clear(screen.getByLabelText(/capabilities/i));
@@ -128,7 +129,7 @@ describe('ProviderSettings', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
-    renderApp('/providers');
+    renderProviderSettings();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('adapter down');
   });
@@ -143,7 +144,7 @@ describe('ProviderSettings', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
-    renderApp('/providers');
+    renderProviderSettings();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('workspace denied');
   });
@@ -193,6 +194,14 @@ describe('ProviderSettings', () => {
     expect(await screen.findByText('Routing Recall')).toBeInTheDocument();
   });
 });
+
+function renderProviderSettings() {
+  return render(
+    <AuthProvider>
+      <ProviderSettings />
+    </AuthProvider>
+  );
+}
 
 function adapterSchema() {
   return {

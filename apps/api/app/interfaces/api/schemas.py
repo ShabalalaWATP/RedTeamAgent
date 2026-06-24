@@ -49,6 +49,7 @@ class WorkspaceView(BaseModel):
 class AuthResponse(BaseModel):
     user: UserView
     workspace: WorkspaceView
+    workspace_role: str | None = None
     csrf_token: str | None = None
     verification_token: str | None = None
     reset_token: str | None = None

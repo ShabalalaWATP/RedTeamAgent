@@ -329,6 +329,7 @@ function auth() {
     email: 'owner@example.com',
     workspaceId: 'workspace-1',
     workspaceName: 'Workspace',
+    workspaceRole: 'owner',
     csrfToken: 'csrf-token'
   };
 }

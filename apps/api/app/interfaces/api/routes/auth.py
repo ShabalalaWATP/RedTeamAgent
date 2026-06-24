@@ -28,6 +28,7 @@ def register(payload: RegisterRequest, service: Annotated[AuthService, Depends(a
     return AuthResponse(
         user=UserView.model_validate(result["user"]),
         workspace=WorkspaceView.model_validate(result["workspace"]),
+        workspace_role=result["workspace_role"],
         verification_token=result["verification_token"],
     )
 
@@ -57,6 +58,7 @@ def login(
     return AuthResponse(
         user=UserView.model_validate(result["user"]),
         workspace=WorkspaceView.model_validate(result["workspace"]),
+        workspace_role=result["workspace_role"],
         csrf_token=csrf_token,
     )
 

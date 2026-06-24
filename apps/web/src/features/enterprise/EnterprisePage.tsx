@@ -64,7 +64,11 @@ function split(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
-export function EnterprisePage() {
+type EnterprisePageProps = {
+  embedded?: boolean;
+};
+
+export function EnterprisePage({ embedded = false }: EnterprisePageProps) {
   const { auth } = useAuth();
   const [governance, setGovernance] = useState<Governance>(emptyGovernance);
   const [members, setMembers] = useState<EnterpriseMember[]>([]);
@@ -202,10 +206,10 @@ export function EnterprisePage() {
   };
 
   return (
-    <section className="screen enterprise-screen">
+    <section className={embedded ? 'enterprise-screen settings-block stack' : 'screen enterprise-screen'}>
       <div className="screen-header">
         <div>
-          <h1>Enterprise</h1>
+          {embedded ? <h2>Workspace administration</h2> : <h1>Workspace administration</h1>}
           <p className="muted">Workspace governance, collaboration controls and production operations.</p>
         </div>
         <Status tone={governance.mfa_required ? 'ok' : 'warn'}>{governance.mfa_required ? 'MFA required' : 'MFA optional'}</Status>
@@ -275,7 +279,7 @@ export function EnterprisePage() {
 
         <section className="panel stack" aria-labelledby="actions">
           <h2 id="actions"><Bell size={20} />Action tracking</h2>
-          <EntityList items={notifications.map((item) => `${item.kind}: ${item.title}`)} empty="No enterprise notifications." />
+          <EntityList items={notifications.map((item) => `${item.kind}: ${item.title}`)} empty="No workspace notifications." />
         </section>
 
         <section className="panel stack" aria-labelledby="customisation">

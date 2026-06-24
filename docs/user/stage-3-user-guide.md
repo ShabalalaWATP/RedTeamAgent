@@ -2,7 +2,7 @@
 
 Organisation users can invite colleagues, manage project access, comment on reports, assign actions, record decision rationale and share reports through expiring links. Reports remain provisional decision support and should not be treated as legal, medical, financial, engineering or regulatory certification.
 
-Administrators manage provider governance, retention, approved research domains, custom agents, rubrics, templates, API tokens, webhooks and scheduled re-reviews from the Enterprise screen.
+Administrators manage AI provider setup, provider governance, retention, approved research domains, custom agents, rubrics, templates, API tokens, webhooks and scheduled re-reviews from the admin-only `Settings` view. Regular members use projects, workflows, reviews and reports without seeing provider credentials or workspace administration controls.
 
 First signup starts at `/auth`: enter an email and a 12-character-or-longer password, register, verify the email link, then log in. Local development may show a verification token directly; production sends verification and reset links by SMTP.
 

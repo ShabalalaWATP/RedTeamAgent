@@ -17,6 +17,7 @@ describe('RedTeamAgent app flows', () => {
         return jsonResponse({
           user: { id: 'user-1', email: 'alex@example.com', is_verified: false },
           workspace: { id: 'workspace-1', name: 'Personal workspace' },
+          workspace_role: 'owner',
           verification_token: 'verify-token'
         });
       }
@@ -25,6 +26,7 @@ describe('RedTeamAgent app flows', () => {
         return jsonResponse({
           user: { id: 'user-1', email: 'alex@example.com', is_verified: true },
           workspace: { id: 'workspace-1', name: 'Personal workspace' },
+          workspace_role: 'owner',
           csrf_token: 'csrf-token'
         });
       }
@@ -39,7 +41,9 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /verify email/i }));
     await user.click(screen.getByRole('button', { name: /log in/i }));
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toContain('csrf-token');
+    expect(sessionStorage.getItem('rta.auth')).toContain('"workspaceRole":"owner"');
   });
 
   it('creates, updates and deletes a project from the dashboard', async () => {
@@ -84,102 +88,6 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /confirm delete/i }));
     await waitFor(() => expect(screen.queryByText('Updated decision review')).not.toBeInTheDocument());
     expect(screen.getByText('No projects yet')).toBeInTheDocument();
-  });
-
-  it('creates a provider connection from adapter schema fields', async () => {
-    storeAuth();
-    const user = userEvent.setup();
-    mockFetch((url, init) => {
-      if (url.includes('/providers/adapters')) {
-        return jsonResponse([
-          {
-            key: 'fake',
-            label: 'Deterministic fake provider',
-            fields: [{ name: 'scenario', label: 'Scenario', secret: false, required: false, input_type: 'text' }],
-            default_capabilities: ['text', 'structured_output']
-          }
-        ]);
-      }
-      if (url.includes('/providers/connections?')) return jsonResponse([]);
-      if (url.includes('/providers/models?')) return jsonResponse([]);
-      if (url.includes('/providers/profiles?')) return jsonResponse([]);
-      if (url.includes('/providers/connections') && init?.method === 'POST') {
-        expect(init.headers).toMatchObject({ 'X-CSRF-Token': authState.csrfToken });
-        return jsonResponse({
-          id: 'conn-1',
-          workspace_id: authState.workspaceId,
-          adapter: 'fake',
-          name: 'Fake local provider',
-          config: {},
-          has_credentials: false
-        });
-      }
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-    renderApp('/providers');
-    expect((await screen.findAllByText('Deterministic fake provider')).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: /test and save/i }));
-    expect(await screen.findByText(/credentials were not returned/i)).toBeInTheDocument();
-  });
-
-  it('registers a model record and assigns it to an agent profile', async () => {
-    storeAuth();
-    const user = userEvent.setup();
-    let modelCreated = false;
-    mockFetch((url, init) => {
-      if (url.includes('/providers/adapters')) {
-        return jsonResponse([
-          { key: 'fake', label: 'Deterministic fake provider', fields: [], default_capabilities: ['text'] }
-        ]);
-      }
-      if (url.includes('/providers/connections?')) {
-        return jsonResponse([
-          {
-            id: 'conn-1',
-            workspace_id: authState.workspaceId,
-            adapter: 'fake',
-            name: 'Fake local provider',
-            config: {},
-            has_credentials: false
-          }
-        ]);
-      }
-      if (url.includes('/providers/models?')) {
-        return jsonResponse(modelCreated ? [modelResponse()] : []);
-      }
-      if (url.includes('/providers/profiles?')) return jsonResponse([]);
-      if (url.includes('/providers/models') && init?.method === 'POST') {
-        expect(JSON.parse(String(init.body))).toMatchObject({ model_identifier: 'fake-reviewer' });
-        modelCreated = true;
-        return jsonResponse(modelResponse());
-      }
-      if (url.includes('/providers/profiles') && init?.method === 'POST') {
-        expect(JSON.parse(String(init.body))).toMatchObject({ agent_key: 'cybersecurity_privacy' });
-        return jsonResponse({
-          id: 'profile-1',
-          workspace_id: authState.workspaceId,
-          name: 'Security profile',
-          agent_key: 'cybersecurity_privacy',
-          model_record_id: 'model-1',
-          explicit_pin: true
-        });
-      }
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-    renderApp('/providers');
-    expect((await screen.findAllByText('Fake local provider')).length).toBeGreaterThan(0);
-    await user.clear(screen.getByLabelText(/model identifier/i));
-    await user.type(screen.getByLabelText(/model identifier/i), 'fake-reviewer');
-    await user.click(screen.getByLabelText(/capability probe verified/i));
-    await user.click(screen.getByRole('button', { name: /register model/i }));
-    expect(await screen.findByText('Model record saved with visible capability provenance.')).toBeInTheDocument();
-    expect(await screen.findByText(/text, structured_output, streaming/i)).toBeInTheDocument();
-    await user.clear(screen.getByLabelText(/profile name/i));
-    await user.type(screen.getByLabelText(/profile name/i), 'Security profile');
-    await user.selectOptions(screen.getByLabelText(/^agent$/i), 'cybersecurity_privacy');
-    await user.click(screen.getByLabelText(/explicitly pin/i));
-    await user.click(screen.getByRole('button', { name: /assign profile/i }));
-    expect(await screen.findByText(/model profile assigned/i)).toBeInTheDocument();
   });
 
   it('creates a review, ingests text, preflights and starts a run', async () => {

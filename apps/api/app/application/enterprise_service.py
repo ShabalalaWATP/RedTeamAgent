@@ -26,7 +26,7 @@ class EnterpriseService:
         return {"id": workspace.id, "name": workspace.name, "workspace_type": "organisation"}
 
     def list_members(self, user_id: str, workspace_id: str) -> list[dict[str, Any]]:
-        require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        require_workspace_admin(self.repo.membership_role(workspace_id, user_id))
         return self.repo.list_members(workspace_id)
 
     def invite_member(self, user_id: str, workspace_id: str, email: str, role: str) -> dict[str, Any]:
@@ -185,7 +185,7 @@ class EnterpriseService:
         return {"report_id": report.id, "access_mode": share.access_mode, "data": report.data}
 
     def get_governance(self, user_id: str, workspace_id: str) -> Any:
-        require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        require_workspace_admin(self.repo.membership_role(workspace_id, user_id))
         return self.repo.get_governance(workspace_id)
 
     def update_governance(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:

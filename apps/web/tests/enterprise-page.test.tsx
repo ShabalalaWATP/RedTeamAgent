@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { AuthProvider } from '../src/app/AuthContext';
 import { EnterprisePage } from '../src/features/enterprise/EnterprisePage';
-import { authState, jsonResponse, mockFetch, renderApp, renderWithRouter, storeAuth } from './test-utils';
+import { authState, jsonResponse, mockFetch, renderWithRouter, storeAuth } from './test-utils';
 
 const governance = {
   workspace_id: authState.workspaceId,
@@ -68,8 +68,8 @@ describe('EnterprisePage', () => {
       return jsonResponse({}, 404);
     });
 
-    renderApp('/enterprise');
-    expect(await screen.findByRole('heading', { name: 'Enterprise' })).toBeInTheDocument();
+    renderEnterprisePage();
+    expect(await screen.findByRole('heading', { name: 'Workspace administration' })).toBeInTheDocument();
     expect(screen.getByText(`${authState.email} · owner`)).toBeInTheDocument();
     expect(screen.getByText('assigned_action: Assign owner')).toBeInTheDocument();
     expect(screen.getAllByText('fake-reviewer').length).toBeGreaterThan(0);
@@ -141,11 +141,11 @@ describe('EnterprisePage', () => {
       return jsonResponse({}, 404);
     });
 
-    renderApp('/enterprise');
+    renderEnterprisePage();
     expect(await screen.findByText('MFA optional')).toBeInTheDocument();
     expect(screen.getAllByDisplayValue('').length).toBeGreaterThan(0);
     expect(screen.getByText('No members found.')).toBeInTheDocument();
-    expect(screen.getByText('No enterprise notifications.')).toBeInTheDocument();
+    expect(screen.getByText('No workspace notifications.')).toBeInTheDocument();
     expect(screen.getByText('No audit events.')).toBeInTheDocument();
     expect(screen.getByText('No governed model records are available.')).toBeInTheDocument();
   });
@@ -174,8 +174,8 @@ describe('EnterprisePage', () => {
       return jsonResponse({}, 404);
     });
 
-    renderApp('/enterprise');
-    await screen.findByRole('heading', { name: 'Enterprise' });
+    renderEnterprisePage();
+    await screen.findByRole('heading', { name: 'Workspace administration' });
     const user = userEvent.setup();
     for (const name of ['Save governance', 'Invite', 'Create agent', 'Create token', 'Create webhook', 'Run retention']) {
       await user.click(screen.getByRole('button', { name }));
@@ -191,7 +191,7 @@ describe('EnterprisePage', () => {
       </AuthProvider>,
       '/enterprise'
     );
-    expect(await screen.findByRole('heading', { name: 'Enterprise' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Workspace administration' })).toBeInTheDocument();
     const user = userEvent.setup();
     for (const name of ['Save governance', 'Invite', 'Create agent', 'Create token', 'Create webhook', 'Run retention']) {
       await user.click(screen.getByRole('button', { name }));
@@ -199,3 +199,12 @@ describe('EnterprisePage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+function renderEnterprisePage() {
+  renderWithRouter(
+    <AuthProvider>
+      <EnterprisePage />
+    </AuthProvider>,
+    '/settings'
+  );
+}

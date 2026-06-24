@@ -93,9 +93,9 @@ Workspace governance can centrally restrict provider adapters, model identifiers
 
 `DAILY_REVIEW_RUN_LIMIT` controls how many AI review runs one signed-in user can start per UTC day. The API enforces this before a run is queued, so direct API calls and browser clicks are covered. Source ingestion and other expensive actions also keep the existing per-minute limiter.
 
-## Stage 3 Enterprise Controls
+## Admin Settings
 
-The Enterprise screen includes organisation settings, member management, invitations, provider governance, SSO/MFA-ready identity fields, SCIM mappings, data retention, audit inspection, action notifications, custom agents, rubrics, report templates, API tokens, webhooks, scheduled re-review, outcome tracking, operations summaries and model comparison.
+The admin-only `Settings` view includes AI provider setup, model registration, agent model profiles, organisation settings, member management, invitations, provider governance, SSO/MFA-ready identity fields, SCIM mappings, data retention, audit inspection, action notifications, custom agents, rubrics, report templates, API tokens, webhooks, scheduled re-review, outcome tracking, operations summaries and model comparison. Regular members do not see the `Settings` nav item and admin endpoints reject non-admin access.
 
 API tokens are returned once and then stored only as hashes. Webhook deliveries use timestamped HMAC signatures with replay protection. Report shares use expiring tokens and access events are audited.
 

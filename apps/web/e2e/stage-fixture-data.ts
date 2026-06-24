@@ -11,6 +11,7 @@ export function authResponse(extra: Record<string, string | null>) {
   return {
     user: { id: 'user-1', email: 'alex@example.com', is_verified: true },
     workspace: { id: 'workspace-1', name: 'Alex Workspace' },
+    workspace_role: 'owner',
     csrf_token: null,
     verification_token: null,
     reset_token: null,

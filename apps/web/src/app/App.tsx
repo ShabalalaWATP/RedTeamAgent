@@ -1,12 +1,12 @@
-import { Activity, Building2, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import type { ReactElement } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { api } from '../api/client';
 import { AuthPage } from '../features/auth/AuthPage';
-import { EnterprisePage } from '../features/enterprise/EnterprisePage';
-import { ProviderSettings } from '../features/providers/ProviderSettings';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
 import { NewReviewPage } from '../features/reviews/NewReviewPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { WorkflowHistory } from '../features/workflows/WorkflowHistory';
 import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -16,6 +16,7 @@ import './styles.css';
 function Layout() {
   const { auth, setAuth } = useAuth();
   if (!auth) return <Navigate to="/auth" replace />;
+  const isAdmin = isWorkspaceAdmin(auth.workspaceRole);
   const logout = async () => {
     await api.logout(auth.csrfToken);
     setAuth(null);
@@ -30,15 +31,14 @@ function Layout() {
         <nav>
           <NavLink to="/dashboard"><FolderKanban />Projects</NavLink>
           <NavLink to="/workflows"><Activity />Workflows</NavLink>
-          <NavLink to="/providers"><Settings />Providers</NavLink>
-          <NavLink to="/enterprise"><Building2 />Enterprise</NavLink>
+          {isAdmin ? <NavLink to="/settings"><Settings />Settings</NavLink> : null}
         </nav>
       </aside>
       <main>
         <header className="topbar">
           <div>
             <strong>{auth.workspaceName}</strong>
-            <span>{auth.email}</span>
+            <span>{auth.email} · {roleLabel(auth.workspaceRole)}</span>
           </div>
           <Button onClick={logout}>Log out</Button>
         </header>
@@ -48,6 +48,20 @@ function Layout() {
   );
 }
 
+function AdminRoute({ children }: { children: ReactElement }) {
+  const { auth } = useAuth();
+  if (!isWorkspaceAdmin(auth?.workspaceRole ?? 'member')) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+function isWorkspaceAdmin(role: string) {
+  return role === 'owner' || role === 'administrator';
+}
+
+function roleLabel(role: string) {
+  return role.replace(/_/g, ' ');
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -55,8 +69,9 @@ function AppRoutes() {
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workflows" element={<WorkflowHistory />} />
-        <Route path="/providers" element={<ProviderSettings />} />
-        <Route path="/enterprise" element={<EnterprisePage />} />
+        <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+        <Route path="/providers" element={<Navigate to="/settings" replace />} />
+        <Route path="/enterprise" element={<Navigate to="/settings" replace />} />
         <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
         <Route path="/runs/:runId" element={<ReportPage />} />
       </Route>

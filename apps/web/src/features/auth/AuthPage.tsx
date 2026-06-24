@@ -50,6 +50,7 @@ export function AuthPage() {
         email: response.user.email,
         workspaceId: response.workspace.id,
         workspaceName: response.workspace.name,
+        workspaceRole: response.workspace_role ?? 'member',
         csrfToken: response.csrf_token ?? ''
       });
       navigate('/dashboard');

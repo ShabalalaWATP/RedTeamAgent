@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { useAuth } from '../src/app/AuthContext';
+import { AuthProvider, useAuth } from '../src/app/AuthContext';
+import { ProviderSettings } from '../src/features/providers/ProviderSettings';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
 
@@ -70,9 +71,9 @@ describe('edge UI flows', () => {
     cleanup();
 
     storeAuth();
-    renderApp('/providers');
+    renderProviderSettings();
     fireEvent.submit((await screen.findByLabelText(/adapter/i)).closest('form') as HTMLFormElement);
-    expect(screen.getByRole('heading', { name: 'Provider settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI providers' })).toBeInTheDocument();
     cleanup();
 
     storeAuth();
@@ -97,6 +98,27 @@ describe('edge UI flows', () => {
     renderApp('/dashboard');
     await userEvent.click(await screen.findByRole('button', { name: /log out/i }));
     expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+  });
+
+  it('hides admin settings from members and redirects deep links', async () => {
+    storeAuth({ workspaceRole: 'member', email: 'member@example.com' });
+    mockFetch((url) => {
+      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/dashboard');
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /settings/i })).not.toBeInTheDocument();
+    cleanup();
+
+    storeAuth({ workspaceRole: 'member', email: 'member@example.com' });
+    mockFetch((url) => {
+      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/settings');
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
   });
 
   it('renders secret provider fields and handles save errors', async () => {
@@ -125,7 +147,7 @@ describe('edge UI flows', () => {
       if (url.includes('/providers/connections') && init?.method === 'POST') return jsonResponse({ message: 'missing key' }, 422);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/providers');
+    renderProviderSettings();
     await user.selectOptions(await screen.findByLabelText(/adapter/i), 'openai');
     expect(screen.getByLabelText(/api key/i)).toHaveAttribute('type', 'password');
     await user.type(screen.getByLabelText(/api key/i), 'secret-value');
@@ -145,7 +167,7 @@ describe('edge UI flows', () => {
       if (url.includes('/providers/profiles?')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-    renderApp('/providers');
+    renderProviderSettings();
     expect(await screen.findByText('No adapters')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -369,4 +391,8 @@ describe('edge UI flows', () => {
 
 function renderWithNoProvider(element: ReactElement) {
   return render(element);
+}
+
+function renderProviderSettings() {
+  return render(<AuthProvider><ProviderSettings /></AuthProvider>);
 }

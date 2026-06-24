@@ -108,9 +108,10 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await tabTo(page, page.getByRole('link', { name: 'Workflows' }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
-  await tabTo(page, page.getByRole('link', { name: 'Providers' }));
+  await tabTo(page, page.getByRole('link', { name: 'Settings' }));
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Provider settings' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AI providers' })).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: 'Test and save' }));
 });
 

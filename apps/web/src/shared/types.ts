@@ -5,6 +5,7 @@ export type AuthState = {
   email: string;
   workspaceId: string;
   workspaceName: string;
+  workspaceRole: string;
   csrfToken: string;
 };
 

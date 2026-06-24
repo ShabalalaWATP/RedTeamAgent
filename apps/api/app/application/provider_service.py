@@ -57,14 +57,14 @@ class ProviderService:
         return self._connection_view(connection)
 
     def list_connections(self, user_id: str, workspace_id: str) -> list[dict[str, Any]]:
-        self._role(user_id, workspace_id)
+        require_admin(self._role(user_id, workspace_id))
         return [self._connection_view(item) for item in self.repo.list_provider_connections(workspace_id)]
 
     def test_connection(self, user_id: str, connection_id: str) -> dict[str, Any]:
         connection = self.repo.get_provider_connection(connection_id)
         if connection is None:
             raise NotFoundError("Provider connection not found.")
-        self._role(user_id, connection.workspace_id)
+        require_admin(self._role(user_id, connection.workspace_id))
         adapter = self._adapter(connection.adapter)
         return adapter.test_connection(connection.config, self._credentials(connection.encrypted_credentials))
 
@@ -135,7 +135,7 @@ class ProviderService:
         return model
 
     def list_models(self, user_id: str, workspace_id: str) -> list[Any]:
-        self._role(user_id, workspace_id)
+        require_admin(self._role(user_id, workspace_id))
         return self.repo.list_models(workspace_id)
 
     def probe_model(self, user_id: str, model_id: str) -> Any:
@@ -171,7 +171,7 @@ class ProviderService:
         return profile
 
     def list_profiles(self, user_id: str, workspace_id: str) -> list[Any]:
-        self._role(user_id, workspace_id)
+        require_admin(self._role(user_id, workspace_id))
         return self.repo.list_profiles(workspace_id)
 
     def _adapter(self, key: str) -> ProviderAdapter:
