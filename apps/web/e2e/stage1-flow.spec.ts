@@ -82,6 +82,10 @@ async function mockApi(page: Page) {
       });
       return;
     }
+    if (url.pathname === '/workspaces/workspace-1/workflows') {
+      await fulfilJson(route, [workflowResponse()]);
+      return;
+    }
     await route.fulfill({ status: 404, headers: apiHeaders, body: '{"message":"Not mocked"}' });
   });
 }
@@ -113,6 +117,10 @@ test('stage 1 browser flow reaches evidence-linked report', async ({ page }) => 
   await expect(page.getByText('Unsupported claim risk')).toBeVisible();
   await page.getByRole('button', { name: 'Markdown' }).click();
   await expect(page.getByLabel('Export output')).toContainText('Evidence-linked report');
+  await page.getByRole('link', { name: 'Workflows' }).click();
+  await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
+  await expect(page.getByText('Checkout provider migration')).toBeVisible();
+  await expect(page.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
 });
 
 async function assertNoSeriousA11yIssues(page: Page) {
@@ -207,5 +215,23 @@ function reportResponse() {
     ],
     sources: ['proposal.txt'],
     methodology: 'Deterministic fake-provider review with evidence-linked findings.'
+  };
+}
+
+function workflowResponse() {
+  return {
+    id: 'run-1',
+    workspace_id: 'workspace-1',
+    review_id: 'review-1',
+    review_title: 'Checkout provider migration',
+    project_id: 'project-1',
+    project_title: 'Launch decision',
+    mode: 'standard',
+    state: 'completed',
+    created_at: '2026-06-24T00:00:00Z',
+    selected_agents: ['cybersecurity_privacy', 'operations_delivery'],
+    top_risks: ['Unsupported claim risk'],
+    finding_count: 1,
+    has_report: true
   };
 }

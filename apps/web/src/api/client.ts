@@ -45,6 +45,22 @@ const runSchema = z.object({
   usage: z.record(z.string(), z.unknown())
 });
 
+const workflowSummarySchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  review_id: z.string(),
+  review_title: z.string(),
+  project_id: z.string(),
+  project_title: z.string(),
+  mode: z.string(),
+  state: z.string(),
+  created_at: z.string(),
+  selected_agents: z.array(z.string()),
+  top_risks: z.array(z.string()),
+  finding_count: z.number(),
+  has_report: z.boolean()
+});
+
 const reportSchema = z.object({
   data: z.object({
     title: z.string(),
@@ -130,6 +146,11 @@ export class ApiClient {
 
   async startRun(csrf: string, reviewId: string) {
     return runSchema.parse(await this.request(`/reviews/${reviewId}/runs`, 'POST', { csrf }));
+  }
+
+  async listWorkflows(workspaceId: string) {
+    const path = `/workspaces/${workspaceId}/workflows`;
+    return z.array(workflowSummarySchema).parse(await this.request(path, 'GET'));
   }
 
   async runEvents(runId: string) {

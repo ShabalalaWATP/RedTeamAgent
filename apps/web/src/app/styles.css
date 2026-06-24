@@ -122,7 +122,7 @@ main {
 }
 
 .screen {
-  width: min(1180px, calc(100vw - 56px));
+  width: min(1180px, calc(100% - 56px));
   margin: 0 auto;
   padding: 32px 0 88px;
 }
@@ -211,9 +211,11 @@ textarea {
   color: #ffd7da;
 }
 
-.button:disabled {
+.button:disabled,
+.button.disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .status {
@@ -274,6 +276,44 @@ textarea {
   border-radius: 8px;
   padding: 14px;
   background: #0c141c;
+}
+
+.section-title,
+.workflow-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-title { justify-content: flex-start; }
+
+.section-title h2 {
+  margin: 0;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 12px;
+}
+
+.workflow-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #0c141c;
+}
+
+.workflow-item > .stack { min-width: 0; }
+
+.compact-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
 }
 
 .timeline {
@@ -343,7 +383,17 @@ textarea {
   }
 
   .screen-header,
-  .list-item {
+  .list-item,
+  .workflow-heading,
+  .workflow-item {
     display: grid;
+  }
+
+  .workflow-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workflow-item .button {
+    width: 100%;
   }
 }

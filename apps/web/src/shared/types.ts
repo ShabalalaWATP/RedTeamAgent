@@ -52,6 +52,22 @@ export type Run = {
   usage: Record<string, unknown>;
 };
 
+export type WorkflowSummary = {
+  id: string;
+  workspace_id: string;
+  review_id: string;
+  review_title: string;
+  project_id: string;
+  project_title: string;
+  mode: string;
+  state: string;
+  created_at: string;
+  selected_agents: string[];
+  top_risks: string[];
+  finding_count: number;
+  has_report: boolean;
+};
+
 export type ReportFinding = {
   id: string;
   title: string;

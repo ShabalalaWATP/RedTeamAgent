@@ -66,7 +66,7 @@ export function AuthPage() {
           <Status tone="info">Secure foundation</Status>
           <h1>RedTeamAgent</h1>
           <p className="muted">
-            Evidence-led reviews with tenant isolation, provider-neutral routing and structured reports.
+            Evidence-led red teaming for decisions, proposals, essays, projects, policies and code changes.
           </p>
           <div className="row">
             <Status tone="ok">HttpOnly sessions</Status>

@@ -167,4 +167,34 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getAllByRole('button', { name: /markdown/i })[0]);
     expect(await screen.findByLabelText(/export output/i)).toHaveValue('# Exported report');
   });
+
+  it('shows previous workflows for the signed-in workspace', async () => {
+    storeAuth();
+    mockFetch((url) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) {
+        return jsonResponse([
+          {
+            id: 'run-1',
+            workspace_id: authState.workspaceId,
+            review_id: 'review-1',
+            review_title: 'Essay argument review',
+            project_id: 'project-1',
+            project_title: 'University essay',
+            mode: 'standard',
+            state: 'completed',
+            created_at: '2026-06-24T00:00:00Z',
+            selected_agents: ['alternative_perspectives', 'product_user_experience'],
+            top_risks: ['Unclear evidence chain'],
+            finding_count: 3,
+            has_report: true
+          }
+        ]);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/workflows');
+    expect(await screen.findByRole('heading', { name: 'Previous workflows' })).toBeInTheDocument();
+    expect(screen.getByText('Essay argument review')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
+  });
 });

@@ -16,7 +16,7 @@ from app.interfaces.api.dependencies import (
     require_csrf,
     workflow_service,
 )
-from app.interfaces.api.schemas import ReportView, RunEventView, RunView
+from app.interfaces.api.schemas import ReportView, RunEventView, RunView, WorkflowSummaryView
 
 router = APIRouter(tags=["runs"])
 
@@ -50,6 +50,15 @@ def get_run(
     service: Annotated[WorkflowService, Depends(workflow_service)],
 ) -> RunView:
     return RunView.model_validate(service.get_run(context.user.id, run_id))
+
+
+@router.get("/workspaces/{workspace_id}/workflows", response_model=list[WorkflowSummaryView])
+def list_workflows(
+    workspace_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[WorkflowService, Depends(workflow_service)],
+) -> list[WorkflowSummaryView]:
+    return [WorkflowSummaryView.model_validate(item) for item in service.list_workflows(context.user.id, workspace_id)]
 
 
 @router.get("/runs/{run_id}/events", response_model=list[RunEventView])

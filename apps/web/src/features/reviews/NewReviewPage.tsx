@@ -6,13 +6,13 @@ import { useAuth } from '../../app/AuthContext';
 import type { Review, Source } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 
-const DEFAULT_PROPOSAL = 'Launch the new checkout provider with staged rollout, support coverage and rollback plan.';
+const DEFAULT_PROPOSAL = 'Adopt the proposal with staged validation, named owners, evidence checks and rollback criteria.';
 
 export function NewReviewPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { auth } = useAuth();
-  const [title, setTitle] = useState('Checkout provider migration');
+  const [title, setTitle] = useState('Decision readiness review');
   const [proposal, setProposal] = useState(DEFAULT_PROPOSAL);
   const [mode, setMode] = useState<'basic' | 'standard' | 'in_depth'>('standard');
   const [focus, setFocus] = useState('security, policy, UX');
@@ -75,7 +75,7 @@ export function NewReviewPage() {
       <div className="screen-header">
         <div>
           <h1>New review</h1>
-          <p className="muted">Create the evidence pack, inspect routing, then run the structured workflow.</p>
+          <p className="muted">Use any source material, inspect routing, then run the structured decision workflow.</p>
         </div>
         <Status tone={review ? 'ok' : 'info'}>{review ? 'Review created' : 'Draft'}</Status>
       </div>

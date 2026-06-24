@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -185,6 +186,22 @@ class RunView(BaseModel):
     routing_plan: dict[str, Any]
     usage: dict[str, Any]
     model_config = ConfigDict(from_attributes=True)
+
+
+class WorkflowSummaryView(BaseModel):
+    id: str
+    workspace_id: str
+    review_id: str
+    review_title: str
+    project_id: str
+    project_title: str
+    mode: str
+    state: str
+    created_at: datetime
+    selected_agents: list[str]
+    top_risks: list[str]
+    finding_count: int
+    has_report: bool
 
 
 class RunEventView(BaseModel):

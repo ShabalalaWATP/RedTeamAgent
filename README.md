@@ -1,6 +1,6 @@
 # RedTeamAgent
 
-RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews. The current build is a Stage 1 foundation vertical slice: registration, workspace creation, projects, reviews, source ingestion, provider routing, deterministic fake-provider review runs and evidence-linked reports.
+RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build is a Stage 1 foundation vertical slice: registration, workspace creation, projects, previous workflow history, reviews, source ingestion, provider routing, deterministic fake-provider review runs and evidence-linked reports.
 
 The current implementation follows Stage 1 from `docs/codex-three-stage-goals.md`, but it is not yet a complete Stage 1 release. See `docs/delivery/stage-1-completion-report.md` for passed checks and remaining release-blocking gaps. Stage 2 and Stage 3 are intentionally out of scope until Stage 1 gates pass.
 
@@ -61,10 +61,14 @@ Provider connections are created from adapter schemas exposed by the API. Stage 
 
 Credentials are write-only. The API never returns stored provider credentials to the browser.
 
+## Cheap Hosting Plan
+
+Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deployment plan. The repository includes a production-oriented Docker Compose and Caddy setup under `deploy/cheap-vps/`.
+
 ## Known Limitations
 
 - Email verification and password reset use development tokens in local mode rather than a mail provider.
 - Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration and capability metadata.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Full Stage 1 release gates are not all implemented yet. Remaining gaps include project update/delete, model catalogue/profile management, full SSE streaming semantics, visual-regression baselines, complete WCAG audit coverage and full Docker runtime verification.
+- Full Stage 1 release gates are not all implemented yet. Remaining gaps include frontend project edit/delete controls, model catalogue/profile management, full SSE streaming semantics, visual-regression baselines, complete WCAG audit coverage and full Docker runtime verification.
 - Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.

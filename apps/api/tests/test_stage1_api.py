@@ -125,6 +125,17 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report_data["findings"][0]["evidence_type"] == "source"
     assert "professional sign-off" in report_data["assumptions"][0]
 
+    workflows = client.get(f"/workspaces/{auth['workspace_id']}/workflows")
+    assert workflows.status_code == 200, workflows.text
+    workflow = workflows.json()[0]
+    assert workflow["id"] == run.json()["id"]
+    assert workflow["review_title"] == "Checkout migration"
+    assert workflow["project_title"] == "Payments rollout"
+    assert workflow["state"] == "completed"
+    assert workflow["has_report"] is True
+    assert workflow["finding_count"] == 1
+    assert workflow["top_risks"]
+
     exported_json = client.get(f"/runs/{run.json()['id']}/report/export?fmt=json")
     assert json.loads(exported_json.text)["title"] == "Checkout migration"
     assert client.get(f"/runs/{run.json()['id']}/report/export?fmt=markdown").text.startswith("#")
@@ -163,6 +174,9 @@ def test_cross_workspace_access_is_denied(client: TestClient) -> None:
         headers=csrf_headers(second),
     )
     assert denied_run.status_code == 403
+
+    denied_workflows = second_client.get(f"/workspaces/{first['workspace_id']}/workflows")
+    assert denied_workflows.status_code == 403
 
     denied_context = second_client.post(
         "/context-packs",

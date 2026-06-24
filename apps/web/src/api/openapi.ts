@@ -385,6 +385,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspace_id}/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workflows */
+        get: operations["list_workflows_workspaces__workspace_id__workflows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runs/{run_id}/events": {
         parameters: {
             query?: never;
@@ -823,6 +840,38 @@ export interface components {
         VerifyEmailRequest: {
             /** Token */
             token: string;
+        };
+        /** WorkflowSummaryView */
+        WorkflowSummaryView: {
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Review Id */
+            review_id: string;
+            /** Review Title */
+            review_title: string;
+            /** Project Id */
+            project_id: string;
+            /** Project Title */
+            project_title: string;
+            /** Mode */
+            mode: string;
+            /** State */
+            state: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Selected Agents */
+            selected_agents: string[];
+            /** Top Risks */
+            top_risks: string[];
+            /** Finding Count */
+            finding_count: number;
+            /** Has Report */
+            has_report: boolean;
         };
         /** WorkspaceView */
         WorkspaceView: {
@@ -1819,6 +1868,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_workflows_workspaces__workspace_id__workflows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowSummaryView"][];
                 };
             };
             /** @description Validation Error */

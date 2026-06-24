@@ -1807,6 +1807,68 @@
         }
       }
     },
+    "/workspaces/{workspace_id}/workflows": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Workflows",
+        "operationId": "list_workflows_workspaces__workspace_id__workflows_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowSummaryView"
+                  },
+                  "title": "Response List Workflows Workspaces  Workspace Id  Workflows Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runs/{run_id}/events": {
       "get": {
         "tags": [
@@ -2917,6 +2979,86 @@
           "token"
         ],
         "title": "VerifyEmailRequest"
+      },
+      "WorkflowSummaryView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "review_id": {
+            "type": "string",
+            "title": "Review Id"
+          },
+          "review_title": {
+            "type": "string",
+            "title": "Review Title"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_title": {
+            "type": "string",
+            "title": "Project Title"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "selected_agents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Agents"
+          },
+          "top_risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Risks"
+          },
+          "finding_count": {
+            "type": "integer",
+            "title": "Finding Count"
+          },
+          "has_report": {
+            "type": "boolean",
+            "title": "Has Report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "review_id",
+          "review_title",
+          "project_id",
+          "project_title",
+          "mode",
+          "state",
+          "created_at",
+          "selected_agents",
+          "top_risks",
+          "finding_count",
+          "has_report"
+        ],
+        "title": "WorkflowSummaryView"
       },
       "WorkspaceView": {
         "properties": {

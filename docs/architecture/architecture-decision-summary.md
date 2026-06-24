@@ -2,7 +2,7 @@
 
 ## Summary
 
-RedTeamAgent is implemented as a local-first modular monolith with a React/Vite frontend and FastAPI backend. The backend separates domain policy, application use cases, interface adapters and infrastructure so that provider, storage, ingestion, workflow and export implementations can be replaced through contracts.
+RedTeamAgent is implemented as a local-first modular monolith with a React/Vite frontend and FastAPI backend. It red-teams decision-making artefacts of any kind, not primarily source code: proposals, essays, project plans, policies, product choices, code changes and other evidence-backed decisions should all fit the same workflow. The backend separates domain policy, application use cases, interface adapters and infrastructure so that provider, storage, ingestion, workflow and export implementations can be replaced through contracts.
 
 ## Key Decisions
 

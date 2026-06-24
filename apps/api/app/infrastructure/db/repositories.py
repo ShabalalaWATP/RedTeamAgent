@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import RunState, SourceState, WorkspaceRole
@@ -229,6 +229,20 @@ class SqlRepository:
     def get_run(self, run_id: str) -> models.Run | None:
         return self.session.get(models.Run, run_id)
 
+    def list_workflows(self, workspace_id: str) -> list[dict[str, Any]]:
+        statement = (
+            select(models.Run, models.Review, models.Project, models.Report)
+            .join(models.Review, models.Review.id == models.Run.review_id)
+            .join(models.Project, models.Project.id == models.Review.project_id)
+            .outerjoin(models.Report, models.Report.run_id == models.Run.id)
+            .where(models.Run.workspace_id == workspace_id)
+            .order_by(desc(models.Run.created_at))
+        )
+        return [
+            self._workflow_summary(run, review, project, report)
+            for run, review, project, report in self.session.execute(statement).all()
+        ]
+
     def update_run(self, run_id: str, state: str, usage: dict[str, Any] | None = None) -> None:
         run = self.session.get(models.Run, run_id)
         if run:
@@ -271,3 +285,40 @@ class SqlRepository:
 
     def commit(self) -> None:
         self.session.commit()
+
+    @staticmethod
+    def _workflow_summary(
+        run: models.Run,
+        review: models.Review,
+        project: models.Project,
+        report: models.Report | None,
+    ) -> dict[str, Any]:
+        report_data = report.data if report else {}
+        findings = report_data.get("findings", []) if isinstance(report_data, dict) else []
+        top_risks = SqlRepository._string_list(
+            report_data.get("top_risks", []) if isinstance(report_data, dict) else []
+        )
+        selected_agents = SqlRepository._string_list(
+            run.routing_plan.get("selected_agents", []) if isinstance(run.routing_plan, dict) else []
+        )
+        return {
+            "id": run.id,
+            "workspace_id": run.workspace_id,
+            "review_id": run.review_id,
+            "review_title": review.title,
+            "project_id": project.id,
+            "project_title": project.title,
+            "mode": review.mode,
+            "state": run.state,
+            "created_at": run.created_at,
+            "selected_agents": selected_agents,
+            "top_risks": top_risks,
+            "finding_count": len(findings) if isinstance(findings, list) else 0,
+            "has_report": report is not None,
+        }
+
+    @staticmethod
+    def _string_list(value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item) for item in value]

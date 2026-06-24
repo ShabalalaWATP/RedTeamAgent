@@ -34,7 +34,11 @@
     "jsdom": "27.3.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "5.9.3",
-    "vite": "^7.3.5",
+    "vite": "7.3.5",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "js-yaml": "4.2.0"
   }
 }

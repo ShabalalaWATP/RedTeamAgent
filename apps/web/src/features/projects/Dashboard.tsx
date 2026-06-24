@@ -9,8 +9,8 @@ import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 export function Dashboard() {
   const { auth } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [title, setTitle] = useState('Stage 1 launch review');
-  const [description, setDescription] = useState('Assess product, security, legal and delivery risk.');
+  const [title, setTitle] = useState('Decision review workspace');
+  const [description, setDescription] = useState('Red-team a project, proposal, essay, policy or code change.');
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -38,7 +38,7 @@ export function Dashboard() {
       <div className="screen-header">
         <div>
           <h1>Projects</h1>
-          <p className="muted">Create a review workspace and keep every run source-linked.</p>
+          <p className="muted">Create a workspace for any decision artefact and keep every workflow source-linked.</p>
         </div>
         <Status tone="ok">Tenant isolated</Status>
       </div>
@@ -59,7 +59,7 @@ export function Dashboard() {
         <div className="panel stack">
           <h2>Active projects</h2>
           {projects.length === 0 ? (
-            <EmptyState title="No projects yet" body="Create the first project to start a structured review." />
+            <EmptyState title="No projects yet" body="Create the first decision space to start a structured review." />
           ) : (
             <div className="list">
               {projects.map((project) => (

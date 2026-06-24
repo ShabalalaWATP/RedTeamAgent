@@ -66,6 +66,10 @@ class WorkflowService:
     def get_run(self, user_id: str, run_id: str) -> Any:
         return self._require_run(user_id, run_id)
 
+    def list_workflows(self, user_id: str, workspace_id: str) -> list[dict[str, Any]]:
+        self._require_member(user_id, workspace_id)
+        return self.repo.list_workflows(workspace_id)
+
     def list_events(self, user_id: str, run_id: str) -> list[Any]:
         self._require_run(user_id, run_id)
         return self.repo.list_run_events(run_id)

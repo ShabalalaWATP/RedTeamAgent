@@ -263,4 +263,20 @@ describe('edge UI flows', () => {
     renderApp('/runs/missing');
     expect(await screen.findByRole('alert')).toHaveTextContent('run missing');
   });
+
+  it('shows empty and error states for previous workflows', async () => {
+    storeAuth();
+    mockFetch((url) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/workflows');
+    expect(await screen.findByText('No workflows yet')).toBeInTheDocument();
+    cleanup();
+
+    storeAuth();
+    mockFetch(() => jsonResponse({ message: 'history unavailable' }, 500));
+    renderApp('/workflows');
+    expect(await screen.findByRole('alert')).toHaveTextContent('history unavailable');
+  });
 });

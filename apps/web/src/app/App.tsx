@@ -1,4 +1,4 @@
-import { Activity, Database, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { api } from '../api/client';
 import { AuthPage } from '../features/auth/AuthPage';
@@ -6,6 +6,7 @@ import { ProviderSettings } from '../features/providers/ProviderSettings';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
 import { NewReviewPage } from '../features/reviews/NewReviewPage';
+import { WorkflowHistory } from '../features/workflows/WorkflowHistory';
 import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
 import './styles.css';
@@ -26,8 +27,7 @@ function Layout() {
         </div>
         <nav>
           <NavLink to="/dashboard"><FolderKanban />Projects</NavLink>
-          <NavLink to="/dashboard"><Activity />Reviews</NavLink>
-          <NavLink to="/dashboard"><Database />Evidence</NavLink>
+          <NavLink to="/workflows"><Activity />Workflows</NavLink>
           <NavLink to="/providers"><Settings />Providers</NavLink>
         </nav>
       </aside>
@@ -51,6 +51,7 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/workflows" element={<WorkflowHistory />} />
         <Route path="/providers" element={<ProviderSettings />} />
         <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
         <Route path="/runs/:runId" element={<ReportPage />} />

@@ -1,10 +1,32 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'danger';
 };
 
-export function Button({ variant = 'secondary', className = '', ...props }: ButtonProps) {
+type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  asLink: true;
+  disabled?: boolean;
+  to: string;
+  variant?: 'primary' | 'secondary' | 'danger';
+};
+
+type ButtonLikeProps = ButtonProps | ButtonLinkProps;
+
+export function Button({ variant = 'secondary', className = '', ...props }: ButtonLikeProps) {
+  if ('asLink' in props) {
+    const { asLink: _asLink, disabled, to, ...linkProps } = props;
+    const disabledClass = disabled ? 'disabled' : '';
+    return (
+      <Link
+        aria-disabled={disabled || undefined}
+        className={`button ${variant} ${disabledClass} ${className}`}
+        to={disabled ? '#' : to}
+        {...linkProps}
+      />
+    );
+  }
   return <button className={`button ${variant} ${className}`} {...props} />;
 }
 
