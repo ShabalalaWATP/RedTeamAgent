@@ -199,7 +199,10 @@ describe('RedTeamAgent app flows', () => {
       }
       if (url.includes('/context-packs')) return jsonResponse({ id: 'pack-1' });
       if (url.includes('/preflight')) return jsonResponse({ selected_agents: [{ key: 'cybersecurity_privacy' }], external_research: false });
-      if (url.includes('/runs')) return jsonResponse({ id: 'run-1', workspace_id: authState.workspaceId, review_id: 'review-1', state: 'completed', routing_plan: {}, usage: {} });
+      if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-1', 'completed'));
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([{ id: 'event-1', state: 'completed', message: 'done', sequence: 1 }]);
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: reportResponse() });
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/projects/project-1/reviews/new');
@@ -216,40 +219,15 @@ describe('RedTeamAgent app flows', () => {
   it('loads report data, filters findings and exports markdown', async () => {
     storeAuth();
     const user = userEvent.setup();
-    mockFetch((url) => {
+    const fetchMock = mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
+      if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-2', 'completed'));
+      if (url.endsWith('/runs/run-2') && init?.method === 'GET') return jsonResponse(runResponse('run-2', 'completed'));
+      if (url.includes('/runs/run-2/events')) return jsonResponse([]);
+      if (url.includes('/runs/run-2/report')) return jsonResponse({ data: reportResponse() });
       if (url.includes('/events')) return jsonResponse([{ id: 'event-1', state: 'completed', message: 'done', sequence: 1 }]);
       if (url.includes('/report/export')) return textResponse('# Exported report');
-      if (url.includes('/report')) {
-        return jsonResponse({
-          data: {
-            title: 'Checkout migration',
-            provisional_recommendation: 'Proceed with controls',
-            executive_summary: 'Summary',
-            coverage_map: { sources: 1, agents: ['cybersecurity_privacy'] },
-            top_risks: ['Risk'],
-            dependencies: [],
-            blockers: [],
-            assumptions: [],
-            evidence_gaps: [],
-            sources: ['source'],
-            methodology: 'Method',
-            findings: [
-              {
-                id: 'finding-1',
-                title: 'Medium risk',
-                severity: 'medium',
-                confidence: 'high',
-                agent: 'operations_delivery',
-                category: 'delivery',
-                evidence_type: 'source',
-                evidence_label: 'source:1',
-                summary: 'Needs owner',
-                recommended_action: 'Assign owner'
-              }
-            ]
-          }
-        });
-      }
+      if (url.includes('/report')) return jsonResponse({ data: reportResponse() });
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/runs/run-1');
@@ -258,6 +236,29 @@ describe('RedTeamAgent app flows', () => {
     expect(screen.getByText('Medium risk')).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: /markdown/i })[0]);
     expect(await screen.findByLabelText(/export output/i)).toHaveValue('# Exported report');
+    await user.click(screen.getByRole('button', { name: /retry run/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/reviews/review-1/runs'), expect.anything()));
+  });
+
+  it('cancels a running workflow from the report timeline', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'specialist_review'));
+      if (url.includes('/runs/run-1/events')) {
+        return jsonResponse([{ id: 'event-1', state: 'specialist_review', message: 'running', sequence: 1 }]);
+      }
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ message: 'Report not found' }, 404);
+      if (url.endsWith('/runs/run-1/cancel') && init?.method === 'POST') {
+        expect(init.headers).toMatchObject({ 'X-CSRF-Token': authState.csrfToken });
+        return jsonResponse(runResponse('run-1', 'cancelled'));
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/runs/run-1');
+    expect((await screen.findAllByText('specialist_review')).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: /cancel run/i }));
+    expect(await screen.findByText('cancelled')).toBeInTheDocument();
   });
 
   it('shows previous workflows for the signed-in workspace', async () => {
@@ -300,5 +301,46 @@ function modelResponse() {
     capabilities: ['text', 'structured_output', 'streaming'],
     provenance: 'manual',
     verified: true
+  };
+}
+
+function runResponse(id: string, state: string) {
+  return {
+    id,
+    workspace_id: authState.workspaceId,
+    review_id: 'review-1',
+    state,
+    routing_plan: {},
+    usage: {}
+  };
+}
+
+function reportResponse() {
+  return {
+    title: 'Checkout migration',
+    provisional_recommendation: 'Proceed with controls',
+    executive_summary: 'Summary',
+    coverage_map: { sources: 1, agents: ['cybersecurity_privacy'] },
+    top_risks: ['Risk'],
+    dependencies: [],
+    blockers: [],
+    assumptions: [],
+    evidence_gaps: [],
+    sources: ['source'],
+    methodology: 'Method',
+    findings: [
+      {
+        id: 'finding-1',
+        title: 'Medium risk',
+        severity: 'medium',
+        confidence: 'high',
+        agent: 'operations_delivery',
+        category: 'delivery',
+        evidence_type: 'source',
+        evidence_label: 'source:1',
+        summary: 'Needs owner',
+        recommended_action: 'Assign owner'
+      }
+    ]
   };
 }

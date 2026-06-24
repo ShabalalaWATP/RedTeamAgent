@@ -244,6 +244,9 @@ describe('edge UI flows', () => {
     storeAuth();
     const user = userEvent.setup();
     mockFetch((url) => {
+      if (url.endsWith('/runs/run-2')) {
+        return jsonResponse({ id: 'run-2', workspace_id: authState.workspaceId, review_id: 'review-2', state: 'completed', routing_plan: {}, usage: {} });
+      }
       if (url.includes('/events')) return jsonResponse([{ id: 'event-1', state: 'failed', message: 'failed', sequence: 1 }]);
       if (url.includes('/report/export?fmt=json')) return textResponse('{"ok":true}');
       if (url.includes('/report/export?fmt=html')) return textResponse('<html></html>');
@@ -291,6 +294,7 @@ describe('edge UI flows', () => {
   it('shows report loading errors', async () => {
     storeAuth();
     mockFetch((url) => {
+      if (url.endsWith('/runs/missing')) return jsonResponse({ message: 'run missing' }, 404);
       if (url.includes('/events')) return jsonResponse({ message: 'run missing' }, 404);
       return jsonResponse({ message: 'unexpected' }, 500);
     });

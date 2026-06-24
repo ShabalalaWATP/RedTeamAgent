@@ -44,6 +44,8 @@ describe('ApiClient', () => {
         });
       }
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
+      if (url.endsWith('/runs/run-1/cancel') && init?.method === 'POST') return jsonResponse(runResponse('cancelled'));
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
       if (url.includes('/providers/connections?')) {
         return jsonResponse([
           {
@@ -105,6 +107,9 @@ describe('ApiClient', () => {
     await expect(client.uploadSource('csrf', 'review-1', file)).resolves.toMatchObject({ state: 'ingested' });
     await expect(client.updateProject('csrf', 'project-1', 'Updated', 'Changed')).resolves.toMatchObject({ title: 'Updated' });
     await expect(client.deleteProject('csrf', 'project-1')).resolves.toBeUndefined();
+    await expect(client.getRun('run-1')).resolves.toMatchObject({ state: 'completed' });
+    await expect(client.cancelRun('csrf', 'run-1')).resolves.toMatchObject({ state: 'cancelled' });
+    expect(client.eventStreamUrl('run-1')).toMatch('/runs/run-1/events/stream');
     await expect(client.listProviderConnections('workspace-1')).resolves.toHaveLength(1);
     await expect(client.testProviderConnection('csrf', 'conn-1')).resolves.toMatchObject({ ok: true });
     await expect(client.createModel('csrf', {})).resolves.toMatchObject({ id: 'model-1' });
@@ -127,6 +132,17 @@ describe('ApiClient', () => {
     await expect(client.exportReport('run-1', 'html')).rejects.toThrow('Request failed with 500');
   });
 });
+
+function runResponse(state: string) {
+  return {
+    id: 'run-1',
+    workspace_id: 'workspace-1',
+    review_id: 'review-1',
+    state,
+    routing_plan: {},
+    usage: {}
+  };
+}
 
 function modelResponse() {
   return {

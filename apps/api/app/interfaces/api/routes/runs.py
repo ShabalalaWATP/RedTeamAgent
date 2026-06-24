@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from typing import Annotated
 
@@ -80,7 +81,13 @@ async def stream_events(
 
     async def event_stream() -> AsyncIterator[str]:
         for event in events:
-            yield f"event: {event.state}\ndata: {event.message}\n\n"
+            payload = {
+                "id": event.id,
+                "state": event.state,
+                "message": event.message,
+                "sequence": event.sequence,
+            }
+            yield f"id: {event.sequence}\ndata: {json.dumps(payload)}\n\n"
             await asyncio.sleep(0)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

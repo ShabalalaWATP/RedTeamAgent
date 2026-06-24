@@ -213,6 +213,18 @@ export class ApiClient {
     return runSchema.parse(await this.request(`/reviews/${reviewId}/runs`, 'POST', { csrf }));
   }
 
+  async getRun(runId: string) {
+    return runSchema.parse(await this.request(`/runs/${runId}`, 'GET'));
+  }
+
+  async cancelRun(csrf: string, runId: string) {
+    return runSchema.parse(await this.request(`/runs/${runId}/cancel`, 'POST', { csrf }));
+  }
+
+  eventStreamUrl(runId: string) {
+    return `${API_BASE}/runs/${runId}/events/stream`;
+  }
+
   async listWorkflows(workspaceId: string) {
     const path = `/workspaces/${workspaceId}/workflows`;
     return z.array(workflowSummarySchema).parse(await this.request(path, 'GET'));

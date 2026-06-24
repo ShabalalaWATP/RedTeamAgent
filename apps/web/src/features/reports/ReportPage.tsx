@@ -1,8 +1,9 @@
-import { Download, Filter } from 'lucide-react';
+import { Download, Filter, RotateCcw, StopCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { ReportData } from '../../shared/types';
+import { useAuth } from '../../app/AuthContext';
+import type { ReportData, Run } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Status } from '../../shared/ui';
 
 type RunEvent = {
@@ -12,8 +13,19 @@ type RunEvent = {
   sequence: number;
 };
 
+const TERMINAL_STATES = new Set(['completed', 'failed', 'cancelled']);
+
+function mergeEvent(events: RunEvent[], next: RunEvent) {
+  const byId = new Map(events.map((event) => [event.id, event]));
+  byId.set(next.id, next);
+  return Array.from(byId.values()).sort((left, right) => left.sequence - right.sequence);
+}
+
 export function ReportPage() {
   const { runId } = useParams();
+  const navigate = useNavigate();
+  const { auth } = useAuth();
+  const [run, setRun] = useState<Run | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [severity, setSeverity] = useState('all');
@@ -22,12 +34,47 @@ export function ReportPage() {
 
   useEffect(() => {
     if (!runId) return;
-    Promise.all([api.runEvents(runId), api.report(runId)])
-      .then(([eventData, reportData]) => {
+    let active = true;
+    let stream: EventSource | null = null;
+
+    const loadReport = async (state: string) => {
+      try {
+        const reportData = await api.report(runId);
+        if (active) setReport(reportData as ReportData);
+      } catch (err) {
+        if (active && state === 'completed') setError((err as Error).message);
+      }
+    };
+
+    const loadRun = async () => {
+      setError(null);
+      try {
+        const [runData, eventData] = await Promise.all([api.getRun(runId), api.runEvents(runId)]);
+        if (!active) return;
+        setRun(runData);
         setEvents(eventData as RunEvent[]);
-        setReport(reportData as ReportData);
-      })
-      .catch((err) => setError(err.message));
+        await loadReport(runData.state);
+      } catch (err) {
+        if (active) setError((err as Error).message);
+      }
+    };
+
+    void loadRun();
+    if (typeof EventSource !== 'undefined') {
+      stream = new EventSource(api.eventStreamUrl(runId), { withCredentials: true });
+      stream.onmessage = (message) => {
+        const next = JSON.parse(message.data) as RunEvent;
+        setEvents((current) => mergeEvent(current, next));
+        setRun((current) => (current ? { ...current, state: next.state } : current));
+        if (next.state === 'completed') void loadReport(next.state);
+        if (TERMINAL_STATES.has(next.state)) stream?.close();
+      };
+      stream.onerror = () => stream?.close();
+    }
+    return () => {
+      active = false;
+      stream?.close();
+    };
   }, [runId]);
 
   const findings = useMemo(() => {
@@ -40,6 +87,31 @@ export function ReportPage() {
     setExportText(await api.exportReport(runId, fmt));
   };
 
+  const cancelRun = async () => {
+    if (!auth || !runId) return;
+    setError(null);
+    try {
+      const next = await api.cancelRun(auth.csrfToken, runId);
+      setRun(next);
+      setEvents(await api.runEvents(runId) as RunEvent[]);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const retryRun = async () => {
+    if (!auth || !run) return;
+    setError(null);
+    try {
+      const next = await api.startRun(auth.csrfToken, run.review_id);
+      navigate(`/runs/${next.id}`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const canCancel = run ? !TERMINAL_STATES.has(run.state) : false;
+
   return (
     <section className="screen">
       <div className="screen-header">
@@ -47,7 +119,7 @@ export function ReportPage() {
           <h1>Report preview</h1>
           <p className="muted">Evidence-linked findings with assumptions and methodology visible.</p>
         </div>
-        <Status tone={report ? 'ok' : 'info'}>{report ? 'Quality gate passed' : 'Loading'}</Status>
+        <Status tone={report ? 'ok' : 'info'}>{run?.state ?? 'Loading'}</Status>
       </div>
       <ErrorState message={error} />
       <div className="grid">
@@ -96,9 +168,17 @@ export function ReportPage() {
             ))}
           </ol>
           <div className="row">
-            <Button onClick={() => void exportReport('markdown')}><Download size={16} /> Markdown</Button>
-            <Button onClick={() => void exportReport('json')}>JSON</Button>
-            <Button onClick={() => void exportReport('html')}>HTML</Button>
+            <Button onClick={() => void cancelRun()} disabled={!canCancel}>
+              <StopCircle size={16} /> Cancel run
+            </Button>
+            <Button onClick={() => void retryRun()} disabled={!run}>
+              <RotateCcw size={16} /> Retry run
+            </Button>
+          </div>
+          <div className="row">
+            <Button onClick={() => void exportReport('markdown')} disabled={!report}><Download size={16} /> Markdown</Button>
+            <Button onClick={() => void exportReport('json')} disabled={!report}>JSON</Button>
+            <Button onClick={() => void exportReport('html')} disabled={!report}>HTML</Button>
           </div>
           {exportText ? <textarea readOnly rows={8} value={exportText} aria-label="Export output" /> : null}
           <h3>Evidence gaps</h3>

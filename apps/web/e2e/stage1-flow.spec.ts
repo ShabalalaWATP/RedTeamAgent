@@ -70,6 +70,10 @@ async function mockApi(page: Page) {
       await fulfilJson(route, runResponse());
       return;
     }
+    if (url.pathname === '/runs/run-1') {
+      await fulfilJson(route, runResponse());
+      return;
+    }
     if (url.pathname === '/runs/run-1/events') {
       await fulfilJson(route, runEvents());
       return;

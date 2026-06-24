@@ -26,6 +26,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Agent model profiles can be assigned from saved model records in the provider settings UI.
 - Deterministic fake provider and provider endpoint validation for hosted mode.
 - Local workflow progression through intake, ingestion, framing, agent planning, specialist review, reconciliation, report composition and quality gate.
+- JSON Server-Sent Events replay is consumed by the report timeline, with run snapshot refresh after page reload.
+- Report timeline controls can cancel non-terminal runs and retry a run from the same review.
 - Structured evidence-linked report retrieval and Markdown, JSON and HTML export.
 - Dark-mode-first responsive UI for auth, projects, provider settings, review creation and report screens.
 - Docker Compose configuration for web, API, worker, PostgreSQL with pgvector image, Redis and MinIO.
@@ -38,8 +40,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Live model catalogue sync from provider APIs is not complete.
 - Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
-- Server-Sent Events progress is covered by run events, but the browser currently polls event history rather than consuming a live SSE stream.
-- Cancel and retry controls for safe stages are not complete.
+- True long-running background execution and in-flight cancellation are still limited by the synchronous local workflow engine.
 - Full CRUD and IDOR coverage for every workspace-owned resource is not complete.
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
 - Visual-regression baselines are screenshots, not an automated baseline suite.
@@ -66,8 +67,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Backend coverage: pytest-cov, 97.39 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
-- Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 26 tests.
-- Frontend coverage: Vitest v8, 95.10 percent statements, 83.52 percent branches, 98.77 percent functions, 99.47 percent lines.
+- Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 32 tests.
+- Frontend coverage: Vitest v8, 95.15 percent statements, 82.84 percent branches, 97.75 percent functions, 99.54 percent lines.
 - Frontend type check: `npm run typecheck --prefix apps/web`, passed.
 - Frontend production build: `npm run build --prefix apps/web`, passed.
 - Dependency gate: `npm audit --prefix apps/web --audit-level=high`, passed with 0 vulnerabilities reported.
@@ -99,7 +100,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Performance Results
 
-- Frontend production bundle built successfully at approximately 329.34 kB JavaScript and 4.98 kB CSS before gzip.
+- Frontend production bundle built successfully at approximately 331.13 kB JavaScript and 4.98 kB CSS before gzip.
 - Formal app shell, interaction, run-progress and large-report performance budgets are documented as required work, not yet enforced.
 
 ## Migration Or Rollback Notes
@@ -160,4 +161,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, live SSE consumption, cancel/retry, stronger context-pack provenance and automated accessibility/visual baselines.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, stronger context-pack provenance, true background workflow execution semantics and automated accessibility/visual baselines.
