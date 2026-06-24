@@ -33,7 +33,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Report timeline controls can cancel non-terminal runs and retry a run from the same review.
 - Structured evidence-linked report retrieval and Markdown, JSON and HTML export.
 - Dark-mode-first responsive UI for auth, projects, provider settings, review creation and report screens.
-- Docker Compose configuration for web, API, worker, PostgreSQL with pgvector image, Redis and MinIO.
+- Docker Compose configuration and runtime validation for web, API, worker, PostgreSQL with pgvector image, Redis and MinIO.
 - Cheap VPS deployment plan with production Compose, Caddy reverse proxy and domain guidance.
 
 ## Incomplete DoD Items
@@ -45,7 +45,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
 - Visual-regression baselines are screenshots, not an automated baseline suite.
 - WCAG coverage includes an automated Playwright axe smoke check, not a complete WCAG 2.2 AA audit.
-- Docker Compose was configuration-validated, but the full multi-service runtime was not brought up and exercised end to end.
 - Branch coverage is below 95 percent on the frontend, although statements, functions and lines pass the 95 percent gate.
 
 ## Security Issues Found And Fixed
@@ -64,7 +63,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 ## Test Results
 
 - Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 25 tests.
-- Backend coverage: pytest-cov, 97.51 percent total coverage.
+- Backend coverage: pytest-cov, 96.91 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.
@@ -76,6 +75,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Line-count gate: `python scripts\check_line_lengths.py`, passed.
 - Secret scan: `python scripts\secret_scan.py`, passed.
 - Docker Compose config: `docker compose config`, passed.
+- Docker Compose full runtime: `docker compose up -d --build`, passed with explicit host-port overrides for this workstation, API `/health`, web `/` and MinIO live health verified, all required services running, then torn down with `docker compose down`.
 - Cheap VPS production Compose config: `docker compose --env-file deploy\cheap-vps\.env.production -f deploy\cheap-vps\docker-compose.prod.yml config`, passed using a temporary placeholder env file.
 - Playwright E2E: `npm run e2e --prefix apps/web`, passed with desktop and mobile Chromium projects after setting `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the local cached Chromium executable.
 - In-app browser QA: passed on a real local API and Vite app for register, verify, login, project create/edit/delete, decision review run, workflow history, provider connection save, manual model registration, agent profile assignment, stored connection testing, desktop viewport, mobile viewport and workflow history report navigation. A desktop clipping issue in workflow history, a mobile topbar overlay issue on the dashboard and a stale provider workspace-load alert were found and fixed.
@@ -137,6 +137,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - `docs/delivery/release-gates.md`
 - `docs/delivery/stage-1-completion-report.md`
 - `docs/deployment/cheap-hosting-plan.md`
+- `docker-compose.yml`
 - `deploy/cheap-vps/docker-compose.prod.yml`
 - `deploy/cheap-vps/Caddyfile`
 - `deploy/cheap-vps/.env.production.example`

@@ -15,6 +15,8 @@ docker compose up -d postgres redis minio
 
 Create `.env` from `.env.example` for local overrides. The backend starts without live provider credentials when `ALLOW_FAKE_PROVIDER=true`.
 
+The dependency-only compose services use non-default host ports to avoid clashing with local database installs: PostgreSQL `55432`, Redis `56379`, MinIO API `59000` and MinIO console `59001`. Override `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`, `API_HOST_PORT` or `WEB_HOST_PORT` before running `docker compose` if needed. When running the API outside Docker, point local `.env` values at those host ports.
+
 ## Development
 
 ```powershell
@@ -37,9 +39,19 @@ npm audit --prefix apps/web --audit-level=high
 python scripts/check_line_lengths.py
 python scripts/secret_scan.py
 docker compose config
+docker compose up -d --build
+docker compose down
 ```
 
 Backend and frontend coverage are measured separately and configured to fail below 95 percent.
+
+If the default API or web ports are already in use, run the full stack with explicit host ports:
+
+```powershell
+$env:API_HOST_PORT='18000'
+$env:WEB_HOST_PORT='15173'
+docker compose up -d --build
+```
 
 Playwright E2E checks can be run with:
 
@@ -70,5 +82,5 @@ Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deploym
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
 - Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration and capability metadata.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes, true background workflow execution semantics, visual-regression baselines, complete WCAG audit coverage and full Docker runtime verification.
+- Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes, true background workflow execution semantics, visual-regression baselines and complete WCAG audit coverage.
 - Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.
