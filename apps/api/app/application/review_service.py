@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.application.ports.repositories import RepositoryPorts
+from app.application.provenance import context_pack_snapshot
 from app.domain.enums import AGENT_LABELS, ReviewMode, SourceState, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError
 from app.domain.policies import require_write, route_agents, validate_upload
@@ -67,6 +68,7 @@ class ReviewService:
         review = self._require_review_member(user_id, review_id)
         decision = route_agents(ReviewMode(review.mode), review.focus_chips)
         sources = self.repo.list_sources(review.id)
+        selected_agent_keys = {agent.value for agent in decision.selected_agents}
         return {
             "review_id": review.id,
             "sources": [self._source_view(source) for source in sources],
@@ -84,6 +86,10 @@ class ReviewService:
             "challenge_passes": decision.challenge_passes,
             "report_depth": decision.report_depth,
             "capability_warnings": self._capability_warnings(review.workspace_id),
+            "context_packs": context_pack_snapshot(
+                self.repo.list_context_packs(review.workspace_id),
+                selected_agent_keys,
+            ),
         }
 
     def _extract_source(

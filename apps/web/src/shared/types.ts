@@ -109,6 +109,14 @@ export type ReportFinding = {
   recommended_action: string;
 };
 
+export type ContextPackProvenance = {
+  id: string;
+  name: string;
+  agent_key: string;
+  version: number;
+  markdown_sha256: string;
+};
+
 export type ReportData = {
   title: string;
   provisional_recommendation: string;
@@ -119,6 +127,7 @@ export type ReportData = {
   blockers: string[];
   assumptions: string[];
   evidence_gaps: string[];
+  context_packs: ContextPackProvenance[];
   findings: ReportFinding[];
   sources: string[];
   methodology: string;

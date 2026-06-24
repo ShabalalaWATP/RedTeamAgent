@@ -98,6 +98,14 @@ const modelProfileSchema = z.object({
   explicit_pin: z.boolean()
 });
 
+const contextPackProvenanceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  agent_key: z.string(),
+  version: z.number(),
+  markdown_sha256: z.string()
+});
+
 const reportSchema = z.object({
   data: z.object({
     title: z.string(),
@@ -109,6 +117,7 @@ const reportSchema = z.object({
     blockers: z.array(z.string()),
     assumptions: z.array(z.string()),
     evidence_gaps: z.array(z.string()),
+    context_packs: z.array(contextPackProvenanceSchema).default([]),
     findings: z.array(z.record(z.string(), z.unknown())),
     sources: z.array(z.string()),
     methodology: z.string()

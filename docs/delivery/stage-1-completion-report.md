@@ -20,6 +20,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Previous workflow history API and frontend screen for signed-in users.
 - Text source creation plus TXT, Markdown, PDF and DOCX upload/extraction support.
 - Context pack creation, listing and review-page assignment UI with visible agent key and version.
+- Completed runs capture assigned context-pack id, name, agent key, version and Markdown SHA-256 in routing and report provenance.
 - Provider adapter schemas for fake, OpenAI, Anthropic, Google Gemini and generic OpenAI-compatible adapters.
 - Provider credential submission is write-only from the browser perspective.
 - Manual model registration with visible capability provenance and verification status.
@@ -36,7 +37,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 ## Incomplete DoD Items
 
 - Email verification and password reset are local-token development flows, not mail-provider-backed production flows.
-- Context pack versions are visible in the composer, but completed runs do not yet persist exact context-pack version snapshots in runtime and report provenance.
 - Live model catalogue sync from provider APIs is not complete.
 - Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
@@ -64,13 +64,13 @@ The repository now has a working secure foundation and vertical slice, but sever
 ## Test Results
 
 - Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 22 tests.
-- Backend coverage: pytest-cov, 97.39 percent total coverage.
+- Backend coverage: pytest-cov, 97.37 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.
-- Frontend coverage: Vitest v8, 95.32 percent statements, 82.11 percent branches, 97.92 percent functions, 99.57 percent lines.
+- Frontend coverage: Vitest v8, 95.34 percent statements, 82.43 percent branches, 97.93 percent functions, 99.57 percent lines.
 - Frontend type check: `npm run typecheck --prefix apps/web`, passed.
-- Frontend production build: `npm run build --prefix apps/web`, passed, 333.76 kB JavaScript and 5.00 kB CSS before gzip.
+- Frontend production build: `npm run build --prefix apps/web`, passed, 334.38 kB JavaScript and 5.02 kB CSS before gzip.
 - Dependency gate: `npm audit --prefix apps/web --audit-level=high`, passed with 0 vulnerabilities reported.
 - OpenAPI export: `.\.venv\Scripts\python apps\api\scripts\export_openapi.py`, passed.
 - Line-count gate: `python scripts\check_line_lengths.py`, passed.
@@ -95,7 +95,7 @@ The repository now has a working secure foundation and vertical slice, but sever
   - `output/playwright/context-pack-mobile.png`
   - `output/browser/provider-settings-desktop.png`
   - `output/browser/provider-settings-mobile.png`
-- Manual inspection confirmed the report screen renders on desktop and mobile without the previous footer overlap.
+- Manual inspection confirmed the report screen, including context-pack provenance, renders on desktop and mobile without the previous footer overlap.
 - Browser automation confirmed provider settings renders on desktop and mobile without horizontal overflow, offscreen controls or stale alerts after provider/model/profile operations.
 - Playwright screenshots confirmed the new review context-pack composer and saved-pack provenance list render on desktop and mobile without horizontal overflow.
 - In-app browser screenshots confirmed the previous-workflows screen and project dashboard controls render on desktop and mobile without clipped actions after the responsive layout fixes.
@@ -103,7 +103,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Performance Results
 
-- Frontend production bundle built successfully at approximately 333.76 kB JavaScript and 5.00 kB CSS before gzip.
+- Frontend production bundle built successfully at approximately 334.38 kB JavaScript and 5.02 kB CSS before gzip.
 - Formal app shell, interaction, run-progress and large-report performance budgets are documented as required work, not yet enforced.
 
 ## Migration Or Rollback Notes
@@ -164,4 +164,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, run-level context-pack provenance, true background workflow execution semantics and automated accessibility/visual baselines.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, true background workflow execution semantics and automated accessibility/visual baselines.

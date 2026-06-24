@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 
 from fastapi.testclient import TestClient
 
@@ -35,6 +36,8 @@ def create_project_review(client: TestClient, auth: dict[str, object]) -> dict[s
 def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     auth = register_verified(client)
     ids = create_project_review(client, auth)
+    policy_markdown = "# Policy\nPrefer reversible deployments."
+    policy_hash = sha256(policy_markdown.encode("utf-8")).hexdigest()
 
     source = client.post(
         f"/reviews/{ids['review_id']}/sources/text",
@@ -51,7 +54,7 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
             "workspace_id": auth["workspace_id"],
             "name": "Architecture policy",
             "agent_key": "software_architecture",
-            "markdown": "# Policy\nPrefer reversible deployments.",
+            "markdown": policy_markdown,
         },
     )
     assert pack.status_code == 200, pack.text
@@ -105,6 +108,9 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert body["selected_mode"] == "in_depth"
     assert any(agent["key"] == "cybersecurity_privacy" for agent in body["selected_agents"])
     assert body["external_research"] is False
+    assert body["context_packs"][0]["name"] == "Architecture policy"
+    assert body["context_packs"][0]["version"] == 1
+    assert body["context_packs"][0]["markdown_sha256"] == policy_hash
 
     run = client.post(
         f"/reviews/{ids['review_id']}/runs",
@@ -112,6 +118,9 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     )
     assert run.status_code == 200, run.text
     assert run.json()["state"] == "completed"
+    run_context = run.json()["routing_plan"]["context_packs"][0]
+    assert run_context["agent_key"] == "software_architecture"
+    assert run_context["markdown_sha256"] == policy_hash
 
     events = client.get(f"/runs/{run.json()['id']}/events")
     assert events.status_code == 200, events.text
@@ -125,6 +134,8 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     report_data = report.json()["data"]
     assert report_data["findings"][0]["evidence_type"] == "source"
     assert "professional sign-off" in report_data["assumptions"][0]
+    assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
+    assert "context-pack version snapshot" in report_data["methodology"]
 
     workflows = client.get(f"/workspaces/{auth['workspace_id']}/workflows")
     assert workflows.status_code == 200, workflows.text
@@ -139,7 +150,9 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
 
     exported_json = client.get(f"/runs/{run.json()['id']}/report/export?fmt=json")
     assert json.loads(exported_json.text)["title"] == "Checkout migration"
-    assert client.get(f"/runs/{run.json()['id']}/report/export?fmt=markdown").text.startswith("#")
+    exported_markdown = client.get(f"/runs/{run.json()['id']}/report/export?fmt=markdown").text
+    assert exported_markdown.startswith("#")
+    assert "## Context Packs" in exported_markdown
     assert "<html>" in client.get(f"/runs/{run.json()['id']}/report/export?fmt=html").text
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.application.ports.repositories import RepositoryPorts
+from app.application.provenance import context_pack_snapshot
 from app.domain.enums import AGENT_LABELS, AgentKey, ReviewMode, RunState
 from app.domain.exceptions import AuthorisationError, NotFoundError, QualityGateError
 from app.domain.policies import route_agents
@@ -27,9 +28,15 @@ class WorkflowService:
     def start_run(self, user_id: str, review_id: str) -> Any:
         review = self._require_review(user_id, review_id)
         decision = route_agents(ReviewMode(review.mode), review.focus_chips)
+        selected_agents = [agent.value for agent in decision.selected_agents]
+        context_packs = context_pack_snapshot(
+            self.repo.list_context_packs(review.workspace_id),
+            set(selected_agents),
+        )
         routing_plan = {
-            "selected_agents": [agent.value for agent in decision.selected_agents],
+            "selected_agents": selected_agents,
             "excluded_agents": {agent.value: reason for agent, reason in decision.excluded_agents.items()},
+            "context_packs": context_packs,
             "model_profile": "fake-local",
             "permitted_fallbacks": ["fake-local"],
         }
@@ -85,6 +92,7 @@ class WorkflowService:
         sources = self.repo.list_sources(review.id)
         source_labels = [f"{source.filename}:{source.id}" for source in sources]
         evidence_label = source_labels[0] if source_labels else "assumption"
+        context_packs = self._safe_list(routing_plan.get("context_packs", []))
         findings = [
             {
                 "id": "finding-1",
@@ -115,11 +123,21 @@ class WorkflowService:
                 for key in routing_plan["selected_agents"]
                 if key in {agent.value for agent in AgentKey}
             ],
+            "context_packs": context_packs,
             "findings": findings,
             "recommended_actions": [finding["recommended_action"] for finding in findings],
             "sources": source_labels,
-            "methodology": "Deterministic fake-provider Stage 1 workflow with source-linked quality gate.",
+            "methodology": (
+                "Deterministic fake-provider Stage 1 workflow with source-linked quality gate "
+                "and context-pack version snapshot."
+            ),
         }
+
+    @staticmethod
+    def _safe_list(value: object) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        return [item for item in value if isinstance(item, dict)]
 
     @staticmethod
     def _quality_gate(report_data: dict[str, Any]) -> None:

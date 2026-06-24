@@ -15,6 +15,7 @@ def export_report(data: dict[str, Any], fmt: str) -> str:
 
 def _markdown(data: dict[str, Any]) -> str:
     findings = data.get("findings", [])
+    context_packs = data.get("context_packs", [])
     lines = [
         f"# {data['title']}",
         "",
@@ -33,6 +34,10 @@ def _markdown(data: dict[str, Any]) -> str:
                 f"  - Evidence: {finding['evidence_label']}",
             ]
         )
+    if context_packs:
+        lines.extend(["", "## Context Packs"])
+        for pack in context_packs:
+            lines.append(f"- {pack['name']} ({pack['agent_key']}) v{pack['version']}")
     lines.extend(["", "## Methodology", str(data["methodology"])])
     return "\n".join(lines)
 

@@ -132,6 +132,7 @@ test('stage 1 browser flow reaches evidence-linked report', async ({ page }) => 
   await page.getByRole('button', { name: 'Run review' }).click();
   await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
   await expect(page.getByText('Unsupported claim risk')).toBeVisible();
+  await expect(page.getByText('Stage 1 governance context')).toBeVisible();
   await page.getByRole('button', { name: 'Markdown' }).click();
   await expect(page.getByLabel('Export output')).toContainText('Evidence-linked report');
   await page.getByRole('link', { name: 'Workflows' }).click();
@@ -238,6 +239,15 @@ function reportResponse() {
     blockers: [],
     assumptions: ['Traffic can be shifted gradually.'],
     evidence_gaps: ['No load test attached.'],
+    context_packs: [
+      {
+        id: 'context-1',
+        name: 'Stage 1 governance context',
+        agent_key: 'policy_governance',
+        version: 1,
+        markdown_sha256: 'abcdef1234567890'
+      }
+    ],
     findings: [
       {
         id: 'finding-1',

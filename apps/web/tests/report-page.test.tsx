@@ -64,6 +64,8 @@ describe('ReportPage run controls', () => {
     });
     expect((await screen.findAllByText('completed')).length).toBeGreaterThan(0);
     expect(await screen.findByText('Streamed report')).toBeInTheDocument();
+    expect(screen.getByText('Architecture policy')).toBeInTheDocument();
+    expect(screen.getByText('software_architecture')).toBeInTheDocument();
     expect(screen.getByText('done')).toBeInTheDocument();
     expect(FakeEventSource.instances[0].closed).toBe(true);
     act(() => FakeEventSource.instances[0].fail());
@@ -174,6 +176,15 @@ function reportResponse() {
     blockers: [],
     assumptions: [],
     evidence_gaps: [],
+    context_packs: [
+      {
+        id: 'pack-1',
+        name: 'Architecture policy',
+        agent_key: 'software_architecture',
+        version: 1,
+        markdown_sha256: 'abcdef1234567890'
+      }
+    ],
     sources: [],
     methodology: 'Method',
     findings: []

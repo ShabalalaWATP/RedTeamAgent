@@ -187,6 +187,23 @@ export function ReportPage() {
           ) : (
             <ul>{report?.evidence_gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
           )}
+          <h3>Context packs</h3>
+          {(report?.context_packs.length ?? 0) === 0 ? (
+            <p className="muted">No context packs recorded for this run.</p>
+          ) : (
+            <div className="list">
+              {report?.context_packs.map((pack) => (
+                <article className="list-item" key={pack.id}>
+                  <div>
+                    <strong>{pack.name}</strong>
+                    <p className="muted">{pack.agent_key}</p>
+                    <small>SHA-256: {pack.markdown_sha256.slice(0, 12)}</small>
+                  </div>
+                  <Status tone="ok">Version {pack.version}</Status>
+                </article>
+              ))}
+            </div>
+          )}
         </aside>
       </div>
     </section>
