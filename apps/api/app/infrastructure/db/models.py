@@ -144,6 +144,7 @@ class ModelRecord(Base):
     capabilities: Mapped[list[str]] = mapped_column(JsonType, default=list)
     provenance: Mapped[str] = mapped_column(String(120), default="manual")
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    probe_result: Mapped[dict[str, object]] = mapped_column(JsonType, default=dict)
 
 
 class ModelProfile(Base):

@@ -61,7 +61,9 @@ describe('ApiClient', () => {
         ]);
       }
       if (url.includes('/providers/connections/conn-1/test')) return jsonResponse({ ok: true });
+      if (url.includes('/providers/connections/conn-1/models/sync')) return jsonResponse([modelResponse()]);
       if (url.includes('/providers/models?')) return jsonResponse([modelResponse()]);
+      if (url.includes('/providers/models/model-1/probe')) return jsonResponse(modelResponse());
       if (url.includes('/providers/profiles?')) {
         return jsonResponse([
           {
@@ -116,8 +118,10 @@ describe('ApiClient', () => {
     await expect(client.listContextPacks('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listProviderConnections('workspace-1')).resolves.toHaveLength(1);
     await expect(client.testProviderConnection('csrf', 'conn-1')).resolves.toMatchObject({ ok: true });
+    await expect(client.syncModels('csrf', 'conn-1')).resolves.toHaveLength(1);
     await expect(client.createModel('csrf', {})).resolves.toMatchObject({ id: 'model-1' });
     await expect(client.listModels('workspace-1')).resolves.toHaveLength(1);
+    await expect(client.probeModel('csrf', 'model-1')).resolves.toMatchObject({ verified: true });
     await expect(client.createProfile('csrf', {})).resolves.toMatchObject({ name: 'Profile' });
     await expect(client.listProfiles('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listWorkflows('workspace-1')).resolves.toHaveLength(1);
@@ -156,7 +160,8 @@ function modelResponse() {
     model_identifier: 'fake-reviewer',
     capabilities: ['text'],
     provenance: 'manual',
-    verified: true
+    verified: true,
+    probe_result: { ok: true, source: 'test' }
   };
 }
 

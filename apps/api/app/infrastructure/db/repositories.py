@@ -201,9 +201,39 @@ class SqlRepository:
     def get_model(self, model_id: str) -> models.ModelRecord | None:
         return self.session.get(models.ModelRecord, model_id)
 
+    def get_model_by_identifier(
+        self,
+        workspace_id: str,
+        provider_connection_id: str,
+        model_identifier: str,
+    ) -> models.ModelRecord | None:
+        statement = select(models.ModelRecord).where(
+            models.ModelRecord.workspace_id == workspace_id,
+            models.ModelRecord.provider_connection_id == provider_connection_id,
+            models.ModelRecord.model_identifier == model_identifier,
+        )
+        return self.session.scalar(statement)
+
     def list_models(self, workspace_id: str) -> list[models.ModelRecord]:
         statement = select(models.ModelRecord).where(models.ModelRecord.workspace_id == workspace_id)
         return list(self.session.scalars(statement))
+
+    def update_model_probe(
+        self,
+        model_id: str,
+        capabilities: list[str],
+        provenance: str,
+        verified: bool,
+        probe_result: dict[str, Any],
+    ) -> models.ModelRecord:
+        model = self.session.get(models.ModelRecord, model_id)
+        if model is None:
+            raise LookupError(model_id)
+        model.capabilities = capabilities
+        model.provenance = provenance
+        model.verified = verified
+        model.probe_result = probe_result
+        return model
 
     def create_profile(self, workspace_id: str, data: dict[str, Any]) -> models.ModelProfile:
         profile = models.ModelProfile(workspace_id=workspace_id, **data)

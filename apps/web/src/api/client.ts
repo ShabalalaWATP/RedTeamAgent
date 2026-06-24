@@ -86,7 +86,8 @@ const modelRecordSchema = z.object({
   model_identifier: z.string(),
   capabilities: z.array(z.string()),
   provenance: z.string(),
-  verified: z.boolean()
+  verified: z.boolean(),
+  probe_result: z.record(z.string(), z.unknown()).default({})
 });
 
 const modelProfileSchema = z.object({
@@ -214,12 +215,22 @@ export class ApiClient {
     return this.request(`/providers/connections/${connectionId}/test`, 'POST', { csrf });
   }
 
+  async syncModels(csrf: string, connectionId: string) {
+    return z.array(modelRecordSchema).parse(
+      await this.request(`/providers/connections/${connectionId}/models/sync`, 'POST', { csrf })
+    );
+  }
+
   async createModel(csrf: string, body: Record<string, unknown>) {
     return modelRecordSchema.parse(await this.request('/providers/models', 'POST', { csrf, body }));
   }
 
   async listModels(workspaceId: string) {
     return z.array(modelRecordSchema).parse(await this.request(`/providers/models?workspace_id=${workspaceId}`, 'GET'));
+  }
+
+  async probeModel(csrf: string, modelId: string) {
+    return modelRecordSchema.parse(await this.request(`/providers/models/${modelId}/probe`, 'POST', { csrf }));
   }
 
   async createProfile(csrf: string, body: Record<string, unknown>) {

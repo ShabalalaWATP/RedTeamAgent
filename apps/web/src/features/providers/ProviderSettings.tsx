@@ -157,6 +157,30 @@ export function ProviderSettings() {
     }
   };
 
+  const syncCatalogue = async (connectionId: string) => {
+    if (!auth) return;
+    setError(null);
+    try {
+      const synced = await api.syncModels(auth.csrfToken, connectionId);
+      setResult(`Model catalogue synced with ${synced.length} record${synced.length === 1 ? '' : 's'}.`);
+      await loadWorkspaceData();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const probeModel = async (modelId: string) => {
+    if (!auth) return;
+    setError(null);
+    try {
+      const model = await api.probeModel(auth.csrfToken, modelId);
+      setResult(`Capability probe ${model.verified ? 'passed' : 'needs review'} for ${model.model_identifier}.`);
+      await loadWorkspaceData();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   return (
     <section className="screen">
       <div className="screen-header">
@@ -207,9 +231,14 @@ export function ProviderSettings() {
                     <strong>{connection.name}</strong>
                     <p className="muted">{connection.adapter} · credentials {connection.has_credentials ? 'stored' : 'not required'}</p>
                   </div>
-                  <Button type="button" onClick={() => void testConnection(connection.id)}>
-                    <RefreshCcw size={16} /> Test
-                  </Button>
+                  <div className="row">
+                    <Button type="button" onClick={() => void testConnection(connection.id)}>
+                      <RefreshCcw size={16} /> Test
+                    </Button>
+                    <Button type="button" onClick={() => void syncCatalogue(connection.id)}>
+                      Sync catalogue
+                    </Button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -281,7 +310,9 @@ export function ProviderSettings() {
                     <strong>{model.model_identifier}</strong>
                     <p className="muted">{model.provenance} · {model.verified ? 'verified' : 'unverified'}</p>
                     <p className="muted">{model.capabilities.join(', ') || 'No capabilities recorded.'}</p>
+                    <small>{String(model.probe_result.source ?? 'No probe recorded')}</small>
                   </div>
+                  <Button type="button" onClick={() => void probeModel(model.id)}>Probe</Button>
                 </article>
               ))}
             </div>

@@ -146,11 +146,22 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       await fulfilJson(route, { status: 'ok' });
       return;
     }
+    if (url.pathname === '/providers/connections/provider-1/models/sync') {
+      state.modelRecords = [modelRecordResponse()];
+      await fulfilJson(route, state.modelRecords);
+      return;
+    }
     if (url.pathname === '/providers/models' && request.method() === 'GET') {
       await fulfilJson(route, state.modelRecords);
       return;
     }
     if (url.pathname === '/providers/models' && request.method() === 'POST') {
+      const model = modelRecordResponse();
+      state.modelRecords = [model];
+      await fulfilJson(route, model);
+      return;
+    }
+    if (url.pathname === '/providers/models/model-1/probe') {
       const model = modelRecordResponse();
       state.modelRecords = [model];
       await fulfilJson(route, model);
@@ -358,7 +369,8 @@ export function modelRecordResponse() {
     model_identifier: 'fake-reviewer',
     capabilities: ['text', 'structured_output', 'streaming'],
     provenance: 'manual',
-    verified: true
+    verified: true,
+    probe_result: { ok: true, source: 'deterministic_fake_probe' }
   };
 }
 

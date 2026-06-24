@@ -72,6 +72,10 @@ def test_cross_workspace_idor_matrix(client: TestClient) -> None:
             f"/providers/connections/{resources['connection_id']}/test",
             headers=csrf_headers(attacker),
         ),
+        other_client.post(
+            f"/providers/connections/{resources['connection_id']}/models/sync",
+            headers=csrf_headers(attacker),
+        ),
         other_client.get(f"/providers/models?workspace_id={owner['workspace_id']}"),
         other_client.post(
             "/providers/models",
@@ -83,6 +87,7 @@ def test_cross_workspace_idor_matrix(client: TestClient) -> None:
                 "capabilities": ["text"],
             },
         ),
+        other_client.post(f"/providers/models/{resources['model_id']}/probe", headers=csrf_headers(attacker)),
         other_client.get(f"/providers/profiles?workspace_id={owner['workspace_id']}"),
         other_client.post(
             "/providers/profiles",

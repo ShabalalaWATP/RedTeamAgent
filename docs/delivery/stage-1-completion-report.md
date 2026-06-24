@@ -25,7 +25,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Cross-workspace IDOR matrix coverage denies unauthorised access across project, review, source, context pack, provider, model, profile, run, event, report and workflow routes.
 - Provider adapter schemas for fake, OpenAI, Anthropic, Google Gemini and generic OpenAI-compatible adapters.
 - Provider credential submission is write-only from the browser perspective.
-- Manual model registration with visible capability provenance and verification status.
+- Manual model registration plus adapter-backed model catalogue sync with visible capability provenance, verification status and durable probe results.
 - Agent model profiles can be assigned from saved model records in the provider settings UI.
 - Deterministic fake provider and provider endpoint validation for hosted mode.
 - Local workflow progression through intake, ingestion, framing, agent planning, specialist review, reconciliation, report composition and quality gate.
@@ -40,8 +40,6 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Incomplete DoD Items
 
-- Live model catalogue sync from provider APIs is not complete.
-- Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
 - WCAG coverage includes automated Playwright axe smoke checks across the core screen matrix, not a complete WCAG 2.2 AA audit.
@@ -51,6 +49,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 - Provider endpoint validation blocks loopback, private, link-local and cloud metadata routes in hosted mode unless self-hosted mode is explicitly enabled.
 - Stored provider credentials are never returned by provider connection responses.
+- Provider catalogue sync uses server-side adapter snapshots rather than replaying stored secrets against live provider APIs.
 - Object-level workspace checks cover the full Stage 1 route matrix for project, review, source, context pack, provider, model, profile, run, event, report and workflow paths.
 - Prompt-injection-style source text is treated as untrusted evidence in tests and cannot override deterministic routing or report quality gates.
 - The report footer was changed from a fixed overlay to normal document flow after visual verification showed it covering report content.
@@ -63,13 +62,13 @@ The repository now has a working secure foundation and vertical slice, but sever
 ## Test Results
 
 - Backend tests: `.\.venv\Scripts\python -m pytest apps\api`, passed, 26 tests.
-- Backend coverage: pytest-cov, 96.32 percent total coverage.
+- Backend coverage: pytest-cov, 95.79 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
 - Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 35 tests.
-- Frontend coverage: Vitest v8, 95.34 percent statements, 82.43 percent branches, 97.93 percent functions, 99.57 percent lines.
+- Frontend coverage: Vitest v8, 95.34 percent statements, 81.03 percent branches, 98.50 percent functions, 99.79 percent lines.
 - Frontend type check: `npm run typecheck --prefix apps/web`, passed.
-- Frontend production build: `npm run build --prefix apps/web`, passed, 334.38 kB JavaScript and 5.02 kB CSS before gzip.
+- Frontend production build: `npm run build --prefix apps/web`, passed, 335.32 kB JavaScript and 5.02 kB CSS before gzip.
 - Dependency gate: `npm audit --prefix apps/web --audit-level=high`, passed with 0 vulnerabilities reported.
 - OpenAPI export: `.\.venv\Scripts\python apps\api\scripts\export_openapi.py`, passed.
 - Line-count gate: `python scripts\check_line_lengths.py`, passed.
@@ -145,6 +144,14 @@ The repository now has a working secure foundation and vertical slice, but sever
 - `apps/web/e2e/stage1-flow.spec.ts`
 - `apps/web/e2e/stage1-visual-smoke.spec.ts`
 - `apps/web/e2e/stage1-visual-smoke.spec.ts-snapshots/`
+- `apps/api/app/application/provider_service.py`
+- `apps/api/app/infrastructure/providers/adapters.py`
+- `apps/api/app/interfaces/api/routes/providers.py`
+- `apps/api/app/interfaces/api/schemas.py`
+- `apps/web/src/features/providers/ProviderSettings.tsx`
+- `apps/web/src/api/client.ts`
+- `apps/web/src/shared/types.ts`
+- `packages/contracts/openapi.json`
 - `deploy/cheap-vps/docker-compose.prod.yml`
 - `deploy/cheap-vps/Caddyfile`
 - `deploy/cheap-vps/.env.production.example`
@@ -171,4 +178,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes and complete WCAG audit coverage.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish hybrid retrieval, live text-generation provider adapters and complete WCAG audit coverage.

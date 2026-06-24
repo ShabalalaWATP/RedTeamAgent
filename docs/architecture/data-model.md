@@ -12,7 +12,7 @@
 - `EvidenceChunk`: extracted text with locators and retrieval metadata.
 - `ContextPack`: versioned Markdown context assigned to an agent.
 - `ProviderConnection`: write-only provider credential and adapter configuration.
-- `ModelRecord`: model capability snapshot and provenance.
+- `ModelRecord`: model capability snapshot, provenance, verification state and durable probe result.
 - `ModelProfile`: routing profile assigned to agents.
 - `Run`: review workflow instance and state.
 - `RunEvent`: durable timeline event for SSE replay.

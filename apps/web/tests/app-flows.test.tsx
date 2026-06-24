@@ -309,7 +309,8 @@ function modelResponse() {
     model_identifier: 'fake-reviewer',
     capabilities: ['text', 'structured_output', 'streaming'],
     provenance: 'manual',
-    verified: true
+    verified: true,
+    probe_result: { ok: true, source: 'manual' }
   };
 }
 

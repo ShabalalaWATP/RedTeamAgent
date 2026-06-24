@@ -52,6 +52,19 @@ def test_connection(
     return service.test_connection(context.user.id, connection_id)
 
 
+@router.post(
+    "/connections/{connection_id}/models/sync",
+    response_model=list[ModelView],
+    dependencies=[Depends(require_csrf)],
+)
+def sync_models(
+    connection_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ProviderService, Depends(provider_service)],
+) -> list[ModelView]:
+    return [ModelView.model_validate(item) for item in service.sync_models(context.user.id, connection_id)]
+
+
 @router.post("/models", response_model=ModelView, dependencies=[Depends(require_csrf)])
 def create_model(
     payload: ModelCreate,
@@ -69,6 +82,15 @@ def list_models(
     service: Annotated[ProviderService, Depends(provider_service)],
 ) -> list[ModelView]:
     return [ModelView.model_validate(item) for item in service.list_models(context.user.id, workspace_id)]
+
+
+@router.post("/models/{model_id}/probe", response_model=ModelView, dependencies=[Depends(require_csrf)])
+def probe_model(
+    model_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ProviderService, Depends(provider_service)],
+) -> ModelView:
+    return ModelView.model_validate(service.probe_model(context.user.id, model_id))
 
 
 @router.post("/profiles", response_model=ProfileView, dependencies=[Depends(require_csrf)])

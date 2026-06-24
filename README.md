@@ -72,6 +72,7 @@ Provider connections are created from adapter schemas exposed by the API. Stage 
 - generic OpenAI-compatible adapter schema with endpoint validation.
 
 Credentials are write-only. The API never returns stored provider credentials to the browser.
+Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 1 uses adapter-maintained catalogue snapshots rather than replaying stored secrets against live provider APIs.
 
 ## Cheap Hosting Plan
 
@@ -80,8 +81,8 @@ Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deploym
 ## Known Limitations
 
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
-- Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration and capability metadata.
+- Live provider calls are not required for Stage 1 checks. Real provider adapters currently validate configuration, adapter-backed catalogue snapshots and capability metadata.
 - Stage 1 supports text, Markdown, PDF and DOCX uploads only.
-- Full Stage 1 release gates are not all implemented yet. Remaining gaps include live model catalogue sync, richer capability probes and complete WCAG audit coverage.
+- Full Stage 1 release gates are not all implemented yet. Remaining gaps include hybrid retrieval, live text-generation provider adapters and complete WCAG audit coverage.
 - Workflow execution uses FastAPI background tasks for the Stage 1 vertical slice. A Redis-backed external worker queue remains a production hardening item.
 - Reports are decision-support artefacts, not legal, security, privacy, engineering or delivery sign-off.

@@ -60,6 +60,7 @@ export type ModelRecord = {
   capabilities: string[];
   provenance: string;
   verified: boolean;
+  probe_result: Record<string, unknown>;
 };
 
 export type ModelProfile = {

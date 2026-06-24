@@ -19,6 +19,28 @@ class FakeProviderAdapter:
         scenario = str(config.get("scenario", "valid"))
         return {"ok": scenario not in {"timeout", "rate_limit"}, "scenario": scenario}
 
+    def catalogue_models(self, config: dict[str, Any], credentials: dict[str, str]) -> list[dict[str, Any]]:
+        del config, credentials
+        return [
+            {
+                "model_identifier": "fake-reviewer",
+                "capabilities": self.schema.default_capabilities,
+                "provenance": "adapter_catalogue:fake",
+                "verified": True,
+                "probe_result": {"ok": True, "source": "deterministic_fake_catalogue"},
+            }
+        ]
+
+    def probe_capabilities(self, model_identifier: str, capabilities: list[str]) -> dict[str, Any]:
+        missing = [capability for capability in capabilities if capability == "missing_capability"]
+        return {
+            "ok": not missing,
+            "model_identifier": model_identifier,
+            "verified_capabilities": [capability for capability in capabilities if capability not in missing],
+            "missing_capabilities": missing,
+            "source": "deterministic_fake_probe",
+        }
+
     def generate_structured(self, prompt: str, schema_name: str) -> dict[str, Any]:
         if "invalid_schema" in prompt:
             return {"invalid": True}
@@ -38,8 +60,14 @@ class FakeProviderAdapter:
 
 
 class StaticProviderAdapter:
-    def __init__(self, schema: AdapterSchema, self_hosted_mode: bool = False) -> None:
+    def __init__(
+        self,
+        schema: AdapterSchema,
+        catalogue: list[dict[str, Any]] | None = None,
+        self_hosted_mode: bool = False,
+    ) -> None:
         self.schema = schema
+        self.catalogue = catalogue or []
         self.self_hosted_mode = self_hosted_mode
 
     def test_connection(self, config: dict[str, Any], credentials: dict[str, str]) -> dict[str, Any]:
@@ -51,6 +79,31 @@ class StaticProviderAdapter:
             if field.secret and field.required and not credentials.get(field.name)
         ]
         return {"ok": not missing, "missing": missing, "capabilities": self.schema.default_capabilities}
+
+    def catalogue_models(self, config: dict[str, Any], credentials: dict[str, str]) -> list[dict[str, Any]]:
+        del config, credentials
+        return [
+            {
+                "model_identifier": item["model_identifier"],
+                "capabilities": item.get("capabilities", self.schema.default_capabilities),
+                "provenance": f"adapter_catalogue:{self.schema.key}",
+                "verified": False,
+                "probe_result": {"ok": None, "source": "static_adapter_catalogue"},
+            }
+            for item in self.catalogue
+        ]
+
+    def probe_capabilities(self, model_identifier: str, capabilities: list[str]) -> dict[str, Any]:
+        available = set(self.schema.default_capabilities)
+        requested = set(capabilities)
+        missing = sorted(requested - available)
+        return {
+            "ok": not missing,
+            "model_identifier": model_identifier,
+            "verified_capabilities": sorted(requested & available),
+            "missing_capabilities": missing,
+            "source": "static_adapter_probe",
+        }
 
     def generate_structured(self, prompt: str, schema_name: str) -> dict[str, Any]:
         del prompt, schema_name
@@ -67,7 +120,11 @@ class ProviderRegistry:
                     label="OpenAI",
                     fields=[AdapterField("api_key", "API key", secret=True, required=True, input_type="password")],
                     default_capabilities=["text", "structured_output", "streaming"],
-                )
+                ),
+                [
+                    {"model_identifier": "gpt-5.5"},
+                    {"model_identifier": "gpt-5.4-mini"},
+                ],
             ),
             "anthropic": StaticProviderAdapter(
                 AdapterSchema(
@@ -75,7 +132,11 @@ class ProviderRegistry:
                     label="Anthropic",
                     fields=[AdapterField("api_key", "API key", secret=True, required=True, input_type="password")],
                     default_capabilities=["text", "structured_output", "streaming"],
-                )
+                ),
+                [
+                    {"model_identifier": "claude-opus-4-7"},
+                    {"model_identifier": "claude-haiku-4-5"},
+                ],
             ),
             "google_gemini": StaticProviderAdapter(
                 AdapterSchema(
@@ -83,7 +144,11 @@ class ProviderRegistry:
                     label="Google Gemini",
                     fields=[AdapterField("api_key", "API key", secret=True, required=True, input_type="password")],
                     default_capabilities=["text", "structured_output"],
-                )
+                ),
+                [
+                    {"model_identifier": "gemini-3-pro-preview"},
+                    {"model_identifier": "gemini-3-flash"},
+                ],
             ),
             "openai_compatible": StaticProviderAdapter(
                 AdapterSchema(
@@ -95,6 +160,7 @@ class ProviderRegistry:
                     ],
                     default_capabilities=["text", "structured_output"],
                 ),
+                [{"model_identifier": "configured-openai-compatible-model"}],
                 self_hosted_mode=self_hosted_mode,
             ),
         }

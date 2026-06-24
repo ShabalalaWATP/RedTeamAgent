@@ -57,6 +57,48 @@ class ProviderService:
         adapter = self._adapter(connection.adapter)
         return adapter.test_connection(connection.config, {"api_key": "__stored__"})
 
+    def sync_models(self, user_id: str, connection_id: str) -> list[Any]:
+        connection = self.repo.get_provider_connection(connection_id)
+        if connection is None:
+            raise NotFoundError("Provider connection not found.")
+        require_admin(self._role(user_id, connection.workspace_id))
+        adapter = self._adapter(connection.adapter)
+        synced: list[Any] = []
+        for item in adapter.catalogue_models(connection.config, {"api_key": "__stored__"}):
+            data = {
+                "provider_connection_id": connection.id,
+                "model_identifier": str(item["model_identifier"]),
+                "capabilities": self._string_list(item.get("capabilities", [])),
+                "provenance": str(item.get("provenance", f"adapter_catalogue:{connection.adapter}")),
+                "verified": bool(item.get("verified", False)),
+                "probe_result": self._dict_value(item.get("probe_result", {})),
+            }
+            existing = self.repo.get_model_by_identifier(
+                connection.workspace_id,
+                connection.id,
+                data["model_identifier"],
+            )
+            if existing is None:
+                synced.append(self.repo.create_model(connection.workspace_id, data))
+            else:
+                synced.append(
+                    self.repo.update_model_probe(
+                        existing.id,
+                        data["capabilities"],
+                        data["provenance"],
+                        data["verified"],
+                        data["probe_result"],
+                    )
+                )
+        self.repo.audit(
+            connection.workspace_id,
+            user_id,
+            "provider.models_synced",
+            {"connection_id": connection.id, "count": len(synced)},
+        )
+        self.repo.commit()
+        return synced
+
     def create_model(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
         require_admin(self._role(user_id, workspace_id))
         connection = self.repo.get_provider_connection(data["provider_connection_id"])
@@ -70,6 +112,28 @@ class ProviderService:
     def list_models(self, user_id: str, workspace_id: str) -> list[Any]:
         self._role(user_id, workspace_id)
         return self.repo.list_models(workspace_id)
+
+    def probe_model(self, user_id: str, model_id: str) -> Any:
+        model = self.repo.get_model(model_id)
+        if model is None:
+            raise NotFoundError("Model not found.")
+        require_admin(self._role(user_id, model.workspace_id))
+        connection = self.repo.get_provider_connection(model.provider_connection_id)
+        if connection is None or connection.workspace_id != model.workspace_id:
+            raise NotFoundError("Provider connection not found.")
+        result = self._adapter(connection.adapter).probe_capabilities(model.model_identifier, model.capabilities)
+        verified = bool(result.get("ok", False))
+        capabilities = self._string_list(result.get("verified_capabilities", model.capabilities))
+        next_model = self.repo.update_model_probe(
+            model.id,
+            capabilities or model.capabilities,
+            f"probe:{connection.adapter}",
+            verified,
+            self._dict_value(result),
+        )
+        self.repo.audit(model.workspace_id, user_id, "provider.model_probed", {"model_id": model.id})
+        self.repo.commit()
+        return next_model
 
     def create_profile(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
         require_admin(self._role(user_id, workspace_id))
@@ -111,3 +175,13 @@ class ProviderService:
             "config": connection.config,
             "has_credentials": bool(connection.encrypted_credentials),
         }
+
+    @staticmethod
+    def _string_list(value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item) for item in value]
+
+    @staticmethod
+    def _dict_value(value: object) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}

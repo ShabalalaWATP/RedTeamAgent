@@ -21,6 +21,12 @@ describe('ProviderSettings', () => {
         expect(init.headers).toMatchObject({ 'X-CSRF-Token': authState.csrfToken });
         return jsonResponse({ ok: true });
       }
+      if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
+        return jsonResponse([modelRecord({ provenance: 'adapter_catalogue:fake' })]);
+      }
+      if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
+        return jsonResponse(modelRecord({ probe_result: { ok: true, source: 'deterministic_fake_probe' } }));
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
@@ -30,6 +36,10 @@ describe('ProviderSettings', () => {
     expect(screen.getByText(/fallback allowed/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByText('Stored connection test passed.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
+    expect(await screen.findByText('Model catalogue synced with 1 record.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /probe/i }));
+    expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
   });
 
   it('surfaces model, profile and stored-connection failures', async () => {
@@ -42,6 +52,12 @@ describe('ProviderSettings', () => {
         return jsonResponse([modelRecord(), modelRecord({ id: 'model-2', model_identifier: 'backup-reviewer' })]);
       }
       if (url.includes('/providers/profiles?')) return jsonResponse([modelProfile()]);
+      if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
+        return jsonResponse({ message: 'sync denied' }, 502);
+      }
+      if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
+        return jsonResponse({ message: 'model probe denied' }, 418);
+      }
       if (url.includes('/providers/models') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
           capabilities: ['text', 'json'],
@@ -66,6 +82,7 @@ describe('ProviderSettings', () => {
     await user.type(screen.getByLabelText(/capabilities/i), 'text, json, ');
     await user.clear(screen.getByLabelText(/^provenance$/i));
     await user.type(screen.getByLabelText(/^provenance$/i), 'manual override');
+    await user.selectOptions(screen.getByLabelText(/provider connection/i), 'conn-1');
     await user.selectOptions(screen.getByLabelText(/model record/i), 'model-2');
     fireEvent.submit(screen.getByLabelText(/model identifier/i).closest('form') as HTMLFormElement);
     fireEvent.submit(screen.getByLabelText(/profile name/i).closest('form') as HTMLFormElement);
@@ -75,6 +92,10 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('profile denied');
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('probe failed');
+    await user.click(screen.getByRole('button', { name: /sync catalogue/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
+    await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
+    expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
   });
 
   it('surfaces adapter catalogue load failures', async () => {
@@ -137,6 +158,7 @@ function modelRecord(overrides: Record<string, unknown> = {}) {
     capabilities: ['text', 'structured_output'],
     provenance: 'manual',
     verified: true,
+    probe_result: { ok: true, source: 'manual' },
     ...overrides
   };
 }

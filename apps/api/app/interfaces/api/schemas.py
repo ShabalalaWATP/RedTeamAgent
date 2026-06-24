@@ -157,6 +157,7 @@ class ModelView(BaseModel):
     capabilities: list[str]
     provenance: str
     verified: bool
+    probe_result: dict[str, Any] = Field(default_factory=dict)
     model_config = ConfigDict(from_attributes=True)
 
 

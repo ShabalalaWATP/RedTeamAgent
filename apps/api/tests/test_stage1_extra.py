@@ -150,6 +150,14 @@ def test_provider_routes_lists_and_failures(client: TestClient) -> None:
     assert listed.json()[0]["id"] == fake.json()["id"]
     tested = client.post(f"/providers/connections/{fake.json()['id']}/test", headers=csrf_headers(auth))
     assert tested.status_code == 200
+    synced = client.post(f"/providers/connections/{fake.json()['id']}/models/sync", headers=csrf_headers(auth))
+    assert synced.status_code == 200
+    assert synced.json()[0]["provenance"] == "adapter_catalogue:fake"
+    assert synced.json()[0]["probe_result"]["source"] == "deterministic_fake_catalogue"
+    probed = client.post(f"/providers/models/{synced.json()[0]['id']}/probe", headers=csrf_headers(auth))
+    assert probed.status_code == 200
+    assert probed.json()["verified"] is True
+    assert probed.json()["probe_result"]["source"] == "deterministic_fake_probe"
 
     model = client.post(
         "/providers/models",
@@ -162,7 +170,8 @@ def test_provider_routes_lists_and_failures(client: TestClient) -> None:
         },
     )
     assert model.status_code == 200
-    assert client.get(f"/providers/models?workspace_id={auth['workspace_id']}").json()[0]["id"] == model.json()["id"]
+    listed_models = client.get(f"/providers/models?workspace_id={auth['workspace_id']}").json()
+    assert any(item["id"] == model.json()["id"] for item in listed_models)
 
     profile = client.post(
         "/providers/profiles",
