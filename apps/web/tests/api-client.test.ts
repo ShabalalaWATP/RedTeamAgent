@@ -46,6 +46,8 @@ describe('ApiClient', () => {
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
       if (url.endsWith('/runs/run-1/cancel') && init?.method === 'POST') return jsonResponse(runResponse('cancelled'));
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/context-packs?')) return jsonResponse([contextPackResponse()]);
+      if (url.endsWith('/context-packs') && init?.method === 'POST') return jsonResponse(contextPackResponse());
       if (url.includes('/providers/connections?')) {
         return jsonResponse([
           {
@@ -110,6 +112,8 @@ describe('ApiClient', () => {
     await expect(client.getRun('run-1')).resolves.toMatchObject({ state: 'completed' });
     await expect(client.cancelRun('csrf', 'run-1')).resolves.toMatchObject({ state: 'cancelled' });
     expect(client.eventStreamUrl('run-1')).toMatch('/runs/run-1/events/stream');
+    await expect(client.createContextPack('csrf', {})).resolves.toMatchObject({ agent_key: 'policy_governance' });
+    await expect(client.listContextPacks('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listProviderConnections('workspace-1')).resolves.toHaveLength(1);
     await expect(client.testProviderConnection('csrf', 'conn-1')).resolves.toMatchObject({ ok: true });
     await expect(client.createModel('csrf', {})).resolves.toMatchObject({ id: 'model-1' });
@@ -153,5 +157,16 @@ function modelResponse() {
     capabilities: ['text'],
     provenance: 'manual',
     verified: true
+  };
+}
+
+function contextPackResponse() {
+  return {
+    id: 'pack-1',
+    workspace_id: 'workspace-1',
+    name: 'Policy pack',
+    agent_key: 'policy_governance',
+    markdown: '# Policy',
+    version: 1
   };
 }

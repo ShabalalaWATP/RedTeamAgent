@@ -200,6 +200,7 @@ describe('edge UI flows', () => {
     storeAuth();
     const user = userEvent.setup();
     mockFetch((url, init) => {
+      if (url.includes('/context-packs?')) return jsonResponse([]);
       if (url.includes('/projects/project-1/reviews') && init?.method === 'POST') {
         return jsonResponse({
           id: 'review-1',
@@ -234,7 +235,10 @@ describe('edge UI flows', () => {
   it('shows review creation errors', async () => {
     storeAuth();
     const user = userEvent.setup();
-    mockFetch(() => jsonResponse({ message: 'project missing' }, 404));
+    mockFetch((url) => {
+      if (url.includes('/context-packs?')) return jsonResponse([]);
+      return jsonResponse({ message: 'project missing' }, 404);
+    });
     renderApp('/projects/project-1/reviews/new');
     await user.click(screen.getByRole('button', { name: /create review/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('project missing');

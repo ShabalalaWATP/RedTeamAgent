@@ -53,8 +53,12 @@ async function mockApi(page: Page) {
       await fulfilJson(route, sourceResponse());
       return;
     }
-    if (url.pathname === '/context-packs') {
-      await fulfilJson(route, { id: 'context-1', version: 1 });
+    if (url.pathname === '/context-packs' && request.method() === 'GET') {
+      await fulfilJson(route, []);
+      return;
+    }
+    if (url.pathname === '/context-packs' && request.method() === 'POST') {
+      await fulfilJson(route, contextPackResponse());
       return;
     }
     if (url.pathname === '/reviews/review-1/preflight') {
@@ -121,6 +125,7 @@ test('stage 1 browser flow reaches evidence-linked report', async ({ page }) => 
   await page.getByRole('button', { name: 'Add pasted text' }).click();
   await expect(page.getByText('proposal.txt')).toBeVisible();
   await page.getByRole('button', { name: 'Add context pack' }).click();
+  await expect(page.getByText('Version 1', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Preflight' }).click();
   await expect(page.getByText('cybersecurity_privacy')).toBeVisible();
 
@@ -190,6 +195,17 @@ function sourceResponse() {
     state: 'ingested',
     metadata: { locator: 'source-1:line-1' },
     warnings: []
+  };
+}
+
+function contextPackResponse() {
+  return {
+    id: 'context-1',
+    workspace_id: 'workspace-1',
+    name: 'Stage 1 governance context',
+    agent_key: 'policy_governance',
+    markdown: '# Governance\nUse source-linked claims and show assumptions.',
+    version: 1
   };
 }
 

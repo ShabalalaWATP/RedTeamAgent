@@ -11,7 +11,7 @@ Stage 1 is complete only when the Stage 1 Definition of Done in `docs/codex-thre
 3. Implement source ingestion for pasted text, TXT, Markdown, PDF and DOCX.
 4. Implement provider registry, fake provider, adapter schemas, capability records and routing policy.
 5. Implement review workflow, durable events, SSE replay, cancellation and structured report generation.
-6. Implement React/Vite app shell, auth, project/review creation, source upload, provider settings, run progress and report views.
+6. Implement React/Vite app shell, auth, project/review creation, source upload, context-pack assignment, provider settings, run progress and report views.
 7. Add backend, frontend, integration and e2e tests with separate 95 percent coverage gates.
 8. Run architecture, line-count, secret scanning, accessibility, visual, performance and browser checks.
 

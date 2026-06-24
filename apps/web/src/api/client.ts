@@ -36,6 +36,15 @@ const sourceSchema = z.object({
   warnings: z.array(z.string())
 });
 
+const contextPackSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  name: z.string(),
+  agent_key: z.string(),
+  markdown: z.string(),
+  version: z.number()
+});
+
 const runSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),
@@ -166,7 +175,12 @@ export class ApiClient {
   }
 
   async createContextPack(csrf: string, body: Record<string, unknown>) {
-    return this.request('/context-packs', 'POST', { csrf, body });
+    return contextPackSchema.parse(await this.request('/context-packs', 'POST', { csrf, body }));
+  }
+
+  async listContextPacks(workspaceId: string) {
+    const path = `/context-packs?workspace_id=${encodeURIComponent(workspaceId)}`;
+    return z.array(contextPackSchema).parse(await this.request(path, 'GET'));
   }
 
   async preflight(reviewId: string) {

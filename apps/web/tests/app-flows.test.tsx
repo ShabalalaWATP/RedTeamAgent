@@ -182,6 +182,7 @@ describe('RedTeamAgent app flows', () => {
   it('creates a review, ingests text, preflights and starts a run', async () => {
     storeAuth();
     const user = userEvent.setup();
+    let contextPacks: unknown[] = [];
     mockFetch((url, init) => {
       if (url.includes('/projects/project-1/reviews') && init?.method === 'POST') {
         return jsonResponse({
@@ -197,7 +198,13 @@ describe('RedTeamAgent app flows', () => {
       if (url.includes('/sources/text')) {
         return jsonResponse({ id: 'source-1', filename: 'proposal.md', content_type: 'text/markdown', state: 'ingested', metadata: {}, warnings: [] });
       }
-      if (url.includes('/context-packs')) return jsonResponse({ id: 'pack-1' });
+      if (url.includes('/context-packs?')) return jsonResponse(contextPacks);
+      if (url.endsWith('/context-packs') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body));
+        expect(body).toMatchObject({ agent_key: 'policy_governance', workspace_id: authState.workspaceId });
+        contextPacks = [contextPackResponse(body)];
+        return jsonResponse(contextPacks[0]);
+      }
       if (url.includes('/preflight')) return jsonResponse({ selected_agents: [{ key: 'cybersecurity_privacy' }], external_research: false });
       if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
@@ -210,6 +217,8 @@ describe('RedTeamAgent app flows', () => {
     await user.click(await screen.findByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByText('proposal.md')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
+    expect(await screen.findByText('Version 1')).toBeInTheDocument();
+    expect(screen.getByText('policy_governance')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /preflight/i }));
     expect(await screen.findByText(/cybersecurity_privacy/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /run review/i }));
@@ -301,6 +310,17 @@ function modelResponse() {
     capabilities: ['text', 'structured_output', 'streaming'],
     provenance: 'manual',
     verified: true
+  };
+}
+
+function contextPackResponse(body: Record<string, string>) {
+  return {
+    id: 'pack-1',
+    workspace_id: authState.workspaceId,
+    name: body.name,
+    agent_key: body.agent_key,
+    markdown: body.markdown,
+    version: 1
   };
 }
 

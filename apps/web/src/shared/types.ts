@@ -34,6 +34,15 @@ export type Source = {
   warnings: string[];
 };
 
+export type ContextPack = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  agent_key: string;
+  markdown: string;
+  version: number;
+};
+
 export type ProviderConnection = {
   id: string;
   workspace_id: string;

@@ -131,6 +131,7 @@ main { min-width: 0; }
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 18px;
+  align-items: start;
 }
 
 .panel {
