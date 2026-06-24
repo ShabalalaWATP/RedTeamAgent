@@ -28,18 +28,30 @@ describe('account and usage controls', () => {
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'another safe phrase');
-    await user.click(screen.getByRole('button', { name: /register/i }));
+    await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('duplicate');
-    await user.type(screen.getByLabelText(/verification token/i), 'bad');
-    await user.click(screen.getByRole('button', { name: /verify email/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('bad token');
-    await user.click(screen.getByRole('button', { name: /log in/i }));
+    await user.click(screen.getByRole('button', { name: /back to sign in/i }));
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('bad login');
-    await user.click(screen.getByRole('button', { name: /send reset/i }));
+    await user.click(screen.getByRole('button', { name: /forgot password/i }));
+    await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/new password/i), 'another safe phrase');
     await user.click(screen.getByRole('button', { name: /confirm reset/i }));
     expect(await screen.findByText(/password updated/i)).toBeInTheDocument();
+  });
+
+  it('surfaces verification errors from a local verification link', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/auth?verification_token=bad');
+    await user.type(screen.getByLabelText(/verification token/i), 'bad');
+    await user.click(screen.getByRole('button', { name: /verify email/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('bad token');
   });
 
   it('starts from the proposal box and surfaces daily quota errors', async () => {

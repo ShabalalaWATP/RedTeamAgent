@@ -186,7 +186,8 @@ describe('edge UI flows', () => {
     });
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
-    await user.click(screen.getByRole('button', { name: /send reset/i }));
+    await user.click(screen.getByRole('button', { name: /forgot password/i }));
+    await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
   });
 
@@ -211,14 +212,15 @@ describe('edge UI flows', () => {
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'correct horse battery');
-    await user.click(screen.getByRole('button', { name: /register/i }));
+    await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /verify email/i })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: /log in/i }));
+    expect(screen.queryByRole('button', { name: /verify email/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /back to sign in/i }));
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toContain('"csrfToken":""');
   });
-
   it('throws when auth context is used outside its provider', () => {
     function BrokenAuthConsumer() {
       useAuth();

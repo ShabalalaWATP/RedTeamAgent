@@ -280,10 +280,11 @@ export async function signIn(page: Page) {
   await page.goto('/auth');
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
-  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByRole('button', { name: 'Create an account' }).click();
+  await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
   await page.getByRole('button', { name: 'Verify email' }).click();
-  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
 }
 

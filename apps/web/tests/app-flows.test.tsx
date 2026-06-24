@@ -36,10 +36,11 @@ describe('RedTeamAgent app flows', () => {
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'correct horse battery');
-    await user.click(screen.getByRole('button', { name: /register/i }));
+    await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /verify email/i }));
-    await user.click(screen.getByRole('button', { name: /log in/i }));
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toContain('csrf-token');

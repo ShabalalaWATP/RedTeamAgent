@@ -14,6 +14,7 @@ EXCLUDED_DIRS = {
     ".pytest_cache",
     ".mypy_cache",
     ".ruff_cache",
+    ".local-object-storage",
     "output",
 }
 EXCLUDED_SUFFIXES = {".md", ".json", ".lock", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".pyc", ".coverage"}
