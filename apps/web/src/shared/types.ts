@@ -43,6 +43,25 @@ export type ProviderConnection = {
   has_credentials: boolean;
 };
 
+export type ModelRecord = {
+  id: string;
+  workspace_id: string;
+  provider_connection_id: string;
+  model_identifier: string;
+  capabilities: string[];
+  provenance: string;
+  verified: boolean;
+};
+
+export type ModelProfile = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  agent_key: string;
+  model_record_id: string;
+  explicit_pin: boolean;
+};
+
 export type Run = {
   id: string;
   workspace_id: string;

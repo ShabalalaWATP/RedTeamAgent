@@ -22,6 +22,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Context pack creation endpoint.
 - Provider adapter schemas for fake, OpenAI, Anthropic, Google Gemini and generic OpenAI-compatible adapters.
 - Provider credential submission is write-only from the browser perspective.
+- Manual model registration with visible capability provenance and verification status.
+- Agent model profiles can be assigned from saved model records in the provider settings UI.
 - Deterministic fake provider and provider endpoint validation for hosted mode.
 - Local workflow progression through intake, ingestion, framing, agent planning, specialist review, reconciliation, report composition and quality gate.
 - Structured evidence-linked report retrieval and Markdown, JSON and HTML export.
@@ -33,8 +35,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 - Email verification and password reset are local-token development flows, not mail-provider-backed production flows.
 - Context pack UI assignment to a specific agent is minimal and needs richer version/provenance display.
-- Model catalogue sync, manual model registration, model profiles and agent-profile assignment are not complete.
-- Capability probe UI and durable model capability records are not complete.
+- Live model catalogue sync from provider APIs is not complete.
+- Capability probe UI is limited to manual verification state and stored connection tests; richer durable provider capability probes are not complete.
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
 - Server-Sent Events progress is covered by run events, but the browser currently polls event history rather than consuming a live SSE stream.
 - Cancel and retry controls for safe stages are not complete.
@@ -64,8 +66,8 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Backend coverage: pytest-cov, 97.39 percent total coverage.
 - Backend lint: `.\.venv\Scripts\python -m ruff check apps\api`, passed.
 - Backend type check: `.\.venv\Scripts\python -m mypy apps\api\app`, passed.
-- Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 21 tests.
-- Frontend coverage: Vitest v8, 95.30 percent statements, 83.80 percent branches, 98.46 percent functions, 99.66 percent lines.
+- Frontend unit tests: `npm run test:coverage --prefix apps/web`, passed, 26 tests.
+- Frontend coverage: Vitest v8, 95.10 percent statements, 83.52 percent branches, 98.77 percent functions, 99.47 percent lines.
 - Frontend type check: `npm run typecheck --prefix apps/web`, passed.
 - Frontend production build: `npm run build --prefix apps/web`, passed.
 - Dependency gate: `npm audit --prefix apps/web --audit-level=high`, passed with 0 vulnerabilities reported.
@@ -75,7 +77,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Docker Compose config: `docker compose config`, passed.
 - Cheap VPS production Compose config: `docker compose --env-file deploy\cheap-vps\.env.production -f deploy\cheap-vps\docker-compose.prod.yml config`, passed using a temporary placeholder env file.
 - Playwright E2E: `npm run e2e --prefix apps/web`, passed with desktop and mobile Chromium projects after setting `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the local cached Chromium executable.
-- In-app browser QA: passed on a real local API and Vite app for register, verify, login, project create/edit/delete, decision review run, workflow history, desktop viewport, mobile viewport and workflow history report navigation. A desktop clipping issue in workflow history and a mobile topbar overlay issue on the dashboard were found and fixed.
+- In-app browser QA: passed on a real local API and Vite app for register, verify, login, project create/edit/delete, decision review run, workflow history, provider connection save, manual model registration, agent profile assignment, stored connection testing, desktop viewport, mobile viewport and workflow history report navigation. A desktop clipping issue in workflow history, a mobile topbar overlay issue on the dashboard and a stale provider workspace-load alert were found and fixed.
 
 ## Accessibility Results
 
@@ -88,13 +90,16 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Screenshots captured:
   - `output/playwright/report-desktop.png`
   - `output/playwright/report-mobile.png`
+  - `output/browser/provider-settings-desktop.png`
+  - `output/browser/provider-settings-mobile.png`
 - Manual inspection confirmed the report screen renders on desktop and mobile without the previous footer overlap.
+- Browser automation confirmed provider settings renders on desktop and mobile without horizontal overflow, offscreen controls or stale alerts after provider/model/profile operations.
 - In-app browser screenshots confirmed the previous-workflows screen and project dashboard controls render on desktop and mobile without clipped actions after the responsive layout fixes.
 - Automated visual baseline comparison is not implemented yet.
 
 ## Performance Results
 
-- Frontend production bundle built successfully at approximately 322.73 kB JavaScript and 4.90 kB CSS before gzip.
+- Frontend production bundle built successfully at approximately 329.34 kB JavaScript and 4.98 kB CSS before gzip.
 - Formal app shell, interaction, run-progress and large-report performance budgets are documented as required work, not yet enforced.
 
 ## Migration Or Rollback Notes
@@ -155,4 +160,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish model catalogue/profile flows, live SSE consumption, cancel/retry, stronger context-pack provenance and automated accessibility/visual baselines.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, live SSE consumption, cancel/retry, stronger context-pack provenance and automated accessibility/visual baselines.

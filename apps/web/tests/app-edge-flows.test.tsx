@@ -148,6 +148,9 @@ describe('edge UI flows', () => {
           }
         ]);
       }
+      if (url.includes('/providers/connections?')) return jsonResponse([]);
+      if (url.includes('/providers/models?')) return jsonResponse([]);
+      if (url.includes('/providers/profiles?')) return jsonResponse([]);
       if (url.includes('/providers/connections') && init?.method === 'POST') return jsonResponse({ message: 'missing key' }, 422);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
@@ -166,12 +169,15 @@ describe('edge UI flows', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch((url) => {
       if (url.includes('/providers/adapters')) return jsonResponse([]);
+      if (url.includes('/providers/connections?')) return jsonResponse([]);
+      if (url.includes('/providers/models?')) return jsonResponse([]);
+      if (url.includes('/providers/profiles?')) return jsonResponse([]);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/providers');
     expect(await screen.findByText('No adapters')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /test and save/i }));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('uses privacy-preserving password reset copy when no local token is returned', async () => {

@@ -61,6 +61,34 @@ const workflowSummarySchema = z.object({
   has_report: z.boolean()
 });
 
+const providerConnectionSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  adapter: z.string(),
+  name: z.string(),
+  config: z.record(z.string(), z.unknown()),
+  has_credentials: z.boolean()
+});
+
+const modelRecordSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  provider_connection_id: z.string(),
+  model_identifier: z.string(),
+  capabilities: z.array(z.string()),
+  provenance: z.string(),
+  verified: z.boolean()
+});
+
+const modelProfileSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  name: z.string(),
+  agent_key: z.string(),
+  model_record_id: z.string(),
+  explicit_pin: z.boolean()
+});
+
 const reportSchema = z.object({
   data: z.object({
     title: z.string(),
@@ -150,7 +178,35 @@ export class ApiClient {
   }
 
   async createProviderConnection(csrf: string, body: Record<string, unknown>) {
-    return this.request('/providers/connections', 'POST', { csrf, body });
+    return providerConnectionSchema.parse(await this.request('/providers/connections', 'POST', { csrf, body }));
+  }
+
+  async listProviderConnections(workspaceId: string) {
+    return z.array(providerConnectionSchema).parse(
+      await this.request(`/providers/connections?workspace_id=${workspaceId}`, 'GET')
+    );
+  }
+
+  async testProviderConnection(csrf: string, connectionId: string) {
+    return this.request(`/providers/connections/${connectionId}/test`, 'POST', { csrf });
+  }
+
+  async createModel(csrf: string, body: Record<string, unknown>) {
+    return modelRecordSchema.parse(await this.request('/providers/models', 'POST', { csrf, body }));
+  }
+
+  async listModels(workspaceId: string) {
+    return z.array(modelRecordSchema).parse(await this.request(`/providers/models?workspace_id=${workspaceId}`, 'GET'));
+  }
+
+  async createProfile(csrf: string, body: Record<string, unknown>) {
+    return modelProfileSchema.parse(await this.request('/providers/profiles', 'POST', { csrf, body }));
+  }
+
+  async listProfiles(workspaceId: string) {
+    return z.array(modelProfileSchema).parse(
+      await this.request(`/providers/profiles?workspace_id=${workspaceId}`, 'GET')
+    );
   }
 
   async startRun(csrf: string, reviewId: string) {

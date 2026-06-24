@@ -44,6 +44,43 @@ describe('ApiClient', () => {
         });
       }
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
+      if (url.includes('/providers/connections?')) {
+        return jsonResponse([
+          {
+            id: 'conn-1',
+            workspace_id: 'workspace-1',
+            adapter: 'fake',
+            name: 'Fake',
+            config: {},
+            has_credentials: false
+          }
+        ]);
+      }
+      if (url.includes('/providers/connections/conn-1/test')) return jsonResponse({ ok: true });
+      if (url.includes('/providers/models?')) return jsonResponse([modelResponse()]);
+      if (url.includes('/providers/profiles?')) {
+        return jsonResponse([
+          {
+            id: 'profile-1',
+            workspace_id: 'workspace-1',
+            name: 'Profile',
+            agent_key: 'evidence_context',
+            model_record_id: 'model-1',
+            explicit_pin: false
+          }
+        ]);
+      }
+      if (url.includes('/providers/models') && init?.method === 'POST') return jsonResponse(modelResponse());
+      if (url.includes('/providers/profiles') && init?.method === 'POST') {
+        return jsonResponse({
+          id: 'profile-1',
+          workspace_id: 'workspace-1',
+          name: 'Profile',
+          agent_key: 'evidence_context',
+          model_record_id: 'model-1',
+          explicit_pin: false
+        });
+      }
       if (url.includes('/report')) {
         return jsonResponse({
           data: {
@@ -68,6 +105,12 @@ describe('ApiClient', () => {
     await expect(client.uploadSource('csrf', 'review-1', file)).resolves.toMatchObject({ state: 'ingested' });
     await expect(client.updateProject('csrf', 'project-1', 'Updated', 'Changed')).resolves.toMatchObject({ title: 'Updated' });
     await expect(client.deleteProject('csrf', 'project-1')).resolves.toBeUndefined();
+    await expect(client.listProviderConnections('workspace-1')).resolves.toHaveLength(1);
+    await expect(client.testProviderConnection('csrf', 'conn-1')).resolves.toMatchObject({ ok: true });
+    await expect(client.createModel('csrf', {})).resolves.toMatchObject({ id: 'model-1' });
+    await expect(client.listModels('workspace-1')).resolves.toHaveLength(1);
+    await expect(client.createProfile('csrf', {})).resolves.toMatchObject({ name: 'Profile' });
+    await expect(client.listProfiles('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listWorkflows('workspace-1')).resolves.toHaveLength(1);
     await expect(client.report('run-1')).resolves.toMatchObject({ title: 'Title' });
     await expect(client.exportReport('run-1', 'markdown')).resolves.toBe('# report');
@@ -84,3 +127,15 @@ describe('ApiClient', () => {
     await expect(client.exportReport('run-1', 'html')).rejects.toThrow('Request failed with 500');
   });
 });
+
+function modelResponse() {
+  return {
+    id: 'model-1',
+    workspace_id: 'workspace-1',
+    provider_connection_id: 'conn-1',
+    model_identifier: 'fake-reviewer',
+    capabilities: ['text'],
+    provenance: 'manual',
+    verified: true
+  };
+}

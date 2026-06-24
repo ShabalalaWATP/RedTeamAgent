@@ -153,6 +153,14 @@ main { min-width: 0; }
   flex-wrap: wrap;
 }
 
+.check-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.check-row input { width: auto; }
+
 .field {
   display: grid;
   gap: 7px;
