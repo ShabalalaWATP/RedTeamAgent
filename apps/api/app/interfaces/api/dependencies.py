@@ -9,9 +9,12 @@ from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.orm import Session
 
 from app.application.auth_service import AuthService
+from app.application.enterprise_operations_service import EnterpriseOperationsService
+from app.application.enterprise_service import EnterpriseService
 from app.application.evaluation_service import EvaluationService
 from app.application.ports.notifications import EmailSender
 from app.application.project_service import ProjectService
+from app.application.provider_governance import ProviderGovernanceService
 from app.application.provider_service import ProviderService
 from app.application.review_service import ReviewService
 from app.application.workflow_service import WorkflowService
@@ -20,6 +23,7 @@ from app.core.database import get_db
 from app.domain.exceptions import AuthenticationError, RateLimitExceeded
 from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.security import PasswordService, TokenService
+from app.infrastructure.db.enterprise_repository import SqlEnterpriseRepository
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
@@ -54,6 +58,10 @@ expensive_limiter = RateLimiter(limit=20, window_seconds=60)
 
 def get_repo(db: Annotated[Session, Depends(get_db)]) -> SqlRepository:
     return SqlRepository(db)
+
+
+def get_enterprise_repo(db: Annotated[Session, Depends(get_db)]) -> SqlEnterpriseRepository:
+    return SqlEnterpriseRepository(db)
 
 
 def password_service() -> PasswordService:
@@ -92,12 +100,19 @@ def provider_registry(settings: Annotated[Settings, Depends(get_settings)]) -> P
     return ProviderRegistry(settings.self_hosted_provider_mode)
 
 
+def provider_governance(
+    repo: Annotated[SqlEnterpriseRepository, Depends(get_enterprise_repo)],
+) -> ProviderGovernanceService:
+    return ProviderGovernanceService(repo)
+
+
 def provider_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
+    governance: Annotated[ProviderGovernanceService, Depends(provider_governance)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ProviderService:
-    return ProviderService(repo, registry, FernetCredentialVault(settings.app_secret_key))
+    return ProviderService(repo, registry, FernetCredentialVault(settings.app_secret_key), governance)
 
 
 def review_service(
@@ -110,9 +125,22 @@ def review_service(
 
 def workflow_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
+    governance: Annotated[ProviderGovernanceService, Depends(provider_governance)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
 ) -> WorkflowService:
-    return WorkflowService(repo, registry)
+    return WorkflowService(repo, registry, governance)
+
+
+def enterprise_service(
+    repo: Annotated[SqlEnterpriseRepository, Depends(get_enterprise_repo)],
+) -> EnterpriseService:
+    return EnterpriseService(repo)
+
+
+def enterprise_operations_service(
+    repo: Annotated[SqlEnterpriseRepository, Depends(get_enterprise_repo)],
+) -> EnterpriseOperationsService:
+    return EnterpriseOperationsService(repo)
 
 
 def current_context(

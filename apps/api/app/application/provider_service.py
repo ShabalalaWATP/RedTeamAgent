@@ -5,16 +5,24 @@ from typing import Any
 from app.application.ports.credentials import CredentialVault
 from app.application.ports.providers import ProviderAdapter
 from app.application.ports.repositories import RepositoryPorts
+from app.application.provider_governance import ProviderGovernanceService
 from app.domain.enums import WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError, ValidationFailure
 from app.domain.policies import require_admin
 
 
 class ProviderService:
-    def __init__(self, repo: RepositoryPorts, registry: Any, credential_vault: CredentialVault) -> None:
+    def __init__(
+        self,
+        repo: RepositoryPorts,
+        registry: Any,
+        credential_vault: CredentialVault,
+        governance: ProviderGovernanceService | None = None,
+    ) -> None:
         self.repo = repo
         self.registry = registry
         self.credential_vault = credential_vault
+        self.governance = governance
 
     def adapter_schemas(self) -> list[dict[str, Any]]:
         return [
@@ -30,6 +38,7 @@ class ProviderService:
     def create_connection(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
         role = self._role(user_id, workspace_id)
         require_admin(role)
+        self._validate_governance(workspace_id, data["adapter"], None, "provider_admin", user_id)
         adapter = self._adapter(data["adapter"])
         result = adapter.test_connection(data.get("config", {}), data.get("credentials", {}))
         if not result["ok"]:
@@ -67,6 +76,13 @@ class ProviderService:
         adapter = self._adapter(connection.adapter)
         synced: list[Any] = []
         for item in adapter.catalogue_models(connection.config, self._credentials(connection.encrypted_credentials)):
+            self._validate_governance(
+                connection.workspace_id,
+                connection.adapter,
+                str(item["model_identifier"]),
+                "model_catalogue",
+                user_id,
+            )
             data = {
                 "provider_connection_id": connection.id,
                 "model_identifier": str(item["model_identifier"]),
@@ -106,6 +122,13 @@ class ProviderService:
         connection = self.repo.get_provider_connection(data["provider_connection_id"])
         if connection is None or connection.workspace_id != workspace_id:
             raise NotFoundError("Provider connection not found.")
+        self._validate_governance(
+            workspace_id,
+            connection.adapter,
+            str(data["model_identifier"]),
+            "model_registration",
+            user_id,
+        )
         model = self.repo.create_model(workspace_id, data)
         self.repo.audit(workspace_id, user_id, "provider.model_created", {"model_id": model.id})
         self.repo.commit()
@@ -156,6 +179,26 @@ class ProviderService:
             return self.registry.get(key)
         except KeyError as exc:
             raise ValidationFailure("Unknown provider adapter.") from exc
+
+    def _validate_governance(
+        self,
+        workspace_id: str,
+        provider: str,
+        model_identifier: str | None,
+        purpose: str,
+        actor_user_id: str,
+    ) -> None:
+        if self.governance is None:
+            return
+        self.governance.validate_route(
+            workspace_id,
+            provider,
+            model_identifier,
+            "internal",
+            "global",
+            purpose,
+            actor_user_id,
+        )
 
     def _role(self, user_id: str, workspace_id: str) -> WorkspaceRole:
         role = self.repo.membership_role(workspace_id, user_id)

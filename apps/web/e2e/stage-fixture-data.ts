@@ -258,3 +258,85 @@ export function evaluationResponse() {
     live_smoke_tests: 'optional, synthetic-only and disabled by default'
   };
 }
+
+export function governanceResponse() {
+  return {
+    workspace_id: 'workspace-1',
+    provider_allowlist: ['fake'],
+    model_allowlist: ['fake-reviewer'],
+    data_classification_allowlist: [],
+    region_allowlist: [],
+    purpose_allowlist: [],
+    approved_domains: ['example.com'],
+    retention_days: 365,
+    preserve_historical_reports: true,
+    legal_hold: false,
+    mfa_required: true,
+    sso_provider: 'saml-ready',
+    custom_branding: {},
+    updated_at: '2026-06-24T00:00:00Z'
+  };
+}
+
+export function enterpriseMembersResponse() {
+  return [
+    { workspace_id: 'workspace-1', user_id: 'user-1', email: 'alex@example.com', role: 'owner' },
+    { workspace_id: 'workspace-1', user_id: 'user-2', email: 'reviewer@example.com', role: 'member' }
+  ];
+}
+
+export function enterpriseAuditResponse() {
+  return [
+    {
+      id: 'audit-1',
+      workspace_id: 'workspace-1',
+      actor_user_id: 'user-1',
+      action: 'enterprise.governance_updated',
+      metadata: {},
+      created_at: '2026-06-24T00:00:00Z'
+    }
+  ];
+}
+
+export function enterpriseNotificationsResponse() {
+  return [
+    {
+      id: 'note-1',
+      workspace_id: 'workspace-1',
+      user_id: null,
+      kind: 'assigned_action',
+      title: 'Assign validation owner',
+      body: '',
+      read: false,
+      created_at: '2026-06-24T00:00:00Z'
+    }
+  ];
+}
+
+export function enterpriseOperationsResponse() {
+  return {
+    run_volume: 6,
+    failure_rate: 0.17,
+    security_events: 2,
+    queue_depth: 0,
+    tracing_redaction: 'enabled',
+    quotas: { workspace_runs_per_hour: 20 },
+    backup_restore: { rto_hours: 4, rpo_hours: 24 }
+  };
+}
+
+export function modelComparisonResponse() {
+  return {
+    workspace_id: 'workspace-1',
+    models: [
+      {
+        model_identifier: 'fake-reviewer',
+        quality: 0.9,
+        cost: 0,
+        latency_ms: 120,
+        failure_rate: 0.01,
+        capability_coverage: 4
+      }
+    ]
+  };
+}

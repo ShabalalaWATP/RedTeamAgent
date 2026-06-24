@@ -200,3 +200,90 @@ export type ReportData = {
   sources: string[];
   methodology: string;
 };
+
+export type Governance = {
+  workspace_id: string;
+  provider_allowlist: string[];
+  model_allowlist: string[];
+  data_classification_allowlist: string[];
+  region_allowlist: string[];
+  purpose_allowlist: string[];
+  approved_domains: string[];
+  retention_days: number;
+  preserve_historical_reports: boolean;
+  legal_hold: boolean;
+  mfa_required: boolean;
+  sso_provider: string | null;
+  custom_branding: Record<string, unknown>;
+  updated_at: string;
+};
+
+export type EnterpriseMember = {
+  workspace_id: string;
+  user_id: string;
+  email: string;
+  role: string;
+};
+
+export type EnterpriseAuditEvent = {
+  id: string;
+  workspace_id: string | null;
+  actor_user_id: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type EnterpriseNotification = {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  read: boolean;
+  created_at: string;
+};
+
+export type EnterpriseOperations = {
+  run_volume: number;
+  failure_rate: number;
+  security_events: number;
+  queue_depth: number;
+  tracing_redaction: string;
+  quotas: Record<string, number>;
+  backup_restore: Record<string, number>;
+};
+
+export type ModelComparison = {
+  workspace_id: string;
+  models: Array<{
+    model_identifier: string;
+    quality: number;
+    cost: number;
+    latency_ms: number;
+    failure_rate: number;
+    capability_coverage: number;
+  }>;
+};
+
+export type ApiToken = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  token_prefix: string;
+  scopes: string[];
+  rate_limit_per_minute: number;
+  revoked: boolean;
+  plain_token?: string | null;
+};
+
+export type WebhookEndpoint = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  signing_secret?: string | null;
+};

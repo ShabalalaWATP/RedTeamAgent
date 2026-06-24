@@ -2,9 +2,16 @@ import { z } from 'zod';
 
 import {
   API_BASE,
+  apiTokenSchema,
   authSchema,
   contextPackSchema,
+  enterpriseAuditSchema,
+  enterpriseMemberSchema,
+  enterpriseNotificationSchema,
+  enterpriseOperationsSchema,
   evaluationResultSchema,
+  governanceSchema,
+  modelComparisonSchema,
   modelProfileSchema,
   modelRecordSchema,
   projectSchema,
@@ -14,6 +21,7 @@ import {
   reviewSchema,
   runSchema,
   sourceSchema,
+  webhookSchema,
   workflowSummarySchema
 } from './schemas';
 
@@ -190,6 +198,63 @@ export class ApiClient {
   async runStage2Evaluation(csrf: string, workspaceId: string) {
     const path = `/workspaces/${workspaceId}/evaluations/stage2`;
     return evaluationResultSchema.parse(await this.request(path, 'POST', { csrf }));
+  }
+
+  async enterpriseGovernance(workspaceId: string) {
+    return governanceSchema.parse(await this.request(`/enterprise/workspaces/${workspaceId}/governance`, 'GET'));
+  }
+
+  async updateEnterpriseGovernance(csrf: string, workspaceId: string, body: Record<string, unknown>) {
+    const path = `/enterprise/workspaces/${workspaceId}/governance`;
+    return governanceSchema.parse(await this.request(path, 'PUT', { csrf, body }));
+  }
+
+  async enterpriseMembers(workspaceId: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/members`;
+    return z.array(enterpriseMemberSchema).parse(await this.request(path, 'GET'));
+  }
+
+  async inviteEnterpriseMember(csrf: string, workspaceId: string, email: string, role: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/invitations`;
+    return this.request(path, 'POST', { csrf, body: { email, role } });
+  }
+
+  async enterpriseAudit(workspaceId: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/audit`;
+    return z.array(enterpriseAuditSchema).parse(await this.request(path, 'GET'));
+  }
+
+  async enterpriseNotifications(workspaceId: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/notifications`;
+    return z.array(enterpriseNotificationSchema).parse(await this.request(path, 'GET'));
+  }
+
+  async enterpriseOperations(workspaceId: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/operations`;
+    return enterpriseOperationsSchema.parse(await this.request(path, 'GET'));
+  }
+
+  async modelComparison(workspaceId: string) {
+    const path = `/enterprise/workspaces/${workspaceId}/model-comparison`;
+    return modelComparisonSchema.parse(await this.request(path, 'GET'));
+  }
+
+  async createApiToken(csrf: string, workspaceId: string, body: Record<string, unknown>) {
+    const path = `/enterprise/workspaces/${workspaceId}/api-tokens`;
+    return apiTokenSchema.parse(await this.request(path, 'POST', { csrf, body }));
+  }
+
+  async createWebhook(csrf: string, workspaceId: string, body: Record<string, unknown>) {
+    const path = `/enterprise/workspaces/${workspaceId}/webhooks`;
+    return webhookSchema.parse(await this.request(path, 'POST', { csrf, body }));
+  }
+
+  async createCustomAgent(csrf: string, workspaceId: string, body: Record<string, unknown>) {
+    return this.request(`/enterprise/workspaces/${workspaceId}/custom-agents`, 'POST', { csrf, body });
+  }
+
+  async enforceRetention(csrf: string, workspaceId: string) {
+    return this.request(`/enterprise/workspaces/${workspaceId}/retention/enforce`, 'POST', { csrf });
   }
 
   private async request(path: string, method: string, options: RequestOptions = {}) {

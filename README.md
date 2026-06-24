@@ -1,8 +1,8 @@
 # RedTeamAgent
 
-RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build completes the Stage 2 rich-evidence milestone: registration, workspace creation, projects, previous workflow history, reviews, rich source ingestion, external research controls, full specialist routing, provider diversity hooks, deterministic evaluation and advanced evidence-linked reports.
+RedTeamAgent is a secure, provider-neutral decision-support platform for evidence-led red team reviews of decisions and artefacts of any kind: projects, proposals, essays, policies, code changes, operating plans and other choices. The current build completes the Stage 3 enterprise and production-readiness milestone: registration, workspace creation, projects, previous workflow history, rich evidence ingestion, external research controls, full specialist routing, provider governance, organisation administration, collaboration, expiring report shares, API/webhook integration, scheduled re-review, retention controls and operational dashboards.
 
-The current implementation follows Stage 2 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-2-completion-report.md` for passed checks, residual risks and the current readiness decision. Stage 3 remains intentionally out of scope.
+The current implementation follows Stage 3 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-3-completion-report.md` for passed checks, residual risks and the current readiness decision.
 
 ## Local Setup
 
@@ -77,6 +77,14 @@ Provider connections are created from adapter schemas exposed by the API. Stage 
 Credentials are encrypted server-side and write-only from the browser perspective. The API never returns stored provider credentials to the browser.
 Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 2 capability records cover text generation, structured output, streaming, tool use, image input, embeddings, transcription and reranking where an adapter claims support.
 
+Workspace governance can centrally restrict provider adapters, model identifiers, data classifications, regions, purposes and approved external research domains. Non-empty allow-lists fail closed before provider setup, model registration or review execution.
+
+## Stage 3 Enterprise Controls
+
+The Enterprise screen includes organisation settings, member management, invitations, provider governance, SSO/MFA-ready identity fields, SCIM mappings, data retention, audit inspection, action notifications, custom agents, rubrics, report templates, API tokens, webhooks, scheduled re-review, outcome tracking, operations summaries and model comparison.
+
+API tokens are returned once and then stored only as hashes. Webhook deliveries use timestamped HMAC signatures with replay protection. Report shares use expiring tokens and access events are audited.
+
 ## Stage 2 Inputs And Research
 
 Reviews support pasted text plus TXT, Markdown, PDF, DOCX, PPTX, CSV, XLSX, PNG, JPEG, WebP, common audio, common video, ZIP and TAR uploads. Browser-recorded voice notes, public website URLs and public Git repository URLs can also be submitted as sources. Rich extraction records locators such as PDF pages, document paragraphs, slides, spreadsheet cells, OCR blocks, timestamps, website snapshots and code file line ranges.
@@ -104,6 +112,7 @@ For `redteamagent.co.uk`, keep the GoDaddy domain registration if preferred and 
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
 - Live provider credentials are optional. Real provider adapters support structured text-generation calls, but the local workflow defaults to the deterministic fake provider for repeatable tests and demos.
 - OCR, transcription, website search and Git ingestion use deterministic local implementations for Stage 2 CI. Production-grade live connectors need provider credentials, monitoring and operational policy before real confidential workloads.
-- Workflow execution uses FastAPI background tasks for the Stage 2 local slice. A Redis-backed external worker queue remains a production hardening item.
+- Workflow execution uses FastAPI background tasks for the local slice. A Redis-backed external worker queue remains recommended before high-volume production use.
+- Local SQLite development uses ordinary database audit storage. Production should forward structured audit events to append-only storage or immutable log retention as documented in the Stage 3 security guide.
 - The WCAG result is a repository release gate, not a third-party certification.
 - Reports are decision-support artefacts, not legal, medical, financial, security, privacy, engineering or delivery sign-off.

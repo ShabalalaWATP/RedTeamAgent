@@ -11,8 +11,10 @@ RUN npm install -g npm@11.17.0 \
         --strip-components=1 \
     && rm -rf "$patch_dir" \
     && npm cache clean --force
-COPY package*.json ./
+RUN chown -R node:node /app
+USER node
+COPY --chown=node:node package*.json ./
 RUN npm ci
-COPY . .
+COPY --chown=node:node . .
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

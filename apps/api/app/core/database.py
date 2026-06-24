@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import get_settings
+from app.infrastructure.db import enterprise_models as _enterprise_models
 from app.infrastructure.db.models import Base
+
+_ = _enterprise_models
 
 
 def _connect_args(database_url: str) -> dict[str, object]:

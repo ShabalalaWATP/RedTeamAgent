@@ -73,6 +73,11 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await expect(page.getByRole('heading', { name: 'Provider settings' })).toBeVisible();
   await expect(page.getByText('manual · verified')).toBeVisible();
   await verifyScreen(page, `providers${suffix}`);
+
+  await page.goto('/enterprise');
+  await expect(page.getByRole('heading', { name: 'Enterprise' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Model comparison' }).getByText('fake-reviewer')).toBeVisible();
+  await verifyScreen(page, `enterprise${suffix}`);
 }
 
 test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, testInfo) => {
@@ -90,6 +95,7 @@ test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, 
       await auditReport(page);
       await auditWorkflows(page);
       await auditProviders(page);
+      await auditEnterprise(page);
     }
   }
 });
@@ -143,6 +149,12 @@ async function auditWorkflows(page: Page) {
 async function auditProviders(page: Page) {
   await page.goto('/providers');
   await expect(page.getByRole('heading', { name: 'Provider settings' })).toBeVisible();
+  await auditCurrentScreen(page);
+}
+
+async function auditEnterprise(page: Page) {
+  await page.goto('/enterprise');
+  await expect(page.getByRole('heading', { name: 'Enterprise' })).toBeVisible();
   await auditCurrentScreen(page);
 }
 

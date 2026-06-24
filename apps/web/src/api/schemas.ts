@@ -198,3 +198,90 @@ export const evaluationResultSchema = z.object({
   adversarial_fixtures: z.array(z.string()),
   live_smoke_tests: z.string()
 });
+
+export const governanceSchema = z.object({
+  workspace_id: z.string(),
+  provider_allowlist: z.array(z.string()),
+  model_allowlist: z.array(z.string()),
+  data_classification_allowlist: z.array(z.string()),
+  region_allowlist: z.array(z.string()),
+  purpose_allowlist: z.array(z.string()),
+  approved_domains: z.array(z.string()),
+  retention_days: z.number(),
+  preserve_historical_reports: z.boolean(),
+  legal_hold: z.boolean(),
+  mfa_required: z.boolean(),
+  sso_provider: z.string().nullable(),
+  custom_branding: z.record(z.string(), z.unknown()),
+  updated_at: z.string()
+});
+
+export const enterpriseMemberSchema = z.object({
+  workspace_id: z.string(),
+  user_id: z.string(),
+  email: z.string(),
+  role: z.string()
+});
+
+export const enterpriseAuditSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string().nullable(),
+  actor_user_id: z.string().nullable(),
+  action: z.string(),
+  metadata: z.record(z.string(), z.unknown()),
+  created_at: z.string()
+});
+
+export const enterpriseNotificationSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  user_id: z.string().nullable(),
+  kind: z.string(),
+  title: z.string(),
+  body: z.string(),
+  read: z.boolean(),
+  created_at: z.string()
+});
+
+export const enterpriseOperationsSchema = z.object({
+  run_volume: z.number(),
+  failure_rate: z.number(),
+  security_events: z.number(),
+  queue_depth: z.number(),
+  tracing_redaction: z.string(),
+  quotas: z.record(z.string(), z.number()),
+  backup_restore: z.record(z.string(), z.number())
+});
+
+export const modelComparisonSchema = z.object({
+  workspace_id: z.string(),
+  models: z.array(z.object({
+    model_identifier: z.string(),
+    quality: z.number(),
+    cost: z.number(),
+    latency_ms: z.number(),
+    failure_rate: z.number(),
+    capability_coverage: z.number()
+  }))
+});
+
+export const apiTokenSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  name: z.string(),
+  token_prefix: z.string(),
+  scopes: z.array(z.string()),
+  rate_limit_per_minute: z.number(),
+  revoked: z.boolean(),
+  plain_token: z.string().nullable().optional()
+});
+
+export const webhookSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  events: z.array(z.string()),
+  enabled: z.boolean(),
+  signing_secret: z.string().nullable().optional()
+});

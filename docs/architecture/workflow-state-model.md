@@ -1,4 +1,4 @@
-# Stage 2 Workflow State Model
+# Stage 3 Workflow State Model
 
 Review runs still move through deterministic states. Stage 2 enriches each state with research, model-diversity and evaluation metadata rather than changing the durable state names:
 
@@ -47,3 +47,15 @@ Events are persisted to `RunEvent` before they are streamed, so refreshing the r
 Background jobs remain idempotent by state: re-executing a terminal run is a no-op, and re-executing an in-flight run advances only missing downstream states.
 
 Each run records a retry-policy snapshot in its routing plan. Transient classes such as provider timeouts, rate limits and temporary storage failures are retryable with bounded attempts. Permanent classes such as schema validation failures, report quality-gate failures, policy denials and unsupported sources fail closed until the user changes the underlying input or configuration.
+
+## Stage 3 Enterprise Jobs
+
+Stage 3 adds enterprise jobs around the existing review workflow:
+
+- `scheduled_re_review`: checks due schedules, records the trigger, creates one observable notification per due schedule and advances the next-run timestamp in the same transaction.
+- `retention_enforcement`: evaluates workspace governance, preserves historical reports and audit facts, then removes or anonymises eligible collaboration records with an audit event.
+- `data_export`: creates a resumable request record, captures workspace-owned structured data and audits completion.
+- `data_deletion`: records a policy-governed deletion request and marks completion only after retention and legal-hold checks pass.
+- `webhook_delivery`: signs payloads with HMAC metadata, records delivery attempts and rejects stale or replayed callback signatures.
+
+These jobs are idempotent by durable status and timestamp. Re-running a completed job returns the recorded result instead of duplicating side effects.

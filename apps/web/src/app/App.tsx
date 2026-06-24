@@ -1,7 +1,8 @@
-import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, Building2, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { api } from '../api/client';
 import { AuthPage } from '../features/auth/AuthPage';
+import { EnterprisePage } from '../features/enterprise/EnterprisePage';
 import { ProviderSettings } from '../features/providers/ProviderSettings';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
@@ -30,6 +31,7 @@ function Layout() {
           <NavLink to="/dashboard"><FolderKanban />Projects</NavLink>
           <NavLink to="/workflows"><Activity />Workflows</NavLink>
           <NavLink to="/providers"><Settings />Providers</NavLink>
+          <NavLink to="/enterprise"><Building2 />Enterprise</NavLink>
         </nav>
       </aside>
       <main>
@@ -54,6 +56,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/workflows" element={<WorkflowHistory />} />
         <Route path="/providers" element={<ProviderSettings />} />
+        <Route path="/enterprise" element={<EnterprisePage />} />
         <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
         <Route path="/runs/:runId" element={<ReportPage />} />
       </Route>

@@ -81,6 +81,12 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps
 ```
 
+To validate the production compose shape without real secrets, run:
+
+```bash
+APP_ENV_FILE=.env.production.example docker compose --env-file .env.production.example -f docker-compose.prod.yml config
+```
+
 ## Firewall
 
 ```bash

@@ -32,6 +32,21 @@
 - Performance budgets exist for OCR, transcription, website ingestion, repository indexing, large reports and PDF export.
 - README, threat model, ADRs and completion report document Stage 2 scope, limits, research modes, provider adapters and user-facing limitations.
 
+## Stage 3 Gates
+
+- All Stage 1 and Stage 2 gates still pass.
+- Organisation workspace, invitation, member-management, project-permission, report-comment, action, decision-journal and notification tests pass.
+- Provider and model governance tests prove disallowed provider routes are rejected before model calls.
+- Report-sharing tests cover expiring links, access controls and share-access audit events.
+- API-token tests prove tokens are scoped, revocable and never returned from list endpoints as plaintext.
+- Webhook tests cover timestamped HMAC signing, invalid signatures and replay rejection.
+- Custom-agent tests prove administrator-approved definitions cannot bypass tool, provider or schema policy.
+- Retention, export and deletion request tests prove workflows are auditable and do not rewrite historical audit facts.
+- Operations tests cover run inspector, operations summary, model comparison, scheduled re-review and outcome tracking.
+- Visual and accessibility checks cover the Enterprise screen on desktop and mobile in dark and light themes.
+- Production deployment checks include strict CSP, secure headers, CORS allow-lists, secure cookie settings, dependency scans, container scans and SBOM generation or documented local evidence.
+- Administrator, security, operations, API and user guides document Stage 3 controls and limitations.
+
 ## Completion Report Template
 
 - completed capabilities;

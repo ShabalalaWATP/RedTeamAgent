@@ -4,6 +4,12 @@ import {
   authResponse,
   contextPackResponse,
   evaluationResponse,
+  enterpriseAuditResponse,
+  enterpriseMembersResponse,
+  enterpriseNotificationsResponse,
+  enterpriseOperationsResponse,
+  governanceResponse,
+  modelComparisonResponse,
   modelProfileResponse,
   modelRecordResponse,
   projectResponse,
@@ -227,6 +233,34 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (url.pathname === '/workspaces/workspace-1/evaluations/stage2') {
       await fulfilJson(route, evaluationResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/governance') {
+      await fulfilJson(route, governanceResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/members') {
+      await fulfilJson(route, enterpriseMembersResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/audit') {
+      await fulfilJson(route, enterpriseAuditResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/notifications') {
+      await fulfilJson(route, enterpriseNotificationsResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/operations') {
+      await fulfilJson(route, enterpriseOperationsResponse());
+      return;
+    }
+    if (url.pathname === '/enterprise/workspaces/workspace-1/model-comparison') {
+      await fulfilJson(route, modelComparisonResponse());
+      return;
+    }
+    if (url.pathname.startsWith('/enterprise/workspaces/workspace-1/')) {
+      await fulfilJson(route, {});
       return;
     }
     await route.fulfill({ status: 404, headers: apiHeaders, body: '{"message":"Not mocked"}' });

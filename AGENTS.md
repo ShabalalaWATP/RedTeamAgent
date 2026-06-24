@@ -5,8 +5,8 @@ Follow the global instructions first. These repository rules add project-specifi
 ## Scope
 
 - Implement the staged plan in `docs/codex-three-stage-goals.md`.
-- Stage 2 is the current milestone. Keep every Stage 1 gate passing while adding Stage 2 capabilities.
-- Do not implement Stage 3 features except for typed extension points needed by Stage 2.
+- Stage 3 is the current milestone. Keep every Stage 1 and Stage 2 gate passing while adding enterprise, governance and production-readiness capabilities.
+- Do not weaken earlier-stage workflows, typed extension points, provider neutrality, tenant isolation or source trust boundaries while adding Stage 3 features.
 - The product is defensive decision support. It must not claim professional sign-off, exhaustive coverage or autonomous exploitation.
 
 ## Architecture

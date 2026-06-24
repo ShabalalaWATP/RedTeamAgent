@@ -1,4 +1,4 @@
-# Stage 2 Data Model
+# Stage 3 Data Model
 
 ## Core Entities
 
@@ -6,7 +6,10 @@
 - `Session`: HttpOnly cookie-backed server session.
 - `Workspace`: tenant boundary. Stage 1 creates one personal workspace per user.
 - `WorkspaceMembership`: user role in a workspace: owner, administrator, member or viewer.
+- `WorkspaceInvitation`: expiring invitation with role, inviter, token hash, accepted timestamp and audit metadata.
+- `WorkspaceGovernance`: workspace-level provider, model, data-classification, region, purpose, retention, domain, identity and branding policy.
 - `Project`: workspace-owned review container.
+- `ProjectPermission`: optional finer-grained access record for a project when workspace membership is not specific enough.
 - `Review`: project-owned proposal review with mode and focus chips.
 - `Source`: uploaded, pasted, recorded, website, repository or external evidence with extraction state, warnings, object key and metadata.
 - `EvidenceChunk`: extracted text with locators and a pgvector-compatible 16-dimension retrieval embedding.
@@ -20,6 +23,20 @@
 - `Run`: review workflow instance and state.
 - `RunEvent`: durable timeline event for SSE replay.
 - `Report`: structured report, findings, evidence gaps and methodology.
+- `ReportComment`: authorised collaboration comment linked to a report or finding.
+- `ReportAction`: assigned action with owner, due date and status.
+- `ReportShare`: expiring report share token with explicit access mode.
+- `DecisionJournal`: initial confidence, final decision, rationale and linked report version.
+- `Notification`: durable user/workspace notification for completed runs, failed runs, assignments and comments.
+- `ScimMapping`: SCIM-ready external user or group mapping.
+- `CustomAgentDefinition`: administrator-approved custom agent configuration with tool and schema boundaries.
+- `CustomRiskRubric`: workspace or template rubric that changes scoring labels without changing report structure.
+- `ReportTemplate`: selectable rendering template for structured reports.
+- `ApiToken`: scoped integration token stored as a hash with prefix metadata, revocation state and rate limit.
+- `WebhookEndpoint`: scoped endpoint with signing metadata, delivery policy and tenant boundary.
+- `ScheduledReview`: idempotent re-review schedule with trigger type and next-run timestamp.
+- `OutcomeRecord`: observed outcome linked to a predicted risk or action.
+- `DataRequest`: export or deletion request with resumable status and audit metadata.
 - `AuditEvent`: structured audit record for security-sensitive actions.
 
 ## Tenant Boundary
@@ -38,3 +55,9 @@ Stage 2 source metadata records type-specific locators:
 - code archives and public repositories: manifest summary, language summary, dependency/config indexes and file path plus line-range locators.
 
 Secret-like values are flagged or redacted in extracted chunks before any external processing path can use them.
+
+## Stage 3 Governance Metadata
+
+Provider and model allow-lists are stored as structured workspace governance arrays keyed by adapter, model identifier, data classification, region and task purpose. Empty allow-lists mean no additional restriction, not public sharing. Non-empty allow-lists fail closed before a provider connection, model record or run route is created.
+
+Retention policies store a default retention period, legal hold flag and historical report preservation flag. Retention jobs may remove or anonymise collaboration data that is outside the preservation scope, but audit events remain factual records and must not be rewritten with sensitive raw content.

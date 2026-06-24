@@ -4,6 +4,7 @@ from typing import Any
 
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
+from app.application.provider_governance import ProviderGovernanceService
 from app.application.search_service import DeterministicSearchProvider, research_queries
 from app.application.workflow_retry import retry_policy_snapshot
 from app.domain.agents import AGENT_LABELS
@@ -26,9 +27,15 @@ TERMINAL_STATES = {RunState.COMPLETED.value, RunState.FAILED.value, RunState.CAN
 
 
 class WorkflowService:
-    def __init__(self, repo: RepositoryPorts, registry: Any) -> None:
+    def __init__(
+        self,
+        repo: RepositoryPorts,
+        registry: Any,
+        governance: ProviderGovernanceService | None = None,
+    ) -> None:
         self.repo = repo
         self.registry = registry
+        self.governance = governance
 
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         review = self._require_review(user_id, review_id)
@@ -39,6 +46,7 @@ class WorkflowService:
             set(selected_agents),
         )
         routing_metadata = self._routing_metadata(review, selected_agents)
+        self._validate_governance(review.workspace_id, user_id)
         routing_plan = {
             "selected_agents": selected_agents,
             "excluded_agents": {agent.value: reason for agent, reason in decision.excluded_agents.items()},
@@ -249,6 +257,19 @@ class WorkflowService:
                 "full specialist routing, source-linked quality gate and context-pack version snapshot."
             ),
         }
+
+    def _validate_governance(self, workspace_id: str, actor_user_id: str) -> None:
+        if self.governance is None:
+            return
+        self.governance.validate_route(
+            workspace_id,
+            "fake",
+            "fake-local",
+            "internal",
+            "global",
+            "review",
+            actor_user_id,
+        )
 
     def _external_sources(self, review: Any) -> list[dict[str, Any]]:
         if not review.external_research:

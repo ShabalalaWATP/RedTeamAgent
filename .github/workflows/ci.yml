@@ -40,7 +40,36 @@ jobs:
           npm run build --prefix apps/web
           npm audit --prefix apps/web --audit-level=high
 
+      - name: OpenAPI contract drift
+        run: |
+          python apps/api/scripts/export_openapi.py
+          npm run generate:api --prefix apps/web
+          git diff --exit-code packages/contracts/openapi.json apps/web/src/api/openapi.ts
+
       - name: Security and structure gates
         run: |
           python scripts/check_line_lengths.py
           python scripts/secret_scan.py
+
+      - name: Trivy high and critical scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: trivy-sbom.cdx.json
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: trivy-sbom
+          path: trivy-sbom.cdx.json
