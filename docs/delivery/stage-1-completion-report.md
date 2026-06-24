@@ -34,6 +34,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Structured evidence-linked report retrieval and Markdown, JSON and HTML export.
 - Dark-mode-first responsive UI for auth, projects, provider settings, review creation and report screens.
 - Docker Compose configuration and runtime validation for web, API, worker, PostgreSQL with pgvector image, Redis and MinIO.
+- Automated Playwright visual-regression baselines cover auth, dashboard, new review, report, workflow history and provider settings on desktop and mobile projects.
 - Cheap VPS deployment plan with production Compose, Caddy reverse proxy and domain guidance.
 
 ## Incomplete DoD Items
@@ -43,8 +44,7 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Hybrid retrieval is represented by evidence models and extraction paths, but full PostgreSQL full-text plus pgvector retrieval is not production-complete.
 - True long-running background execution and in-flight cancellation are still limited by the synchronous local workflow engine.
 - Provider adapters beyond the deterministic fake provider are schema/configuration adapters, not live text-generation callers.
-- Visual-regression baselines are screenshots, not an automated baseline suite.
-- WCAG coverage includes an automated Playwright axe smoke check, not a complete WCAG 2.2 AA audit.
+- WCAG coverage includes automated Playwright axe smoke checks across the core screen matrix, not a complete WCAG 2.2 AA audit.
 - Branch coverage is below 95 percent on the frontend, although statements, functions and lines pass the 95 percent gate.
 
 ## Security Issues Found And Fixed
@@ -77,12 +77,12 @@ The repository now has a working secure foundation and vertical slice, but sever
 - Docker Compose config: `docker compose config`, passed.
 - Docker Compose full runtime: `docker compose up -d --build`, passed with explicit host-port overrides for this workstation, API `/health`, web `/` and MinIO live health verified, all required services running, then torn down with `docker compose down`.
 - Cheap VPS production Compose config: `docker compose --env-file deploy\cheap-vps\.env.production -f deploy\cheap-vps\docker-compose.prod.yml config`, passed using a temporary placeholder env file.
-- Playwright E2E: `npm run e2e --prefix apps/web`, passed with desktop and mobile Chromium projects after setting `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the local cached Chromium executable.
+- Playwright E2E: `npm run e2e --prefix apps/web`, passed, 4 tests across desktop and mobile Chromium projects after setting `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the local cached Chromium executable.
 - In-app browser QA: passed on a real local API and Vite app for register, verify, login, project create/edit/delete, decision review run, workflow history, provider connection save, manual model registration, agent profile assignment, stored connection testing, desktop viewport, mobile viewport and workflow history report navigation. A desktop clipping issue in workflow history, a mobile topbar overlay issue on the dashboard and a stale provider workspace-load alert were found and fixed.
 
 ## Accessibility Results
 
-- Playwright E2E includes an axe check for serious and critical violations on the auth screen.
+- Playwright E2E includes axe checks for serious and critical violations on auth, dashboard, new review, report, workflow history and provider settings screens across desktop and mobile projects.
 - Keyboard-accessible buttons, fields and links are present for the implemented core screens.
 - Complete WCAG 2.2 AA audit coverage for login, new review, running, report and provider settings remains incomplete.
 
@@ -95,11 +95,14 @@ The repository now has a working secure foundation and vertical slice, but sever
   - `output/playwright/context-pack-mobile.png`
   - `output/browser/provider-settings-desktop.png`
   - `output/browser/provider-settings-mobile.png`
+- Automated Playwright visual baselines committed under `apps/web/e2e/stage1-visual-smoke.spec.ts-snapshots/`:
+  - auth, dashboard, new review, report, workflow history and provider settings;
+  - desktop Chromium and Pixel 5 mobile Chromium projects.
 - Manual inspection confirmed the report screen, including context-pack provenance, renders on desktop and mobile without the previous footer overlap.
 - Browser automation confirmed provider settings renders on desktop and mobile without horizontal overflow, offscreen controls or stale alerts after provider/model/profile operations.
 - Playwright screenshots confirmed the new review context-pack composer and saved-pack provenance list render on desktop and mobile without horizontal overflow.
 - In-app browser screenshots confirmed the previous-workflows screen and project dashboard controls render on desktop and mobile without clipped actions after the responsive layout fixes.
-- Automated visual baseline comparison is not implemented yet.
+- In-app browser auth-screen smoke check passed on desktop and mobile: page identity, nonblank render, no framework overlay, no console warnings/errors, field interaction and mobile horizontal-overflow check.
 
 ## Performance Results
 
@@ -138,6 +141,10 @@ The repository now has a working secure foundation and vertical slice, but sever
 - `docs/delivery/stage-1-completion-report.md`
 - `docs/deployment/cheap-hosting-plan.md`
 - `docker-compose.yml`
+- `apps/web/e2e/stage1-fixtures.ts`
+- `apps/web/e2e/stage1-flow.spec.ts`
+- `apps/web/e2e/stage1-visual-smoke.spec.ts`
+- `apps/web/e2e/stage1-visual-smoke.spec.ts-snapshots/`
 - `deploy/cheap-vps/docker-compose.prod.yml`
 - `deploy/cheap-vps/Caddyfile`
 - `deploy/cheap-vps/.env.production.example`
@@ -164,4 +171,4 @@ The repository now has a working secure foundation and vertical slice, but sever
 
 ## Recommended Next Step
 
-Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, true background workflow execution semantics and automated accessibility/visual baselines.
+Keep working on Stage 1. Do not start Stage 2. The next useful milestone is to finish live model catalogue sync, richer provider capability probes, true background workflow execution semantics and complete WCAG audit coverage.

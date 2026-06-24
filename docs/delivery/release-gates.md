@@ -11,7 +11,8 @@
 - Architecture-boundary tests pass.
 - Security acceptance tests pass.
 - End-to-end review workflow passes.
-- Accessibility checks pass on login, new review, running, report and provider settings screens.
+- Accessibility checks pass on auth, dashboard, new review, report, workflows and provider settings screens.
+- Visual regression baselines pass on auth, dashboard, new review, report, workflows and provider settings screens at desktop and mobile breakpoints.
 - Docker Compose starts the required local services.
 
 ## Completion Report Template
