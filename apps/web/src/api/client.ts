@@ -110,6 +110,15 @@ export class ApiClient {
     return projectSchema.parse(await this.request('/projects', 'POST', { csrf, body }));
   }
 
+  async updateProject(csrf: string, projectId: string, title: string, description: string) {
+    const body = { title, description };
+    return projectSchema.parse(await this.request(`/projects/${projectId}`, 'PUT', { csrf, body }));
+  }
+
+  async deleteProject(csrf: string, projectId: string) {
+    await this.request(`/projects/${projectId}`, 'DELETE', { csrf });
+  }
+
   async listProjects(workspaceId: string) {
     return z.array(projectSchema).parse(await this.request(`/projects?workspace_id=${workspaceId}`, 'GET'));
   }

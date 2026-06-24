@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 const apiHeaders = {
   'access-control-allow-credentials': 'true',
   'access-control-allow-headers': 'Content-Type, X-CSRF-Token',
-  'access-control-allow-methods': 'GET,POST,OPTIONS',
+  'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'access-control-allow-origin': 'http://127.0.0.1:5173',
   'content-type': 'application/json'
 };
@@ -39,6 +39,10 @@ async function mockApi(page: Page) {
     }
     if (url.pathname === '/projects' && request.method() === 'POST') {
       await fulfilJson(route, projectResponse());
+      return;
+    }
+    if (url.pathname === '/projects/project-1' && request.method() === 'PUT') {
+      await fulfilJson(route, updatedProjectResponse());
       return;
     }
     if (url.pathname === '/projects/project-1/reviews') {
@@ -103,6 +107,10 @@ test('stage 1 browser flow reaches evidence-linked report', async ({ page }) => 
 
   await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Create project' }).click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Edit project title').fill('Launch decision review');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Launch decision review')).toBeVisible();
   await page.getByRole('link', { name: 'New review' }).click();
 
   await page.getByRole('button', { name: 'Create review' }).click();
@@ -146,6 +154,15 @@ function projectResponse() {
     workspace_id: 'workspace-1',
     title: 'Stage 1 launch review',
     description: 'Assess product, security, legal and delivery risk.'
+  };
+}
+
+function updatedProjectResponse() {
+  return {
+    id: 'project-1',
+    workspace_id: 'workspace-1',
+    title: 'Launch decision review',
+    description: 'Updated decision scope.'
   };
 }
 

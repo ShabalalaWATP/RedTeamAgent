@@ -95,9 +95,7 @@ a:focus-visible {
   border-color: var(--line);
 }
 
-main {
-  min-width: 0;
-}
+main { min-width: 0; }
 
 .topbar {
   justify-content: space-between;
@@ -105,15 +103,9 @@ main {
   border-bottom: 1px solid var(--line);
   padding: 0 28px;
   background: rgb(8 13 18 / 0.92);
-  position: sticky;
-  top: 0;
-  z-index: 5;
 }
 
-.topbar div {
-  display: grid;
-  gap: 4px;
-}
+.topbar div { display: grid; gap: 4px; }
 
 .topbar span,
 .muted,
@@ -179,9 +171,7 @@ select {
   padding: 11px 12px;
 }
 
-textarea {
-  resize: vertical;
-}
+textarea { resize: vertical; }
 
 .button {
   display: inline-flex;
@@ -228,21 +218,10 @@ textarea {
   font-size: 0.88rem;
 }
 
-.status.ok {
-  color: var(--ok);
-}
-
-.status.warn {
-  color: var(--warn);
-}
-
-.status.bad {
-  color: var(--bad);
-}
-
-.status.info {
-  color: var(--accent);
-}
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+.status.bad { color: var(--bad); }
+.status.info { color: var(--accent); }
 
 .error-state,
 .empty-state {
@@ -263,10 +242,7 @@ textarea {
   color: var(--muted);
 }
 
-.list {
-  display: grid;
-  gap: 10px;
-}
+.list { display: grid; gap: 10px; }
 
 .list-item {
   display: flex;
@@ -278,6 +254,11 @@ textarea {
   background: #0c141c;
 }
 
+.list-item > div { min-width: 0; }
+.project-item { align-items: flex-start; }
+.project-edit { width: 100%; }
+.project-actions { justify-content: flex-end; }
+
 .section-title,
 .workflow-heading {
   display: flex;
@@ -288,14 +269,9 @@ textarea {
 
 .section-title { justify-content: flex-start; }
 
-.section-title h2 {
-  margin: 0;
-}
+.section-title h2 { margin: 0; }
 
-.workflow-list {
-  display: grid;
-  gap: 12px;
-}
+.workflow-list { display: grid; gap: 12px; }
 
 .workflow-item {
   display: grid;
@@ -396,4 +372,6 @@ textarea {
   .workflow-item .button {
     width: 100%;
   }
+
+  .project-actions .button { width: 100%; }
 }

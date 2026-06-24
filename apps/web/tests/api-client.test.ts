@@ -34,6 +34,16 @@ describe('ApiClient', () => {
           }
         ]);
       }
+      if (url.endsWith('/projects/project-1') && init?.method === 'PUT') {
+        expect(init.headers).toMatchObject({ 'X-CSRF-Token': 'csrf' });
+        return jsonResponse({
+          id: 'project-1',
+          workspace_id: 'workspace-1',
+          title: 'Updated',
+          description: 'Changed'
+        });
+      }
+      if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
       if (url.includes('/report')) {
         return jsonResponse({
           data: {
@@ -56,6 +66,8 @@ describe('ApiClient', () => {
     });
     const file = new File(['hello'], 'a.txt', { type: 'text/plain' });
     await expect(client.uploadSource('csrf', 'review-1', file)).resolves.toMatchObject({ state: 'ingested' });
+    await expect(client.updateProject('csrf', 'project-1', 'Updated', 'Changed')).resolves.toMatchObject({ title: 'Updated' });
+    await expect(client.deleteProject('csrf', 'project-1')).resolves.toBeUndefined();
     await expect(client.listWorkflows('workspace-1')).resolves.toHaveLength(1);
     await expect(client.report('run-1')).resolves.toMatchObject({ title: 'Title' });
     await expect(client.exportReport('run-1', 'markdown')).resolves.toBe('# report');

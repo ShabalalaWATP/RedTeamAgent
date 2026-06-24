@@ -57,6 +57,34 @@ describe('edge UI flows', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('denied');
   });
 
+  it('surfaces project update and delete errors', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.includes('/projects?workspace_id=')) {
+        return jsonResponse([
+          {
+            id: 'project-1',
+            workspace_id: authState.workspaceId,
+            title: 'Risk review',
+            description: 'Decision scope'
+          }
+        ]);
+      }
+      if (url.endsWith('/projects/project-1') && init?.method === 'PUT') return jsonResponse({ message: 'stale project' }, 409);
+      if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse({ message: 'delete denied' }, 403);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/dashboard');
+    await user.click(await screen.findByRole('button', { name: /edit/i }));
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('stale project');
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await user.click(screen.getByRole('button', { name: /confirm delete/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('delete denied');
+  });
+
   it('prevents native form submission on route screens', async () => {
     mockFetch(() => jsonResponse([]));
     renderApp('/auth');

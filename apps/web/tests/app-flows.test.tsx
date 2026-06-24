@@ -39,7 +39,7 @@ describe('RedTeamAgent app flows', () => {
     expect(sessionStorage.getItem('rta.auth')).toContain('csrf-token');
   });
 
-  it('creates a project and renders the new-review route link', async () => {
+  it('creates, updates and deletes a project from the dashboard', async () => {
     storeAuth();
     const user = userEvent.setup();
     mockFetch((url, init) => {
@@ -52,6 +52,16 @@ describe('RedTeamAgent app flows', () => {
           description: ''
         });
       }
+      if (url.endsWith('/projects/project-1') && init?.method === 'PUT') {
+        expect(init.headers).toMatchObject({ 'X-CSRF-Token': authState.csrfToken });
+        return jsonResponse({
+          id: 'project-1',
+          workspace_id: authState.workspaceId,
+          title: 'Updated decision review',
+          description: 'Updated decision artefact scope'
+        });
+      }
+      if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/dashboard');
@@ -59,6 +69,18 @@ describe('RedTeamAgent app flows', () => {
     expect(await screen.findByText('Stage 1 launch review')).toBeInTheDocument();
     expect(screen.getByText('No description provided.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /new review/i })).toHaveAttribute('href', '/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await user.clear(screen.getByLabelText(/edit project title/i));
+    await user.type(screen.getByLabelText(/edit project title/i), 'Updated decision review');
+    await user.clear(screen.getByLabelText(/edit description/i));
+    await user.type(screen.getByLabelText(/edit description/i), 'Updated decision artefact scope');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(await screen.findByText('Updated decision review')).toBeInTheDocument();
+    expect(screen.getByText('Updated decision artefact scope')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await user.click(screen.getByRole('button', { name: /confirm delete/i }));
+    await waitFor(() => expect(screen.queryByText('Updated decision review')).not.toBeInTheDocument());
+    expect(screen.getByText('No projects yet')).toBeInTheDocument();
   });
 
   it('creates a provider connection from adapter schema fields', async () => {
