@@ -1,10 +1,29 @@
+import { FileText, ListChecks, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
+import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import './auth.css';
+
+const AUTH_FEATURES = [
+  {
+    icon: Shield,
+    title: 'Adversarial multi-agent review',
+    body: 'Specialist agents stress-test proposals, plans, code and writing.'
+  },
+  {
+    icon: ListChecks,
+    title: 'Evidence-linked findings',
+    body: 'Every risk ties back to a source, scored in a clear risk matrix.'
+  },
+  {
+    icon: FileText,
+    title: 'Decision-ready reports',
+    body: 'Export structured decision support, with assumptions shown.'
+  }
+] as const;
 
 type AuthMode = 'login' | 'register' | 'reset';
 
@@ -110,11 +129,25 @@ export function AuthPage() {
     <div className="auth-shell">
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand-panel">
-          <div className="auth-mark"><ShieldCheck aria-hidden="true" size={28} /></div>
-          <div>
-            <h1 id="auth-title">RedTeamAgent</h1>
-            <p>Sign in to review decisions, proposals, projects, code and writing.</p>
+          <div className="auth-brand-top">
+            <img className="auth-logo" src={logo} alt="" width="192" height="192" />
+            <div>
+              <h1 id="auth-title">RedTeamAgent</h1>
+              <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
+            </div>
           </div>
+          <ul className="auth-features">
+            {AUTH_FEATURES.map(({ icon: Icon, title, body }) => (
+              <li key={title}>
+                <span className="auth-feature-icon"><Icon aria-hidden="true" size={18} /></span>
+                <div>
+                  <strong>{title}</strong>
+                  <span>{body}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="auth-brand-foot">Provisional decision support, not professional sign-off.</p>
         </div>
         <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
           <div className="auth-form-header">

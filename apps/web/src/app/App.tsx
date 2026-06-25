@@ -1,7 +1,8 @@
-import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, FileText, FolderKanban, Settings } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { api } from '../api/client';
+import logo from '../assets/redteamagent-logo.png';
 import { AuthPage } from '../features/auth/AuthPage';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
@@ -12,6 +13,7 @@ import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
 import './theme.css';
 import './styles.css';
+import './components.css';
 
 function Layout() {
   const { auth, setAuth } = useAuth();
@@ -25,27 +27,42 @@ function Layout() {
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
         <div className="brand">
-          <ShieldCheck aria-hidden="true" />
-          <span>RedTeamAgent</span>
+          <img src={logo} alt="" width="32" height="32" />
+          <span className="brand-name">
+            RedTeamAgent
+            <small>Decision intelligence</small>
+          </span>
         </div>
         <nav>
-          <NavLink to="/workflows"><Activity />Workflows</NavLink>
-          <NavLink to="/projects"><FolderKanban />Projects</NavLink>
-          {isAdmin ? <NavLink to="/settings"><Settings />Settings</NavLink> : null}
+          <NavLink to="/workflows"><Activity size={18} aria-hidden="true" />Workflows</NavLink>
+          <NavLink to="/projects"><FolderKanban size={18} aria-hidden="true" />Projects</NavLink>
+          {isAdmin ? <NavLink to="/settings"><Settings size={18} aria-hidden="true" />Settings</NavLink> : null}
         </nav>
+        <p className="sidebar-foot">Adversarial review for decisions, proposals, code and writing.</p>
       </aside>
       <main>
         <header className="topbar">
-          <div>
-            <strong>{auth.email}</strong>
-            <span>{roleLabel(auth.workspaceRole)}</span>
+          <div className="topbar-user">
+            <span className="avatar" aria-hidden="true">{initials(auth.email)}</span>
+            <div className="topbar-meta">
+              <strong>{auth.email}</strong>
+              <span className={`role-badge ${isAdmin ? 'is-admin' : ''}`}>{roleLabel(auth.workspaceRole)}</span>
+            </div>
           </div>
           <Button onClick={logout}>Log out</Button>
         </header>
         <Outlet />
+        <footer className="method-note">
+          <FileText aria-hidden="true" size={16} />
+          Reports are provisional decision support, not professional sign-off.
+        </footer>
       </main>
     </div>
   );
+}
+
+function initials(email: string) {
+  return email.slice(0, 2).toUpperCase();
 }
 
 function AdminRoute({ children }: { children: ReactElement }) {
@@ -85,10 +102,6 @@ export function App() {
   return (
     <AuthProvider>
       <AppRoutes />
-      <footer className="method-note">
-        <FileText aria-hidden="true" />
-        Reports are provisional decision support, not professional sign-off.
-      </footer>
     </AuthProvider>
   );
 }

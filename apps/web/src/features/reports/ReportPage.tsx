@@ -17,6 +17,13 @@ type RunEvent = {
 
 const TERMINAL_STATES = new Set(['completed', 'failed', 'cancelled']);
 
+function severityTone(severity: string): 'ok' | 'warn' | 'bad' | 'info' {
+  if (severity === 'critical' || severity === 'high') return 'bad';
+  if (severity === 'medium') return 'warn';
+  if (severity === 'low') return 'info';
+  return 'info';
+}
+
 function mergeEvent(events: RunEvent[], next: RunEvent) {
   const byId = new Map(events.map((event) => [event.id, event]));
   byId.set(next.id, next);
@@ -150,11 +157,16 @@ export function ReportPage() {
               <>
                 <h2>{report.title}</h2>
                 <p>{report.executive_summary}</p>
-                <Status tone="info">{report.provisional_recommendation}</Status>
+                <div className="report-reco">
+                  <span className="report-reco-label">Provisional recommendation</span>
+                  <strong>{report.provisional_recommendation}</strong>
+                </div>
                 <div className="filters" aria-label="Report filters">
                   <Filter size={16} />
                   {['all', 'low', 'medium', 'high', 'critical'].map((value) => (
-                    <Button key={value} onClick={() => setSeverity(value)}>{value}</Button>
+                    <Button key={value} aria-pressed={severity === value} onClick={() => setSeverity(value)}>
+                      {value}
+                    </Button>
                   ))}
                 </div>
                 <div className="list" aria-label="Findings">
@@ -167,7 +179,7 @@ export function ReportPage() {
                         {finding.evidence_excerpt ? <p className="muted">{finding.evidence_excerpt}</p> : null}
                       </div>
                       <div className="stack">
-                        <Status tone={finding.severity === 'medium' ? 'warn' : 'info'}>{finding.severity}</Status>
+                        <Status tone={severityTone(finding.severity)}>{finding.severity}</Status>
                         <Status tone="ok">{finding.confidence}</Status>
                       </div>
                     </article>
@@ -207,7 +219,9 @@ export function ReportPage() {
               <Button onClick={() => void exportReport('html')} disabled={!report}>HTML</Button>
               <Button onClick={() => void exportPdf()} disabled={!report}>PDF</Button>
             </div>
-            {exportText ? <textarea readOnly rows={8} value={exportText} aria-label="Export output" /> : null}
+            {exportText ? (
+              <textarea className="export-output" readOnly rows={8} value={exportText} aria-label="Export output" />
+            ) : null}
           </section>
           {report ? <ReportComparisonPanel runId={runId} /> : null}
           <EvidencePanel report={report} />
