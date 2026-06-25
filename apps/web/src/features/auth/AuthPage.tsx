@@ -39,6 +39,14 @@ function initialMessage(mode: AuthMode) {
   return 'Enter your account details.';
 }
 
+function loginErrorMessage(err: unknown) {
+  const message = String(err).toLowerCase();
+  if (message.includes('failed to fetch')) {
+    return 'Sign in is unavailable. Check the service and try again.';
+  }
+  return 'Email or password is incorrect.';
+}
+
 export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -96,7 +104,7 @@ export function AuthPage() {
       });
       navigate('/workflows');
     } catch (err) {
-      setError((err as Error).message);
+      setError(loginErrorMessage(err));
     }
   };
 

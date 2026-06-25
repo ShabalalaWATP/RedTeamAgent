@@ -33,13 +33,46 @@ describe('account and usage controls', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('duplicate');
     await user.click(screen.getByRole('button', { name: /back to sign in/i }));
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('bad login');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/new password/i), 'another safe phrase');
     await user.click(screen.getByRole('button', { name: /confirm reset/i }));
     expect(await screen.findByText(/password updated/i)).toBeInTheDocument();
+  });
+
+  it('hides raw validation status on malformed sign-in attempts', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/login')) return jsonResponse({ detail: [{ msg: 'value is not a valid email' }] }, 422);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'not-a-real-email');
+    await user.type(screen.getByLabelText(/^password$/i), 'wrong password value');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
+    expect(screen.queryByText(/422/)).not.toBeInTheDocument();
+  });
+
+  it('shows a service message when sign-in cannot reach the API', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/login')) throw new Error('Failed to fetch');
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'wrong password value');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sign in is unavailable. Check the service and try again.'
+    );
   });
 
   it('surfaces verification errors from a local verification link', async () => {
