@@ -22,11 +22,11 @@ describe('ProviderSettings', () => {
           {
             key: 'openai',
             label: 'OpenAI',
-            fields: [],
+            fields: [{ name: 'api_key', label: 'API key', secret: true, required: true, input_type: 'password' }],
             default_capabilities: ['text'],
             catalogue_models: [
               { model_identifier: 'gpt-5.5', capabilities: ['text'] },
-              { model_identifier: 'gpt-fast', capabilities: ['text', 'streaming'] }
+              { model_identifier: 'gpt-5.4-mini', capabilities: ['text', 'streaming'] }
             ]
           }
         ]);
@@ -34,13 +34,24 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/connections?')) return jsonResponse([]);
       if (url.includes('/providers/models?')) return jsonResponse([]);
       if (url.includes('/providers/profiles?')) return jsonResponse([]);
+      if (url.includes('/providers/models/preview') && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          adapter: 'openai',
+          credentials: { api_key: 'test-key' }
+        });
+        return jsonResponse([
+          { model_identifier: 'gpt-fast', capabilities: ['text', 'streaming'] },
+          { model_identifier: 'gpt-deep', capabilities: ['text'] }
+        ]);
+      }
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
         return jsonResponse([modelRecord({ model_identifier: 'fake-fast' })]);
       }
       if (url.includes('/providers/connections') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
           adapter: 'openai',
-          config: { model_identifier: 'gpt-fast' }
+          config: { model_identifier: 'gpt-fast', live_catalogue: true },
+          credentials: { api_key: 'test-key' }
         });
         return jsonResponse(providerConnection());
       }
@@ -52,6 +63,10 @@ describe('ProviderSettings', () => {
     const providerForm = (await screen.findByRole('heading', { name: /connect an ai provider/i }))
       .closest('form') as HTMLElement;
     await user.selectOptions(within(providerForm).getByLabelText(/ai provider/i), 'openai');
+    expect(within(providerForm).queryByText('gpt-5.5')).not.toBeInTheDocument();
+    expect(await within(providerForm).findByText('No models discovered')).toBeInTheDocument();
+    await user.type(within(providerForm).getByLabelText(/api key/i), 'test-key');
+    await user.click(within(providerForm).getByRole('button', { name: /load models/i }));
     expect(await within(providerForm).findByText('gpt-fast')).toBeInTheDocument();
     await user.selectOptions(within(providerForm).getAllByRole('combobox')[1], 'gpt-fast');
     await user.click(screen.getByRole('button', { name: /test and save/i }));
@@ -63,7 +78,7 @@ describe('ProviderSettings', () => {
     const user = userEvent.setup();
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) return jsonResponse([adapterSchema()]);
-      if (url.includes('/providers/connections?')) return jsonResponse([providerConnection()]);
+      if (url.includes('/providers/connections?')) return jsonResponse([providerConnection({ has_credentials: true })]);
       if (url.includes('/providers/models?')) return jsonResponse([modelRecord({ capabilities: [], verified: false })]);
       if (url.includes('/providers/profiles?')) return jsonResponse([modelProfile({ explicit_pin: false })]);
       if (url.includes('/providers/connections/conn-1/test') && init?.method === 'POST') {
@@ -129,6 +144,9 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
         return jsonResponse({ message: 'sync denied' }, 502);
       }
+      if (url.includes('/providers/models/preview') && init?.method === 'POST') {
+        return jsonResponse({ message: 'preview denied' }, 503);
+      }
       if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
         return jsonResponse({ message: 'model probe denied' }, 418);
       }
@@ -154,6 +172,8 @@ describe('ProviderSettings', () => {
 
     renderProviderSettings();
 
+    await user.click(await screen.findByRole('button', { name: /load models/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('preview denied');
     await openDisclosure(user, /advanced ai controls/i);
     expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
     const manualForm = screen.getByRole('heading', { name: /manual model record/i }).closest('form') as HTMLElement;
@@ -228,6 +248,19 @@ describe('ProviderSettings', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('keeps unauthenticated model loading local', async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockFetch((url) => {
+      if (url.includes('/providers/adapters')) return jsonResponse([adapterSchema()]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderProviderSettings();
+
+    await user.click(await screen.findByRole('button', { name: /load models/i }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('shows evaluation running state while metrics load', async () => {
     const user = userEvent.setup();
     sessionStorage.setItem('rta.auth', JSON.stringify(authState));
@@ -282,14 +315,15 @@ function adapterSchema(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function providerConnection() {
+function providerConnection(overrides: Record<string, unknown> = {}) {
   return {
     id: 'conn-1',
     workspace_id: authState.workspaceId,
     adapter: 'fake',
     name: 'Fake local provider',
     config: {},
-    has_credentials: false
+    has_credentials: false,
+    ...overrides
   };
 }
 

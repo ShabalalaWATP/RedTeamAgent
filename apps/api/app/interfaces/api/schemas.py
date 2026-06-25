@@ -157,6 +157,21 @@ class ProviderConnectionView(BaseModel):
     has_credentials: bool
 
 
+class ModelPreviewRequest(BaseModel):
+    workspace_id: str
+    adapter: str
+    config: dict[str, Any] = Field(default_factory=dict)
+    credentials: dict[str, str] = Field(default_factory=dict)
+
+
+class ModelPreviewView(BaseModel):
+    model_identifier: str
+    capabilities: list[str]
+    provenance: str
+    verified: bool
+    probe_result: dict[str, Any] = Field(default_factory=dict)
+
+
 class ModelCreate(BaseModel):
     workspace_id: str
     provider_connection_id: str

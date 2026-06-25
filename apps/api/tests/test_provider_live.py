@@ -5,10 +5,12 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.application.ports.providers import AdapterSchema
 from app.infrastructure.providers import live as live_module
 from app.infrastructure.providers.adapters import ProviderRegistry
+from tests.conftest import csrf_headers, register_verified
 
 
 class FakeResponse:
@@ -74,6 +76,11 @@ def test_live_provider_catalogue_probe_and_error_branches(monkeypatch: pytest.Mo
     assert openai.catalogue_models({}, credentials)[0]["provenance"] == "adapter_catalogue:openai"
     assert openai.probe_capabilities("gpt-test", ["text", "missing"])["missing_capabilities"] == ["missing"]
     assert openai.catalogue_models({"live_catalogue": True}, credentials)[0]["model_identifier"] == "gpt-test"
+    compatible_models = registry.get("openai_compatible").catalogue_models(
+        {"endpoint_url": "https://api.openai.com/v1", "live_catalogue": True},
+        credentials,
+    )
+    assert compatible_models[0]["model_identifier"] == "gpt-test"
     anthropic_models = registry.get("anthropic").catalogue_models({"live_catalogue": True}, credentials)
     gemini_models = registry.get("google_gemini").catalogue_models({"live_catalogue": True}, credentials)
     assert anthropic_models[0]["model_identifier"] == "claude-test"
@@ -110,3 +117,41 @@ def test_all_provider_adapters_probe_claimed_capabilities() -> None:
         )
         assert set(result["verified_capabilities"]) == set(schema.default_capabilities)
         assert result["missing_capabilities"] == ["missing_capability"]
+
+
+def test_admin_previews_live_models_without_persisting_credentials(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_urls: list[str] = []
+
+    def catalogue_urlopen(request: Any, timeout: int) -> FakeResponse:
+        del timeout
+        seen_urls.append(str(request.full_url))
+        return FakeResponse({"data": [{"id": "gpt-live-a"}, {"id": "gpt-live-b"}]})
+
+    monkeypatch.setattr(live_module, "urlopen", catalogue_urlopen)
+    owner = register_verified(client, "preview-owner@example.com")
+    missing = client.post(
+        "/providers/models/preview",
+        headers=csrf_headers(owner),
+        json={"workspace_id": owner["workspace_id"], "adapter": "openai", "credentials": {}},
+    )
+    assert missing.status_code == 422
+
+    preview = client.post(
+        "/providers/models/preview",
+        headers=csrf_headers(owner),
+        json={
+            "workspace_id": owner["workspace_id"],
+            "adapter": "openai",
+            "config": {},
+            "credentials": {"api_key": "test-key"},
+        },
+    )
+    assert preview.status_code == 200, preview.text
+    assert [item["model_identifier"] for item in preview.json()] == ["gpt-live-a", "gpt-live-b"]
+    assert preview.json()[0]["provenance"] == "live_catalogue:openai"
+    assert seen_urls == ["https://api.openai.com/v1/models"]
+    listed = client.get(f"/providers/connections?workspace_id={owner['workspace_id']}")
+    assert listed.json() == []

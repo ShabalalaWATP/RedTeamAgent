@@ -127,12 +127,7 @@ describe('edge UI flows', () => {
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) {
         return jsonResponse([
-          {
-            key: 'fake',
-            label: 'Fake',
-            fields: [],
-            default_capabilities: ['text']
-          },
+          { key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] },
           {
             key: 'openai',
             label: 'OpenAI',
@@ -144,6 +139,7 @@ describe('edge UI flows', () => {
       if (url.includes('/providers/connections?')) return jsonResponse([]);
       if (url.includes('/providers/models?')) return jsonResponse([]);
       if (url.includes('/providers/profiles?')) return jsonResponse([]);
+      if (url.includes('/providers/models/preview') && init?.method === 'POST') return jsonResponse([{ model_identifier: 'gpt-openai', capabilities: ['text'] }]);
       if (url.includes('/providers/connections') && init?.method === 'POST') return jsonResponse({ message: 'missing key' }, 422);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
@@ -154,6 +150,8 @@ describe('edge UI flows', () => {
     expect(screen.getByText(/not a url/i)).toBeInTheDocument();
     await user.clear(screen.getByLabelText(/display name/i));
     await user.type(screen.getByLabelText(/display name/i), 'OpenAI test');
+    await user.click(screen.getByRole('button', { name: /load models/i }));
+    expect(await screen.findByText('gpt-openai')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('missing key');
   });

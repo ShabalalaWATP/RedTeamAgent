@@ -4,6 +4,7 @@ import {
   API_BASE,
   apiTokenSchema,
   authSchema,
+  catalogueModelSchema,
   contextPackSchema,
   enterpriseAuditSchema,
   enterpriseMemberSchema,
@@ -134,6 +135,10 @@ export class ApiClient {
     return z.array(modelRecordSchema).parse(
       await this.request(`/providers/connections/${connectionId}/models/sync`, 'POST', { csrf })
     );
+  }
+
+  async previewProviderModels(csrf: string, body: Record<string, unknown>) {
+    return z.array(catalogueModelSchema).parse(await this.request('/providers/models/preview', 'POST', { csrf, body }));
   }
 
   async createModel(csrf: string, body: Record<string, unknown>) {

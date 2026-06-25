@@ -7,7 +7,19 @@ import type { ModelProfile, ModelRecord, ProviderConnection } from '../../shared
 import { Button, EmptyState, ErrorState, Field } from '../../shared/ui';
 import { EvaluationPanel } from './EvaluationPanel';
 import { ModelDropdown } from './ModelDropdown';
-import { adapterFieldHint, capabilitiesForModel, modelOptionKey, modelOptionsForConnection, modelOptionsForSchema, preferredModelIdentifier, schemaForConnection, type AdapterSchema } from './providerCatalogue';
+import { SavedConnectionsPanel } from './SavedConnectionsPanel';
+import { providerConfig, providerCredentials } from './providerFormData';
+import {
+  adapterFieldHint,
+  capabilitiesForModel,
+  modelOptionKey,
+  modelOptionsForConnection,
+  modelOptionsForSetup,
+  preferredModelIdentifier,
+  schemaForConnection,
+  type AdapterSchema,
+  type CatalogueModel
+} from './providerCatalogue';
 import './providers.css';
 
 function splitCapabilities(value: string) {
@@ -26,6 +38,8 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const [profiles, setProfiles] = useState<ModelProfile[]>([]);
   const [selected, setSelected] = useState('fake');
   const [defaultModelIdentifier, setDefaultModelIdentifier] = useState('fake-reviewer');
+  const [liveModelOptions, setLiveModelOptions] = useState<CatalogueModel[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [name, setName] = useState('Fake local provider');
   const [values, setValues] = useState<Record<string, string>>({ scenario: 'valid' });
   const [modelConnectionId, setModelConnectionId] = useState('');
@@ -66,7 +80,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   }, [auth?.workspaceId]);
 
   const schema = schemas.find((item) => item.key === selected);
-  const defaultModelOptions = modelOptionsForSchema(schema);
+  const defaultModelOptions = modelOptionsForSetup(schema, liveModelOptions);
   const modelConnection = connections.find((connection) => connection.id === modelConnectionId);
   const manualModelSchema = schemaForConnection(schemas, modelConnection);
   const manualModelOptions = modelOptionsForConnection(schemas, models, modelConnection);
@@ -74,9 +88,12 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const manualModelOptionKey = modelOptionKey(manualModelOptions);
 
   useEffect(() => {
-    if (defaultModelOptions.length === 0) return;
-    setDefaultModelIdentifier((current) => preferredModelIdentifier(defaultModelOptions, current));
+    setDefaultModelIdentifier((current) => (
+      defaultModelOptions.length ? preferredModelIdentifier(defaultModelOptions, current) : ''
+    ));
   }, [defaultModelOptionKey]);
+
+  useEffect(() => { setLiveModelOptions([]); }, [selected]);
 
   useEffect(() => {
     if (manualModelOptions.length === 0) return;
@@ -92,15 +109,8 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const createConnection = async () => {
     if (!auth || !schema) return;
     setError(null);
-    const credentials = Object.fromEntries(
-      schema.fields.filter((field) => field.secret).map((field) => [field.name, values[field.name] ?? ''])
-    );
-    const config = Object.fromEntries(
-      schema.fields.filter((field) => !field.secret).map((field) => [field.name, values[field.name] ?? ''])
-    );
-    if (defaultModelOptions.some((model) => model.model_identifier === defaultModelIdentifier)) {
-      config.model_identifier = defaultModelIdentifier;
-    }
+    const credentials = providerCredentials(schema, values);
+    const config = providerConfig(schema, values, defaultModelIdentifier, liveModelOptions.length > 0);
     try {
       const connection = await api.createProviderConnection(auth.csrfToken, {
         workspace_id: auth.workspaceId,
@@ -116,6 +126,27 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
       setProfileModelId(synced[0]?.id ?? '');
     } catch (err) {
       setError((err as Error).message);
+    }
+  };
+
+  const loadProviderModels = async () => {
+    if (!auth || !schema) return;
+    setError(null);
+    setLoadingModels(true);
+    try {
+      const models = await api.previewProviderModels(auth.csrfToken, {
+        workspace_id: auth.workspaceId,
+        adapter: schema.key,
+        config: providerConfig(schema, values),
+        credentials: providerCredentials(schema, values)
+      });
+      setLiveModelOptions(models);
+      setDefaultModelIdentifier(preferredModelIdentifier(models, defaultModelIdentifier));
+      setResult(`Loaded ${models.length} model${models.length === 1 ? '' : 's'} from ${schema.label}.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoadingModels(false);
     }
   };
 
@@ -217,13 +248,6 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
               {schemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
             </select>
           </Field>
-          <Field label="Model" hint="Available models reported by the selected provider.">
-            <ModelDropdown
-              value={defaultModelIdentifier}
-              options={defaultModelOptions}
-              onChange={setDefaultModelIdentifier}
-            />
-          </Field>
           <Field
             label="Display name"
             hint="An internal label, for example 'OpenAI production'. This is not a URL."
@@ -240,36 +264,26 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
               />
             </Field>
           ))}
-          <Button type="button" variant="primary" onClick={createConnection} disabled={!schema}>
+          <Button type="button" onClick={loadProviderModels} disabled={!schema || loadingModels}>
+            <RefreshCcw size={16} /> {loadingModels ? 'Loading models' : 'Load models'}
+          </Button>
+          <Field label="Model" hint="Load the provider's live model list, then choose the model RedTeamAgent should use.">
+            <ModelDropdown
+              value={defaultModelIdentifier}
+              options={defaultModelOptions}
+              onChange={setDefaultModelIdentifier}
+            />
+          </Field>
+          <Button type="button" variant="primary" onClick={createConnection} disabled={!schema || !defaultModelIdentifier}>
             <PlugZap size={16} /> Test and save
           </Button>
         </form>
-        <aside className="panel stack">
-          <h2>Saved connections</h2>
-          {connections.length === 0 ? (
-            <EmptyState title="No saved provider" body="Save the provider RedTeamAgent should use for reviews." />
-          ) : (
-            <div className="list">
-              {connections.map((connection) => (
-                <article className="list-item" key={connection.id}>
-                  <div>
-                    <strong>{connection.name}</strong>
-                    <p className="muted">{connection.adapter} · credentials {connection.has_credentials ? 'stored' : 'not required'}</p>
-                  </div>
-                  <div className="row">
-                    <Button type="button" onClick={() => void testConnection(connection.id)}>
-                      <RefreshCcw size={16} /> Test
-                    </Button>
-                    <Button type="button" onClick={() => void refreshModels(connection.id)}>
-                      Refresh models
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-          <p className="muted">{result || 'Saved providers can be tested or refreshed here.'}</p>
-        </aside>
+        <SavedConnectionsPanel
+          connections={connections}
+          result={result}
+          onTest={(connectionId) => void testConnection(connectionId)}
+          onRefresh={(connectionId) => void refreshModels(connectionId)}
+        />
       </div>
       <details className="settings-disclosure">
         <summary>

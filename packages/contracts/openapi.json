@@ -1577,6 +1577,85 @@
         }
       }
     },
+    "/providers/models/preview": {
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Preview Models",
+        "operationId": "preview_models_providers_models_preview_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelPreviewView"
+                  },
+                  "title": "Response Preview Models Providers Models Preview Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/providers/models": {
       "post": {
         "tags": [
@@ -7112,6 +7191,72 @@
           "capabilities"
         ],
         "title": "ModelCreate"
+      },
+      "ModelPreviewRequest": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "adapter": {
+            "type": "string",
+            "title": "Adapter"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "credentials": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "adapter"
+        ],
+        "title": "ModelPreviewRequest"
+      },
+      "ModelPreviewView": {
+        "properties": {
+          "model_identifier": {
+            "type": "string",
+            "title": "Model Identifier"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "probe_result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Probe Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_identifier",
+          "capabilities",
+          "provenance",
+          "verified"
+        ],
+        "title": "ModelPreviewView"
       },
       "ModelView": {
         "properties": {

@@ -207,6 +207,19 @@ class GeminiProviderAdapter(LiveJsonProviderAdapter):
 
 
 class OpenAICompatibleProviderAdapter(OpenAIProviderAdapter):
+    def _live_catalogue(self, config: dict[str, Any], credentials: dict[str, str]) -> list[dict[str, Any]]:
+        self._validate_config(config)
+        endpoint = str(config["endpoint_url"]).rstrip("/")
+        response = _request_json(
+            "GET",
+            f"{endpoint}/models",
+            {"Authorization": f"Bearer {credentials['api_key']}"},
+            None,
+            self._timeout(config),
+            allow_http=self.self_hosted_mode,
+        )
+        return _catalogue_items(_model_ids_from_response(response), self.schema)
+
     def generate_structured(
         self,
         prompt: str,
@@ -308,3 +321,17 @@ def _catalogue_items(model_ids: list[str], schema: AdapterSchema) -> list[dict[s
         }
         for model_id in model_ids
     ]
+
+
+def _model_ids_from_response(response: dict[str, Any]) -> list[str]:
+    items = response.get("data", response.get("models", []))
+    if not isinstance(items, list):
+        return []
+    model_ids: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("id", item.get("name"))
+        if value:
+            model_ids.append(str(value).removeprefix("models/"))
+    return model_ids

@@ -231,10 +231,13 @@ describe('unauthenticated and alternate branch states', () => {
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
         return jsonResponse([]);
       }
+      if (url.includes('/providers/models/preview') && init?.method === 'POST') {
+        return jsonResponse([{ model_identifier: 'custom-live', capabilities: ['text'] }]);
+      }
       if (url.includes('/providers/connections') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
           adapter: 'custom',
-          config: { endpoint_url: '' },
+          config: { endpoint_url: '', live_catalogue: true, model_identifier: 'custom-live' },
           credentials: { api_key: '' }
         });
         return jsonResponse(connection());
@@ -244,6 +247,7 @@ describe('unauthenticated and alternate branch states', () => {
     sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
     renderWithAuth(<ProviderSettings />);
     await user.selectOptions(await screen.findByLabelText(/ai provider/i), 'custom');
+    await user.click(screen.getByRole('button', { name: /load models/i }));
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(await screen.findByText(/provider connection saved/i)).toBeInTheDocument();
   });

@@ -349,6 +349,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/providers/models/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Models */
+        post: operations["preview_models_providers_models_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/models": {
         parameters: {
             query?: never;
@@ -1583,6 +1600,36 @@ export interface components {
              * @default false
              */
             verified: boolean;
+        };
+        /** ModelPreviewRequest */
+        ModelPreviewRequest: {
+            /** Workspace Id */
+            workspace_id: string;
+            /** Adapter */
+            adapter: string;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            };
+            /** Credentials */
+            credentials?: {
+                [key: string]: string;
+            };
+        };
+        /** ModelPreviewView */
+        ModelPreviewView: {
+            /** Model Identifier */
+            model_identifier: string;
+            /** Capabilities */
+            capabilities: string[];
+            /** Provenance */
+            provenance: string;
+            /** Verified */
+            verified: boolean;
+            /** Probe Result */
+            probe_result?: {
+                [key: string]: unknown;
+            };
         };
         /** ModelView */
         ModelView: {
@@ -3216,6 +3263,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_models_providers_models_preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelPreviewView"][];
                 };
             };
             /** @description Validation Error */

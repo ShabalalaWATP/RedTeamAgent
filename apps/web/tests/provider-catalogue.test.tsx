@@ -8,6 +8,7 @@ import {
   modelOptionKey,
   modelOptionsForConnection,
   modelOptionsForSchema,
+  modelOptionsForSetup,
   preferredModelIdentifier,
   schemaForConnection,
   type AdapterSchema
@@ -46,6 +47,10 @@ describe('provider catalogue helpers', () => {
       .toBeUndefined();
     expect(modelOptionsForSchema(schema)).toHaveLength(1);
     expect(modelOptionsForSchema(undefined)).toHaveLength(0);
+    expect(modelOptionsForSetup(schema, [])).toHaveLength(1);
+    expect(modelOptionsForSetup(secretSchema(), [])).toHaveLength(0);
+    expect(modelOptionsForSetup(secretSchema(), [{ model_identifier: 'gpt-live' }])[0].model_identifier)
+      .toBe('gpt-live');
     expect(schemaForConnection([schema], connection)?.key).toBe('openai');
     expect(modelOptionsForConnection([schema], [], connection)[0].model_identifier).toBe('gpt-5.5');
     expect(modelOptionsForConnection([schema], [syncedModel], connection)[0].model_identifier).toBe('gpt-synced');
@@ -65,6 +70,13 @@ function adapterSchema(): AdapterSchema {
     fields: [],
     default_capabilities: ['text'],
     catalogue_models: [{ model_identifier: 'gpt-5.5', capabilities: ['text', 'streaming'] }]
+  };
+}
+
+function secretSchema(): AdapterSchema {
+  return {
+    ...adapterSchema(),
+    fields: [{ name: 'api_key', label: 'API key', secret: true, required: true, input_type: 'password' }]
   };
 }
 

@@ -33,6 +33,12 @@ export function modelOptionsForSchema(schema: AdapterSchema | undefined) {
   return schema?.catalogue_models?.length ? schema.catalogue_models : [];
 }
 
+export function modelOptionsForSetup(schema: AdapterSchema | undefined, liveModels: CatalogueModel[]) {
+  if (liveModels.length > 0) return liveModels;
+  if (schema?.fields.some((field) => field.secret && field.required)) return [];
+  return modelOptionsForSchema(schema);
+}
+
 export function modelOptionKey(options: CatalogueModel[]) {
   return options.map((model) => model.model_identifier).join('|');
 }

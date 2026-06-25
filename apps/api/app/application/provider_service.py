@@ -69,6 +69,24 @@ class ProviderService:
         adapter = self._adapter(connection.adapter)
         return adapter.test_connection(connection.config, self._credentials(connection.encrypted_credentials))
 
+    def preview_models(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> list[dict[str, Any]]:
+        require_admin(self._role(user_id, workspace_id))
+        adapter = self._adapter(data["adapter"])
+        self._validate_governance(workspace_id, data["adapter"], None, "provider_admin", user_id)
+        self._validate_required_fields(adapter, data.get("config", {}), data.get("credentials", {}))
+        config = {**data.get("config", {}), "live_catalogue": True}
+        return [
+            {
+                "model_identifier": str(item["model_identifier"]),
+                "capabilities": self._string_list(item.get("capabilities", adapter.schema.default_capabilities)),
+                "provenance": str(item.get("provenance", f"live_catalogue:{data['adapter']}")),
+                "verified": bool(item.get("verified", False)),
+                "probe_result": self._dict_value(item.get("probe_result", {})),
+            }
+            for item in adapter.catalogue_models(config, data.get("credentials", {}))
+            if "model_identifier" in item
+        ]
+
     def sync_models(self, user_id: str, connection_id: str) -> list[Any]:
         connection = self.repo.get_provider_connection(connection_id)
         if connection is None:
@@ -247,3 +265,17 @@ class ProviderService:
             for item in catalogue
             if "model_identifier" in item
         ]
+
+    @staticmethod
+    def _validate_required_fields(
+        adapter: ProviderAdapter,
+        config: dict[str, Any],
+        credentials: dict[str, str],
+    ) -> None:
+        missing = [
+            field.label
+            for field in adapter.schema.fields
+            if field.required and not (credentials if field.secret else config).get(field.name)
+        ]
+        if missing:
+            raise ValidationFailure(f"{', '.join(missing)} required before loading models.")

@@ -102,6 +102,14 @@ export const modelRecordSchema = z.object({
   probe_result: z.record(z.string(), z.unknown()).default({})
 });
 
+export const catalogueModelSchema = z.object({
+  model_identifier: z.string(),
+  capabilities: z.array(z.string()).default([]),
+  provenance: z.string().optional(),
+  verified: z.boolean().optional(),
+  probe_result: z.record(z.string(), z.unknown()).default({})
+});
+
 export const modelProfileSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),

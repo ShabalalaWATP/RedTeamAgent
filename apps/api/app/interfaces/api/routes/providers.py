@@ -8,6 +8,8 @@ from app.application.provider_service import ProviderService
 from app.interfaces.api.dependencies import AuthContext, current_context, provider_service, require_csrf
 from app.interfaces.api.schemas import (
     ModelCreate,
+    ModelPreviewRequest,
+    ModelPreviewView,
     ModelView,
     ProfileCreate,
     ProfileView,
@@ -63,6 +65,16 @@ def sync_models(
     service: Annotated[ProviderService, Depends(provider_service)],
 ) -> list[ModelView]:
     return [ModelView.model_validate(item) for item in service.sync_models(context.user.id, connection_id)]
+
+
+@router.post("/models/preview", response_model=list[ModelPreviewView], dependencies=[Depends(require_csrf)])
+def preview_models(
+    payload: ModelPreviewRequest,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ProviderService, Depends(provider_service)],
+) -> list[ModelPreviewView]:
+    models = service.preview_models(context.user.id, payload.workspace_id, payload.model_dump(exclude={"workspace_id"}))
+    return [ModelPreviewView.model_validate(item) for item in models]
 
 
 @router.post("/models", response_model=ModelView, dependencies=[Depends(require_csrf)])
