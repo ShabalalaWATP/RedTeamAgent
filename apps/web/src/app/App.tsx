@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import './theme.css';
 import './styles.css';
 import './components.css';
+import './effects.css';
 
 function Layout() {
   const { auth, setAuth } = useAuth();

@@ -1,0 +1,102 @@
+/* Modern motion and finishing touches. All animation honours reduced-motion. */
+
+html { scroll-behavior: smooth; }
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+/* Thin, technical scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+  background-clip: padding-box;
+}
+
+/* Staggered content entrance, settles at the normal resting state.
+   Transform-only (no opacity) so it never affects computed contrast. */
+@keyframes rta-rise {
+  from { transform: translateY(12px); }
+  to { transform: none; }
+}
+
+.screen > * {
+  animation: rta-rise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.screen > :nth-child(2) { animation-delay: 0.06s; }
+.screen > :nth-child(3) { animation-delay: 0.12s; }
+.screen > :nth-child(4) { animation-delay: 0.18s; }
+
+.auth-card {
+  animation: rta-rise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Soft accent glow behind the login title (keeps solid, accessible text) */
+.auth-brand-panel h1 {
+  text-shadow: 0 0 32px rgb(78 163 255 / 0.3);
+}
+
+/* Light sweep across primary actions on hover */
+.button.primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.button.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.22) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+
+.button.primary:hover::after { transform: translateX(120%); }
+
+/* Subtle card lift */
+.workflow-item:hover { transform: translateY(-2px); }
+
+/* Aligned, technical figures */
+.status,
+.metric-tile span,
+.role-badge,
+.timeline {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
