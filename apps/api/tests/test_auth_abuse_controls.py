@@ -109,7 +109,9 @@ def test_login_rate_limit_blocks_password_spraying(client: TestClient) -> None:
     auth = register_verified(client, "spray@example.com")
 
     bad = {"email": auth["email"], "password": "Wrong-Password-42!"}
-    assert client.post("/auth/login", json=bad).status_code == 401
+    failed = client.post("/auth/login", json=bad)
+    assert failed.status_code == 401
+    assert failed.json() == {"message": "Invalid email or password."}
     assert client.post("/auth/login", json=bad).status_code == 401
     blocked = client.post("/auth/login", json=bad)
     assert blocked.status_code == 429
