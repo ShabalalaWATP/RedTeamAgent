@@ -26,7 +26,7 @@ def test_production_auth_emails_hide_raw_tokens(client: TestClient) -> None:
 
     registered = client.post(
         "/auth/register",
-        json={"email": "prod-email@example.com", "password": "correct horse battery"},
+        json={"email": "prod-email@example.com", "password": "Correct-Horse-42!"},
     )
     assert registered.status_code == 200, registered.text
     assert registered.json()["verification_token"] is None
@@ -46,7 +46,7 @@ def test_production_auth_emails_hide_raw_tokens(client: TestClient) -> None:
     reset_token = _token_from_body(sender.sent[1]["body"], "reset_token")
     confirmed = client.post(
         "/auth/password-reset/confirm",
-        json={"token": reset_token, "password": "another correct phrase"},
+        json={"token": reset_token, "password": "Another-Correct-43!"},
     )
     assert confirmed.status_code == 204, confirmed.text
 

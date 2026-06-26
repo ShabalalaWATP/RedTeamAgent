@@ -1,5 +1,5 @@
 import { FileText, ListChecks, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
@@ -27,9 +27,22 @@ const AUTH_FEATURES = [
 
 type AuthMode = 'login' | 'register' | 'reset';
 
+const PASSWORD_HINT = 'Use 14-128 characters with uppercase, lowercase, a number and a symbol.';
+
+function passwordMeetsPolicy(value: string) {
+  return (
+    value.length >= 14 &&
+    value.length <= 128 &&
+    value.trim() === value &&
+    /[a-z]/.test(value) &&
+    /[A-Z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^\dA-Za-z\s]/.test(value)
+  );
+}
+
 function initialMode(searchParams: URLSearchParams): AuthMode {
   if (searchParams.get('reset_token')) return 'reset';
-  if (searchParams.get('verification_token')) return 'register';
   return 'login';
 }
 
@@ -51,14 +64,36 @@ export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setAuth } = useAuth();
+  const verificationLinkToken = searchParams.get('verification_token');
   const [mode, setMode] = useState<AuthMode>(() => initialMode(searchParams));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [verificationToken, setVerificationToken] = useState(searchParams.get('verification_token') ?? '');
+  const [verificationToken, setVerificationToken] = useState('');
   const [resetToken, setResetToken] = useState(searchParams.get('reset_token') ?? '');
   const [newPassword, setNewPassword] = useState('');
-  const [message, setMessage] = useState(() => initialMessage(mode));
+  const [message, setMessage] = useState(() =>
+    verificationLinkToken ? 'Verifying your email...' : initialMessage(mode)
+  );
   const [error, setError] = useState<string | null>(null);
+  const verificationAttempted = useRef(false);
+  const canRegister = Boolean(email) && passwordMeetsPolicy(password);
+  const canConfirmReset = Boolean(resetToken) && passwordMeetsPolicy(newPassword);
+
+  useEffect(() => {
+    if (!verificationLinkToken || verificationAttempted.current) return;
+    verificationAttempted.current = true;
+    setError(null);
+    void api.verifyEmail(verificationLinkToken)
+      .then(() => {
+        setMode('login');
+        setMessage('Email verified. Sign in to continue.');
+        navigate('/auth', { replace: true });
+      })
+      .catch((err: unknown) => {
+        setMessage('Email verification failed.');
+        setError((err as Error).message);
+      });
+  }, [navigate, verificationLinkToken]);
 
   const switchMode = (nextMode: AuthMode) => {
     setError(null);
@@ -170,16 +205,25 @@ export function AuthPage() {
           </div>
 
           <Field label="Email">
-            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" />
+            <input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              maxLength={320}
+              spellCheck={false}
+            />
           </Field>
 
           {mode === 'reset' ? null : (
-            <Field label="Password">
+            <Field label="Password" hint={mode === 'register' ? PASSWORD_HINT : undefined}>
               <input
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 type="password"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                maxLength={128}
               />
             </Field>
           )}
@@ -198,15 +242,16 @@ export function AuthPage() {
               <Field label="Reset token" hint="Returned only in local development.">
                 <input value={resetToken} onChange={(event) => setResetToken(event.target.value)} />
               </Field>
-              <Field label="New password">
+              <Field label="New password" hint={PASSWORD_HINT}>
                 <input
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
                   type="password"
                   autoComplete="new-password"
+                  maxLength={128}
                 />
               </Field>
-              <Button type="button" onClick={confirmReset} disabled={!resetToken || newPassword.length < 12}>
+              <Button type="button" onClick={confirmReset} disabled={!canConfirmReset}>
                 Confirm reset
               </Button>
             </div>
@@ -230,7 +275,7 @@ export function AuthPage() {
 
             {mode === 'register' ? (
               <>
-                <Button type="button" variant="primary" onClick={register} disabled={!email || password.length < 12}>
+                <Button type="button" variant="primary" onClick={register} disabled={!canRegister}>
                   Create account
                 </Button>
                 <button className="auth-text-button" type="button" onClick={() => switchMode('login')}>

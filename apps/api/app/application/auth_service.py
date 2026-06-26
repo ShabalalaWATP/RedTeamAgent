@@ -100,8 +100,23 @@ class AuthService:
 
     @staticmethod
     def _validate_password(password: str) -> None:
-        if len(password) < 12:
-            raise ValidationFailure("Password must be at least 12 characters.")
+        missing: list[str] = []
+        if len(password) < 14:
+            missing.append("be at least 14 characters")
+        if len(password) > 128:
+            missing.append("be no more than 128 characters")
+        if not any(character.islower() for character in password):
+            missing.append("include a lowercase letter")
+        if not any(character.isupper() for character in password):
+            missing.append("include an uppercase letter")
+        if not any(character.isdigit() for character in password):
+            missing.append("include a number")
+        if not any(not character.isalnum() and not character.isspace() for character in password):
+            missing.append("include a symbol")
+        if password != password.strip():
+            missing.append("not start or end with a space")
+        if missing:
+            raise ValidationFailure(f"Password must {', '.join(missing)}.")
 
     def _send_verification_email(self, email: str, token: str) -> None:
         link = f"{self.public_app_url}/auth?verification_token={token}"

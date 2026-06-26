@@ -306,9 +306,9 @@ export class ApiClient {
   private async errorMessage(response: Response) {
     try {
       const data = await response.json();
-      return data.message ?? `Request failed with ${response.status}`;
+      return data.message ?? 'The request could not be completed. Check the details and try again.';
     } catch {
-      return `Request failed with ${response.status}`;
+      return 'The request could not be completed. Check the details and try again.';
     }
   }
 }

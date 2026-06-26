@@ -10,7 +10,7 @@ def test_login_honours_secure_cookie_setting(client: TestClient) -> None:
     settings = Settings(cookie_secure=True)
     client.app.dependency_overrides[get_settings] = lambda: settings
 
-    password = "correct horse battery"  # noqa: S105 - deterministic test password
+    password = "Correct-Horse-42!"  # noqa: S105 - deterministic test password
     registered = client.post("/auth/register", json={"email": "secure@example.com", "password": password})
     assert registered.status_code == 200, registered.text
     verified = client.post("/auth/verify-email", json={"token": registered.json()["verification_token"]})

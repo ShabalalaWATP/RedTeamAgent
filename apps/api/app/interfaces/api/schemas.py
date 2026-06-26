@@ -13,7 +13,7 @@ class ApiError(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=12)
+    password: str = Field(min_length=14, max_length=128)
 
 
 class LoginRequest(RegisterRequest):
@@ -30,7 +30,7 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirmRequest(BaseModel):
     token: str
-    password: str = Field(min_length=12)
+    password: str = Field(min_length=14, max_length=128)
 
 
 class UserView(BaseModel):

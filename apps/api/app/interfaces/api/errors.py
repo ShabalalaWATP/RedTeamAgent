@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.domain.exceptions import DomainError
@@ -14,4 +15,12 @@ def install_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=ApiError(code=exc.code, message=exc.message).model_dump(),
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        del request, exc
+        return JSONResponse(
+            status_code=422,
+            content=ApiError(code="validation_failed", message="Check the form fields and try again.").model_dump(),
         )

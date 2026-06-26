@@ -172,7 +172,7 @@ def test_logout_and_password_reset(client: TestClient) -> None:
     token = reset.json()["reset_token"]
     confirmed = client.post(
         "/auth/password-reset/confirm",
-        json={"token": token, "password": "a newly safe phrase"},
+        json={"token": token, "password": "Newly-Safe-44!"},
     )
     assert confirmed.status_code == 204, confirmed.text
     logout = client.post("/auth/logout", headers=csrf_headers(auth))

@@ -26,21 +26,31 @@ from tests.test_stage1_api import create_project_review
 def test_auth_error_branches(client: TestClient) -> None:
     weak = client.post("/auth/register", json={"email": "weak@example.com", "password": "too-short"})
     assert weak.status_code == 422
+    assert weak.json()["message"] == "Check the form fields and try again."
+
+    weak_complexity = client.post(
+        "/auth/register",
+        json={"email": "weak-complexity@example.com", "password": "alllowercasepassword"},
+    )
+    assert weak_complexity.status_code == 422
+    assert "uppercase letter" in weak_complexity.json()["message"]
+    assert "number" in weak_complexity.json()["message"]
+    assert "symbol" in weak_complexity.json()["message"]
 
     first = client.post(
         "/auth/register",
-        json={"email": "dup@example.com", "password": "correct horse battery"},
+        json={"email": "dup@example.com", "password": "Correct-Horse-42!"},
     )
     assert first.status_code == 200
     duplicate = client.post(
         "/auth/register",
-        json={"email": "dup@example.com", "password": "correct horse battery"},
+        json={"email": "dup@example.com", "password": "Correct-Horse-42!"},
     )
     assert duplicate.status_code == 409
 
     unverified = client.post(
         "/auth/login",
-        json={"email": "dup@example.com", "password": "correct horse battery"},
+        json={"email": "dup@example.com", "password": "Correct-Horse-42!"},
     )
     assert unverified.status_code == 401
     bad_verify = client.post("/auth/verify-email", json={"token": "bad"})
@@ -50,9 +60,28 @@ def test_auth_error_branches(client: TestClient) -> None:
     assert missing_reset.json()["reset_token"] == ""
     bad_reset = client.post(
         "/auth/password-reset/confirm",
-        json={"token": "bad", "password": "correct horse battery"},
+        json={"token": "bad", "password": "Correct-Horse-42!"},
     )
     assert bad_reset.status_code == 401
+
+
+def test_auth_accepts_unusual_safe_inputs_without_sql_interpolation(client: TestClient) -> None:
+    password = "Sql-Probe-42!'; DROP TABLE users;--"  # noqa: S105 - validates literal password handling.
+    registered = client.post(
+        "/auth/register",
+        json={"email": "o.hara+safe@example.com", "password": password},
+    )
+    assert registered.status_code == 200, registered.text
+
+    verified = client.post("/auth/verify-email", json={"token": registered.json()["verification_token"]})
+    assert verified.status_code == 204, verified.text
+
+    wrong = client.post("/auth/login", json={"email": "o.hara+safe@example.com", "password": "Wrong-Password-42!"})
+    assert wrong.status_code == 401
+    assert wrong.json()["message"] == "Invalid email or password."
+
+    logged_in = client.post("/auth/login", json={"email": "o.hara+safe@example.com", "password": password})
+    assert logged_in.status_code == 200, logged_in.text
 
 
 def test_me_project_lists_updates_deletes_and_cancel(client: TestClient) -> None:
@@ -305,8 +334,8 @@ def test_extractor_storage_and_token_services(tmp_path: Any, monkeypatch: pytest
     assert s3.get("key") == b"s3"
 
     passwords = PasswordService()
-    password_hash = passwords.hash("correct horse battery")
-    assert passwords.verify(password_hash, "correct horse battery") is True
+    password_hash = passwords.hash("Correct-Horse-42!")
+    assert passwords.verify(password_hash, "Correct-Horse-42!") is True
     assert passwords.verify(password_hash, "wrong") is False
 
     tokens = TokenService("test-secret-key-for-tokens")

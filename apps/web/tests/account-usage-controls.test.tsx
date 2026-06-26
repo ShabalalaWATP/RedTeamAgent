@@ -27,7 +27,7 @@ describe('account and usage controls', () => {
     });
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'another safe phrase');
+    await user.type(screen.getByLabelText(/^password$/i), 'Another-Safe-42!');
     await user.click(screen.getByRole('button', { name: /create an account/i }));
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('duplicate');
@@ -37,7 +37,7 @@ describe('account and usage controls', () => {
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/new password/i), 'another safe phrase');
+    await user.type(screen.getByLabelText(/new password/i), 'Another-Safe-43!');
     await user.click(screen.getByRole('button', { name: /confirm reset/i }));
     expect(await screen.findByText(/password updated/i)).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe('account and usage controls', () => {
 
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'not-a-real-email');
-    await user.type(screen.getByLabelText(/^password$/i), 'wrong password value');
+    await user.type(screen.getByLabelText(/^password$/i), 'Wrong-Password-42!');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
@@ -67,7 +67,7 @@ describe('account and usage controls', () => {
 
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'wrong password value');
+    await user.type(screen.getByLabelText(/^password$/i), 'Wrong-Password-42!');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -76,15 +76,13 @@ describe('account and usage controls', () => {
   });
 
   it('surfaces verification errors from a local verification link', async () => {
-    const user = userEvent.setup();
     mockFetch((url) => {
       if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/auth?verification_token=bad');
-    await user.type(screen.getByLabelText(/verification token/i), 'bad');
-    await user.click(screen.getByRole('button', { name: /verify email/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('bad token');
+    expect(screen.queryByLabelText(/verification token/i)).not.toBeInTheDocument();
   });
 
   it('starts from the proposal box and surfaces daily quota errors', async () => {

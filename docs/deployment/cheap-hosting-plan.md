@@ -44,7 +44,7 @@ For a first public beta, budget for roughly $25-$35/month plus the annual domain
 2. Create an apex `A` record for `@` pointing to the VPS IPv4 address.
 3. If the VPS has IPv6 configured, create an apex `AAAA` record for `@` pointing to the VPS IPv6 address.
 4. Create `www` as a `CNAME` to `redteamagent.co.uk`, or as an `A` record to the same VPS IPv4 if GoDaddy DNS does not allow the preferred shape.
-5. Set `DOMAIN_NAME=redteamagent.co.uk,www.redteamagent.co.uk` in the production env used by Caddy.
+5. Set `DOMAIN_NAME=redteamagent.co.uk www.redteamagent.co.uk` in the production env used by Caddy.
 6. Set `PUBLIC_APP_URL=https://redteamagent.co.uk`.
 7. Set `CORS_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk`.
 8. Route browser API calls through `/api` so cookies remain same-site.
@@ -64,7 +64,7 @@ cp .env.production.example .env.production
 
 Edit `.env.production`:
 
-- Set `DOMAIN_NAME=redteamagent.co.uk,www.redteamagent.co.uk`.
+- Set `DOMAIN_NAME=redteamagent.co.uk www.redteamagent.co.uk`.
 - Set `ACME_EMAIL`.
 - Generate `APP_SECRET_KEY`.
 - Replace database and MinIO passwords.

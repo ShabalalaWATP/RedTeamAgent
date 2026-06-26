@@ -6,7 +6,7 @@ from tests.conftest import csrf_headers, register_verified
 
 
 def test_auth_response_includes_workspace_owner_role(client: TestClient) -> None:
-    password = "correct horse battery"  # noqa: S105 - deterministic test password
+    password = "Correct-Horse-42!"  # noqa: S105 - deterministic test password
     registered = client.post("/auth/register", json={"email": "role-owner@example.com", "password": password})
     assert registered.status_code == 200, registered.text
     assert registered.json()["workspace_role"] == "owner"

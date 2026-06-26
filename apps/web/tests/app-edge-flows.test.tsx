@@ -210,7 +210,7 @@ describe('edge UI flows', () => {
     });
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'correct horse battery');
+    await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
     await user.click(screen.getByRole('button', { name: /create an account/i }));
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/check your email/i)).toBeInTheDocument();

@@ -31,7 +31,7 @@ def client() -> Generator[TestClient]:
 
 
 def register_verified(client: TestClient, email: str = "owner@example.com") -> dict[str, Any]:
-    password = "correct horse battery"  # noqa: S105 - deterministic test password
+    password = "Correct-Horse-42!"  # noqa: S105 - deterministic test password
     registered = client.post("/auth/register", json={"email": email, "password": password})
     assert registered.status_code == 200, registered.text
     token = registered.json()["verification_token"]

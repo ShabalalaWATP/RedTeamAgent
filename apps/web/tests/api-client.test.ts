@@ -214,10 +214,16 @@ describe('ApiClient', () => {
     mockFetch(() => jsonResponse({ message: 'No access' }, 403));
     await expect(client.listProjects('workspace-1')).rejects.toThrow('No access');
     mockFetch(() => jsonResponse({}, 500));
-    await expect(client.listProjects('workspace-1')).rejects.toThrow('Request failed with 500');
+    await expect(client.listProjects('workspace-1')).rejects.toThrow(
+      'The request could not be completed. Check the details and try again.'
+    );
     mockFetch(() => textResponse('broken', 500));
-    await expect(client.listProjects('workspace-1')).rejects.toThrow('Request failed with 500');
-    await expect(client.exportReport('run-1', 'html')).rejects.toThrow('Request failed with 500');
+    await expect(client.listProjects('workspace-1')).rejects.toThrow(
+      'The request could not be completed. Check the details and try again.'
+    );
+    await expect(client.exportReport('run-1', 'html')).rejects.toThrow(
+      'The request could not be completed. Check the details and try again.'
+    );
   });
 });
 
