@@ -14,10 +14,12 @@ class ApiError(BaseModel):
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=14, max_length=128)
+    captcha_token: str | None = Field(default=None, max_length=4096)
 
 
 class LoginRequest(RegisterRequest):
-    pass
+    captcha_token: None = None
+    mfa_code: str | None = Field(default=None, max_length=64)
 
 
 class VerifyEmailRequest(BaseModel):
@@ -26,6 +28,7 @@ class VerifyEmailRequest(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
+    captcha_token: str | None = Field(default=None, max_length=4096)
 
 
 class PasswordResetConfirmRequest(BaseModel):
@@ -55,15 +58,30 @@ class AuthResponse(BaseModel):
     reset_token: str | None = None
 
 
+class MfaStatusView(BaseModel):
+    enabled: bool
+
+
+class MfaSetupView(BaseModel):
+    enabled: bool
+    secret: str
+    provisioning_uri: str
+    recovery_codes: list[str]
+
+
+class MfaCodeRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=64)
+
+
 class ProjectCreate(BaseModel):
     workspace_id: str
     title: str = Field(min_length=1, max_length=220)
-    description: str = ""
+    description: str = Field(default="", max_length=5000)
 
 
 class ProjectUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=220)
-    description: str = ""
+    description: str = Field(default="", max_length=5000)
 
 
 class ProjectView(BaseModel):
@@ -76,13 +94,13 @@ class ProjectView(BaseModel):
 
 class ReviewCreate(BaseModel):
     title: str = Field(min_length=1, max_length=220)
-    proposal_text: str = Field(min_length=1)
+    proposal_text: str = Field(min_length=1, max_length=50000)
     mode: Literal["basic", "standard", "in_depth"] = "standard"
-    focus_chips: list[str] = Field(default_factory=list)
+    focus_chips: list[str] = Field(default_factory=list, max_length=12)
     external_research: bool = False
     private_research: bool = True
-    domain_allowlist: list[str] = Field(default_factory=list)
-    domain_blocklist: list[str] = Field(default_factory=list)
+    domain_allowlist: list[str] = Field(default_factory=list, max_length=25)
+    domain_blocklist: list[str] = Field(default_factory=list, max_length=25)
 
 
 class ReviewView(BaseModel):
@@ -101,7 +119,7 @@ class ReviewView(BaseModel):
 
 
 class PastedTextRequest(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=50000)
 
 
 class WebsiteSourceRequest(BaseModel):
@@ -125,9 +143,9 @@ class SourceView(BaseModel):
 
 class ContextPackCreate(BaseModel):
     workspace_id: str
-    name: str = Field(min_length=1)
-    agent_key: str
-    markdown: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=220)
+    agent_key: str = Field(min_length=1, max_length=80)
+    markdown: str = Field(min_length=1, max_length=50000)
 
 
 class ContextPackView(BaseModel):
@@ -142,8 +160,8 @@ class ContextPackView(BaseModel):
 
 class ProviderConnectionCreate(BaseModel):
     workspace_id: str
-    adapter: str
-    name: str
+    adapter: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=160)
     config: dict[str, Any] = Field(default_factory=dict)
     credentials: dict[str, str] = Field(default_factory=dict)
 
@@ -159,7 +177,7 @@ class ProviderConnectionView(BaseModel):
 
 class ModelPreviewRequest(BaseModel):
     workspace_id: str
-    adapter: str
+    adapter: str = Field(min_length=1, max_length=80)
     config: dict[str, Any] = Field(default_factory=dict)
     credentials: dict[str, str] = Field(default_factory=dict)
 
@@ -175,9 +193,9 @@ class ModelPreviewView(BaseModel):
 class ModelCreate(BaseModel):
     workspace_id: str
     provider_connection_id: str
-    model_identifier: str
-    capabilities: list[str]
-    provenance: str = "manual"
+    model_identifier: str = Field(min_length=1, max_length=160)
+    capabilities: list[str] = Field(default_factory=list, max_length=20)
+    provenance: str = Field(default="manual", max_length=120)
     verified: bool = False
 
 
@@ -195,8 +213,8 @@ class ModelView(BaseModel):
 
 class ProfileCreate(BaseModel):
     workspace_id: str
-    name: str
-    agent_key: str
+    name: str = Field(min_length=1, max_length=160)
+    agent_key: str = Field(min_length=1, max_length=80)
     model_record_id: str
     explicit_pin: bool = False
 

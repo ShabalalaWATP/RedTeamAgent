@@ -75,6 +75,37 @@ describe('account and usage controls', () => {
     );
   });
 
+  it('prompts for MFA when the API requires a second factor', async () => {
+    const user = userEvent.setup();
+    let loginCalls = 0;
+    mockFetch((url) => {
+      if (url.includes('/auth/login')) {
+        loginCalls += 1;
+        if (loginCalls === 1) {
+          return jsonResponse({ code: 'mfa_required', message: 'Multi-factor authentication code required.' }, 401);
+        }
+        return jsonResponse({
+          user: { id: 'user-1', email: 'new@example.com', is_verified: true },
+          workspace: { id: 'workspace-1', name: 'Personal workspace' },
+          workspace_role: 'owner',
+          csrf_token: 'csrf-token'
+        });
+      }
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByLabelText(/authenticator or recovery code/i)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/authenticator or recovery code/i), '123456');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
+  });
+
   it('surfaces verification errors from a local verification link', async () => {
     mockFetch((url) => {
       if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);

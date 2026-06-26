@@ -15,6 +15,8 @@ import {
   modelComparisonSchema,
   modelProfileSchema,
   modelRecordSchema,
+  mfaSetupSchema,
+  mfaStatusSchema,
   projectSchema,
   providerConnectionSchema,
   reportComparisonSchema,
@@ -33,21 +35,37 @@ type RequestOptions = {
   formData?: FormData;
 };
 
+export class ApiRequestError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.code = code;
+  }
+}
+
 export class ApiClient {
-  async register(email: string, password: string) {
-    return authSchema.parse(await this.request('/auth/register', 'POST', { body: { email, password } }));
+  async register(email: string, password: string, captchaToken?: string) {
+    return authSchema.parse(
+      await this.request('/auth/register', 'POST', { body: { email, password, captcha_token: captchaToken } })
+    );
   }
 
   async verifyEmail(token: string) {
     await this.request('/auth/verify-email', 'POST', { body: { token } });
   }
 
-  async login(email: string, password: string) {
-    return authSchema.parse(await this.request('/auth/login', 'POST', { body: { email, password } }));
+  async login(email: string, password: string, mfaCode?: string) {
+    return authSchema.parse(
+      await this.request('/auth/login', 'POST', { body: { email, password, mfa_code: mfaCode } })
+    );
   }
 
-  async resetPassword(email: string) {
-    return authSchema.parse(await this.request('/auth/password-reset/request', 'POST', { body: { email } }));
+  async resetPassword(email: string, captchaToken?: string) {
+    return authSchema.parse(
+      await this.request('/auth/password-reset/request', 'POST', { body: { email, captcha_token: captchaToken } })
+    );
   }
 
   async confirmResetPassword(token: string, password: string) {
@@ -56,6 +74,22 @@ export class ApiClient {
 
   async logout(csrf: string) {
     await this.request('/auth/logout', 'POST', { csrf });
+  }
+
+  async mfaStatus() {
+    return mfaStatusSchema.parse(await this.request('/auth/mfa/status', 'GET'));
+  }
+
+  async setupMfa(csrf: string) {
+    return mfaSetupSchema.parse(await this.request('/auth/mfa/setup', 'POST', { csrf }));
+  }
+
+  async enableMfa(csrf: string, code: string) {
+    await this.request('/auth/mfa/enable', 'POST', { csrf, body: { code } });
+  }
+
+  async disableMfa(csrf: string, code: string) {
+    await this.request('/auth/mfa/disable', 'POST', { csrf, body: { code } });
   }
 
   async createProject(csrf: string, workspaceId: string, title: string, description: string) {
@@ -273,20 +307,20 @@ export class ApiClient {
 
   private async request(path: string, method: string, options: RequestOptions = {}) {
     const response = await fetch(`${API_BASE}${path}`, this.init(method, options));
-    if (!response.ok) throw new Error(await this.errorMessage(response));
+    if (!response.ok) throw await this.apiError(response);
     if (response.status === 204) return null;
     return response.json();
   }
 
   private async requestText(path: string) {
     const response = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
-    if (!response.ok) throw new Error(await this.errorMessage(response));
+    if (!response.ok) throw await this.apiError(response);
     return response.text();
   }
 
   private async requestBlob(path: string) {
     const response = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
-    if (!response.ok) throw new Error(await this.errorMessage(response));
+    if (!response.ok) throw await this.apiError(response);
     return response.blob();
   }
 
@@ -303,12 +337,15 @@ export class ApiClient {
     return { method, credentials: 'include', headers, body };
   }
 
-  private async errorMessage(response: Response) {
+  private async apiError(response: Response) {
     try {
       const data = await response.json();
-      return data.message ?? 'The request could not be completed. Check the details and try again.';
+      return new ApiRequestError(
+        data.message ?? 'The request could not be completed. Check the details and try again.',
+        typeof data.code === 'string' ? data.code : undefined
+      );
     } catch {
-      return 'The request could not be completed. Check the details and try again.';
+      return new ApiRequestError('The request could not be completed. Check the details and try again.');
     }
   }
 }

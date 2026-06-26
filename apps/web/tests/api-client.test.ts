@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiClient } from '../src/api/client';
+import { ApiClient, ApiRequestError } from '../src/api/client';
 import { jsonResponse, mockFetch, textResponse } from './test-utils';
 
 afterEach(() => {
@@ -73,6 +73,17 @@ describe('ApiClient', () => {
           }
         ]);
       }
+      if (url.includes('/auth/mfa/status')) return jsonResponse({ enabled: true });
+      if (url.includes('/auth/mfa/setup')) {
+        return jsonResponse({
+          enabled: false,
+          secret: 'JBSWY3DPEHPK3PXP',
+          provisioning_uri: 'otpauth://totp/test',
+          recovery_codes: ['aaaa-bbbb']
+        });
+      }
+      if (url.includes('/auth/mfa/enable')) return jsonResponse(null, 204);
+      if (url.includes('/auth/mfa/disable')) return jsonResponse(null, 204);
       if (url.endsWith('/projects/project-1') && init?.method === 'PUT') {
         expect(init.headers).toMatchObject({ 'X-CSRF-Token': 'csrf' });
         return jsonResponse({
@@ -207,6 +218,10 @@ describe('ApiClient', () => {
     await expect(client.exportReport('run-1', 'markdown')).resolves.toBe('# report');
     await expect(client.exportReportPdf('run-1')).resolves.toMatchObject({ size: 8 });
     await expect(client.runStage2Evaluation('csrf', 'workspace-1')).resolves.toMatchObject({ fixture_count: 10 });
+    await expect(client.mfaStatus()).resolves.toMatchObject({ enabled: true });
+    await expect(client.setupMfa('csrf')).resolves.toMatchObject({ secret: 'JBSWY3DPEHPK3PXP' });
+    await expect(client.enableMfa('csrf', '123456')).resolves.toBeUndefined();
+    await expect(client.disableMfa('csrf', '123456')).resolves.toBeUndefined();
   });
 
   it('surfaces server and non-json errors', async () => {
@@ -224,6 +239,15 @@ describe('ApiClient', () => {
     await expect(client.exportReport('run-1', 'html')).rejects.toThrow(
       'The request could not be completed. Check the details and try again.'
     );
+  });
+
+  it('preserves API error codes for control flow without showing raw status text', async () => {
+    const client = new ApiClient();
+    mockFetch(() => jsonResponse({ code: 'mfa_required', message: 'Multi-factor authentication code required.' }, 401));
+    await expect(client.login('owner@example.com', 'Correct-Horse-42!')).rejects.toMatchObject({
+      code: 'mfa_required',
+      message: 'Multi-factor authentication code required.'
+    } satisfies Partial<ApiRequestError>);
   });
 });
 

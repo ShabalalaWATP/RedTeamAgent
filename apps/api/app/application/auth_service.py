@@ -4,7 +4,7 @@ from typing import Any
 
 from app.application.ports.notifications import EmailSender
 from app.application.ports.repositories import RepositoryPorts
-from app.domain.exceptions import AuthenticationError, ConflictError, NotFoundError, ValidationFailure
+from app.domain.exceptions import AuthenticationError, ConflictError, MfaRequiredError, NotFoundError, ValidationFailure
 
 
 class AuthService:
@@ -16,6 +16,7 @@ class AuthService:
         email_sender: EmailSender,
         public_app_url: str,
         expose_tokens: bool,
+        mfa_service: Any,
     ) -> None:
         self.repo = repo
         self.passwords = password_service
@@ -23,6 +24,7 @@ class AuthService:
         self.email_sender = email_sender
         self.public_app_url = public_app_url.rstrip("/")
         self.expose_tokens = expose_tokens
+        self.mfa = mfa_service
 
     def register(self, email: str, password: str) -> dict[str, Any]:
         self._validate_password(password)
@@ -52,12 +54,20 @@ class AuthService:
         self.repo.audit(None, user_id, "auth.email_verified", {})
         self.repo.commit()
 
-    def login(self, email: str, password: str, csrf_token: str) -> dict[str, Any]:
+    def login(self, email: str, password: str, csrf_token: str, mfa_code: str | None = None) -> dict[str, Any]:
         user = self.repo.get_user_by_email(email)
         if user is None or not self.passwords.verify(user.password_hash, password):
+            self.repo.audit(None, None, "auth.login_failed", {"reason": "invalid_credentials"})
+            self.repo.commit()
             raise AuthenticationError("Invalid email or password.")
         if not user.is_verified:
+            self.repo.audit(None, user.id, "auth.login_failed", {"reason": "email_unverified"})
+            self.repo.commit()
             raise AuthenticationError("Email must be verified before login.")
+        if self.mfa.is_enabled(user.id) and not self.mfa.verify_login_code(user.id, mfa_code):
+            self.repo.audit(None, user.id, "auth.login_failed", {"reason": "mfa_required"})
+            self.repo.commit()
+            raise MfaRequiredError("Multi-factor authentication code required.")
         session = self.repo.create_session(user.id, csrf_token)
         workspace = self.repo.list_workspaces(user.id)[0]
         workspace_role = self.repo.membership_role(workspace.id, user.id)

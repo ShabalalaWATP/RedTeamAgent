@@ -11,6 +11,17 @@ export const authSchema = z.object({
   reset_token: z.string().nullable().optional()
 });
 
+export const mfaStatusSchema = z.object({
+  enabled: z.boolean()
+});
+
+export const mfaSetupSchema = z.object({
+  enabled: z.boolean(),
+  secret: z.string(),
+  provisioning_uri: z.string(),
+  recovery_codes: z.array(z.string())
+});
+
 export const projectSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),

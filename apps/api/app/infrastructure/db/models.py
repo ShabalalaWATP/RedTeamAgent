@@ -31,6 +31,17 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class UserMfaSetting(Base):
+    __tablename__ = "user_mfa_settings"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    secret_ciphertext: Mapped[str] = mapped_column(Text)
+    recovery_code_hashes: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class SessionRecord(Base):
     __tablename__ = "sessions"
 

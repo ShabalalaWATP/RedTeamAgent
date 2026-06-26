@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.application.workflow_service import WorkflowService
 from app.domain.exceptions import QualityGateError, RateLimitExceeded
-from app.interfaces.api.dependencies import RateLimiter
+from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule, MemoryRateLimitStore
 from tests.conftest import csrf_headers, register_verified
 from tests.test_stage1_api import create_project_review
 
@@ -125,8 +125,9 @@ def test_no_source_report_and_quality_gate_branches(client: TestClient) -> None:
 
 
 def test_rate_limiter_branch() -> None:
-    limiter = RateLimiter(limit=2, window_seconds=60)
-    limiter.check("key")
-    limiter.check("key")
+    limiter = AbuseLimiter(MemoryRateLimitStore())
+    rule = LimitRule("test", limit=2, window_seconds=60)
+    limiter.check(rule, "key")
+    limiter.check(rule, "key")
     with pytest.raises(RateLimitExceeded):
-        limiter.check("key")
+        limiter.check(rule, "key")

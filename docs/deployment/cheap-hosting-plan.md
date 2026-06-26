@@ -72,6 +72,9 @@ Edit `.env.production`:
 - Set `CORS_ORIGINS=https://your-domain`.
 - Set `PUBLIC_APP_URL=https://your-domain`.
 - Set `DAILY_REVIEW_RUN_LIMIT` to the number of review runs one user may start per UTC day.
+- Set `LOGIN_RATE_LIMIT_PER_MINUTE`, `AUTH_EMAIL_RATE_LIMIT_PER_HOUR`, `AUTH_IP_RATE_LIMIT_PER_MINUTE` and `EXPENSIVE_RATE_LIMIT_PER_MINUTE`.
+- To enable CAPTCHA, create a Cloudflare Turnstile widget, set `CAPTCHA_REQUIRED=true`, set `TURNSTILE_SECRET_KEY` and set `VITE_TURNSTILE_SITE_KEY`.
+- Set `MFA_ISSUER` to the product name users should see in authenticator apps.
 - Set `MAIL_DELIVERY=smtp`.
 - Set `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `SMTP_STARTTLS`.
 

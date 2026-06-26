@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 10 * 1024 * 1024
     daily_review_run_limit: int = Field(default=20, ge=0)
     public_app_url: str = "http://localhost:5173"
+    captcha_required: bool = False
+    turnstile_secret_key: str = ""
+    mfa_issuer: str = "RedTeamAgent"
+    login_rate_limit_per_minute: int = Field(default=10, ge=1)
+    auth_email_rate_limit_per_hour: int = Field(default=6, ge=1)
+    auth_ip_rate_limit_per_minute: int = Field(default=30, ge=1)
+    expensive_rate_limit_per_minute: int = Field(default=20, ge=1)
     mail_delivery: str = "local"
     mail_from: str = "RedTeamAgent <noreply@localhost>"
     smtp_host: str = "localhost"

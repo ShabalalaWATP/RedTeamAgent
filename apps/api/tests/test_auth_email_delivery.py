@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings, get_settings
 from app.infrastructure.notifications import email as email_module
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
-from app.interfaces.api.dependencies import email_sender
+from app.infrastructure.security.rate_limit import AbuseLimiter, MemoryRateLimitStore
+from app.interfaces.api.dependencies import abuse_limiter, email_sender
 
 
 class FakeEmailSender:
@@ -23,6 +24,7 @@ def test_production_auth_emails_hide_raw_tokens(client: TestClient) -> None:
     settings = Settings(app_env="production", public_app_url="https://redteamagent.example.test")
     client.app.dependency_overrides[get_settings] = lambda: settings
     client.app.dependency_overrides[email_sender] = lambda: sender
+    client.app.dependency_overrides[abuse_limiter] = lambda: AbuseLimiter(MemoryRateLimitStore())
 
     registered = client.post(
         "/auth/register",

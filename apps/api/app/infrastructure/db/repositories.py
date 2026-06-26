@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.domain.enums import RunState, SourceState, WorkspaceRole
 from app.infrastructure.auth.security import new_session_expiry
 from app.infrastructure.db import models
+from app.infrastructure.db.workflow_summary import workflow_summary
 from app.infrastructure.search.evidence_search import EvidenceCandidate, embedding_for_text, rank_candidates
 
 
@@ -37,6 +38,44 @@ class SqlRepository:
         user = self.session.get(models.User, user_id)
         if user:
             user.password_hash = password_hash
+
+    def get_mfa_setting(self, user_id: str) -> models.UserMfaSetting | None:
+        return self.session.get(models.UserMfaSetting, user_id)
+
+    def upsert_mfa_setting(
+        self,
+        user_id: str,
+        secret_ciphertext: str,
+        recovery_code_hashes: list[str],
+        *,
+        enabled: bool,
+    ) -> models.UserMfaSetting:
+        setting = self.session.get(models.UserMfaSetting, user_id)
+        if setting is None:
+            setting = models.UserMfaSetting(user_id=user_id, secret_ciphertext=secret_ciphertext)
+            self.session.add(setting)
+        setting.secret_ciphertext = secret_ciphertext
+        setting.recovery_code_hashes = recovery_code_hashes
+        setting.enabled = enabled
+        setting.enabled_at = models.utc_now() if enabled else None
+        self.session.flush()
+        return setting
+
+    def enable_mfa_setting(self, user_id: str) -> None:
+        setting = self.session.get(models.UserMfaSetting, user_id)
+        if setting:
+            setting.enabled = True
+            setting.enabled_at = models.utc_now()
+
+    def disable_mfa_setting(self, user_id: str) -> None:
+        setting = self.session.get(models.UserMfaSetting, user_id)
+        if setting:
+            self.session.delete(setting)
+
+    def update_mfa_recovery_hashes(self, user_id: str, recovery_code_hashes: list[str]) -> None:
+        setting = self.session.get(models.UserMfaSetting, user_id)
+        if setting:
+            setting.recovery_code_hashes = recovery_code_hashes
 
     def create_session(self, user_id: str, csrf_token: str) -> models.SessionRecord:
         record = models.SessionRecord(
@@ -314,7 +353,7 @@ class SqlRepository:
             .order_by(desc(models.Run.created_at))
         )
         return [
-            self._workflow_summary(run, review, project, report)
+            workflow_summary(run, review, project, report)
             for run, review, project, report in self.session.execute(statement).all()
         ]
 
@@ -357,43 +396,5 @@ class SqlRepository:
                 metadata_json=metadata,
             )
         )
-
     def commit(self) -> None:
         self.session.commit()
-
-    @staticmethod
-    def _workflow_summary(
-        run: models.Run,
-        review: models.Review,
-        project: models.Project,
-        report: models.Report | None,
-    ) -> dict[str, Any]:
-        report_data = report.data if report else {}
-        findings = report_data.get("findings", []) if isinstance(report_data, dict) else []
-        top_risks = SqlRepository._string_list(
-            report_data.get("top_risks", []) if isinstance(report_data, dict) else []
-        )
-        selected_agents = SqlRepository._string_list(
-            run.routing_plan.get("selected_agents", []) if isinstance(run.routing_plan, dict) else []
-        )
-        return {
-            "id": run.id,
-            "workspace_id": run.workspace_id,
-            "review_id": run.review_id,
-            "review_title": review.title,
-            "project_id": project.id,
-            "project_title": project.title,
-            "mode": review.mode,
-            "state": run.state,
-            "created_at": run.created_at,
-            "selected_agents": selected_agents,
-            "top_risks": top_risks,
-            "finding_count": len(findings) if isinstance(findings, list) else 0,
-            "has_report": report is not None,
-        }
-
-    @staticmethod
-    def _string_list(value: object) -> list[str]:
-        if not isinstance(value, list):
-            return []
-        return [str(item) for item in value]

@@ -7,6 +7,32 @@
   box-shadow: var(--shadow);
 }
 
+.settings-block-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.settings-block-header h2 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.recovery-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(144px, 1fr));
+}
+
+.recovery-grid code {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
 .settings-disclosure summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

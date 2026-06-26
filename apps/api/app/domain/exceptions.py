@@ -15,6 +15,10 @@ class AuthenticationError(DomainError):
     code = "authentication_failed"
 
 
+class MfaRequiredError(AuthenticationError):
+    code = "mfa_required"
+
+
 class AuthorisationError(DomainError):
     status_code = 403
     code = "authorisation_failed"

@@ -1,7 +1,7 @@
 import { FileText, ListChecks, Shield } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client';
+import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
@@ -28,6 +28,17 @@ const AUTH_FEATURES = [
 type AuthMode = 'login' | 'register' | 'reset';
 
 const PASSWORD_HINT = 'Use 14-128 characters with uppercase, lowercase, a number and a symbol.';
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (element: HTMLElement, options: Record<string, unknown>) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 function passwordMeetsPolicy(value: string) {
   return (
@@ -71,12 +82,16 @@ export function AuthPage() {
   const [verificationToken, setVerificationToken] = useState('');
   const [resetToken, setResetToken] = useState(searchParams.get('reset_token') ?? '');
   const [newPassword, setNewPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [requiresMfa, setRequiresMfa] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
   const [message, setMessage] = useState(() =>
     verificationLinkToken ? 'Verifying your email...' : initialMessage(mode)
   );
   const [error, setError] = useState<string | null>(null);
   const verificationAttempted = useRef(false);
-  const canRegister = Boolean(email) && passwordMeetsPolicy(password);
+  const captchaReady = !TURNSTILE_SITE_KEY || Boolean(captchaToken);
+  const canRegister = Boolean(email) && passwordMeetsPolicy(password) && captchaReady;
   const canConfirmReset = Boolean(resetToken) && passwordMeetsPolicy(newPassword);
 
   useEffect(() => {
@@ -97,6 +112,9 @@ export function AuthPage() {
 
   const switchMode = (nextMode: AuthMode) => {
     setError(null);
+    setRequiresMfa(false);
+    setMfaCode('');
+    setCaptchaToken('');
     setMode(nextMode);
     setMessage(initialMessage(nextMode));
   };
@@ -104,7 +122,7 @@ export function AuthPage() {
   const register = async () => {
     setError(null);
     try {
-      const response = await api.register(email, password);
+      const response = await api.register(email, password, captchaToken || undefined);
       setVerificationToken(response.verification_token ?? '');
       setMessage(
         response.verification_token ? 'Local verification token issued.' : 'Check your email for the verification link.'
@@ -128,7 +146,7 @@ export function AuthPage() {
   const login = async () => {
     setError(null);
     try {
-      const response = await api.login(email, password);
+      const response = await api.login(email, password, requiresMfa ? mfaCode : undefined);
       setAuth({
         userId: response.user.id,
         email: response.user.email,
@@ -139,6 +157,12 @@ export function AuthPage() {
       });
       navigate('/workflows');
     } catch (err) {
+      if (err instanceof ApiRequestError && err.code === 'mfa_required') {
+        setRequiresMfa(true);
+        setMessage('Enter your authenticator code or recovery code.');
+        setError(null);
+        return;
+      }
       setError(loginErrorMessage(err));
     }
   };
@@ -146,7 +170,7 @@ export function AuthPage() {
   const reset = async () => {
     setError(null);
     try {
-      const response = await api.resetPassword(email);
+      const response = await api.resetPassword(email, captchaToken || undefined);
       setResetToken(response.reset_token ?? '');
       setMessage(
         response.reset_token ? 'Local password reset token issued.' : 'If the account exists, reset was requested.'
@@ -228,6 +252,21 @@ export function AuthPage() {
             </Field>
           )}
 
+          {mode === 'login' && requiresMfa ? (
+            <Field label="Authenticator or recovery code">
+              <input
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value)}
+                autoComplete="one-time-code"
+                maxLength={64}
+              />
+            </Field>
+          ) : null}
+
+          {mode === 'register' || mode === 'reset' ? (
+            <TurnstileChallenge siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />
+          ) : null}
+
           {mode === 'register' && verificationToken ? (
             <div className="auth-inline-panel">
               <Field label="Verification token" hint="Returned only in local development.">
@@ -263,7 +302,7 @@ export function AuthPage() {
           <div className="auth-actions">
             {mode === 'login' ? (
               <>
-                <Button type="button" variant="primary" onClick={login} disabled={!email || !password}>Sign in</Button>
+                <Button type="button" variant="primary" onClick={login} disabled={!email || !password || (requiresMfa && !mfaCode)}>Sign in</Button>
                 <button className="auth-text-button" type="button" onClick={() => switchMode('register')}>
                   Create an account
                 </button>
@@ -286,7 +325,7 @@ export function AuthPage() {
 
             {mode === 'reset' ? (
               <>
-                <Button type="button" variant="primary" onClick={reset} disabled={!email}>Send reset code</Button>
+                <Button type="button" variant="primary" onClick={reset} disabled={!email || !captchaReady}>Send reset code</Button>
                 <button className="auth-text-button" type="button" onClick={() => switchMode('login')}>
                   Back to sign in
                 </button>
@@ -298,3 +337,47 @@ export function AuthPage() {
     </div>
   );
 }
+
+/* v8 ignore start -- external Turnstile script lifecycle is exercised by browser integration, not unit tests. */
+function TurnstileChallenge({ siteKey, onToken }: { siteKey?: string; onToken: (token: string) => void }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const widgetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!siteKey || !containerRef.current) return;
+    let cancelled = false;
+
+    const render = () => {
+      if (cancelled || !containerRef.current || !window.turnstile || widgetRef.current) return;
+      widgetRef.current = window.turnstile.render(containerRef.current, {
+        sitekey: siteKey,
+        callback: (token: string) => onToken(token),
+        'expired-callback': () => onToken(''),
+        'error-callback': () => onToken('')
+      });
+    };
+
+    const existing = document.querySelector<HTMLScriptElement>('script[src*="challenges.cloudflare.com/turnstile"]');
+    if (existing) {
+      render();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = render;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      if (widgetRef.current && window.turnstile) window.turnstile.remove(widgetRef.current);
+      widgetRef.current = null;
+      onToken('');
+    };
+  }, [onToken, siteKey]);
+
+  if (!siteKey) return null;
+  return <div className="auth-turnstile" ref={containerRef} />;
+}
+/* v8 ignore stop */

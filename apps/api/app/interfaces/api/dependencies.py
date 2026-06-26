@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
@@ -12,6 +11,7 @@ from app.application.auth_service import AuthService
 from app.application.enterprise_operations_service import EnterpriseOperationsService
 from app.application.enterprise_service import EnterpriseService
 from app.application.evaluation_service import EvaluationService
+from app.application.mfa_service import MfaService
 from app.application.ports.notifications import EmailSender
 from app.application.project_service import ProjectService
 from app.application.provider_governance import ProviderGovernanceService
@@ -20,7 +20,7 @@ from app.application.review_service import ReviewService
 from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.domain.exceptions import AuthenticationError, RateLimitExceeded
+from app.domain.exceptions import AuthenticationError
 from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.security import PasswordService, TokenService
 from app.infrastructure.db.enterprise_repository import SqlEnterpriseRepository
@@ -28,6 +28,8 @@ from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
 from app.infrastructure.providers.adapters import ProviderRegistry
+from app.infrastructure.security.captcha import TurnstileVerifier
+from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule, MemoryRateLimitStore, RedisRateLimitStore
 from app.infrastructure.storage.object_storage import LocalObjectStorage
 
 
@@ -37,23 +39,8 @@ class AuthContext:
     session: Any
 
 
-class RateLimiter:
-    def __init__(self, limit: int, window_seconds: int) -> None:
-        self.limit = limit
-        self.window_seconds = window_seconds
-        self.hits: dict[str, list[float]] = {}
-
-    def check(self, key: str) -> None:
-        now = time.monotonic()
-        current = [hit for hit in self.hits.get(key, []) if now - hit < self.window_seconds]
-        if len(current) >= self.limit:
-            raise RateLimitExceeded("Too many requests. Try again later.")
-        current.append(now)
-        self.hits[key] = current
-
-
-login_limiter = RateLimiter(limit=10, window_seconds=60)
-expensive_limiter = RateLimiter(limit=20, window_seconds=60)
+local_rate_limit_store = MemoryRateLimitStore()
+_redis_rate_limit_stores: dict[str, RedisRateLimitStore] = {}
 
 
 def get_repo(db: Annotated[Session, Depends(get_db)]) -> SqlRepository:
@@ -72,10 +59,34 @@ def token_service(settings: Annotated[Settings, Depends(get_settings)]) -> Token
     return TokenService(settings.app_secret_key)
 
 
+def credential_vault(settings: Annotated[Settings, Depends(get_settings)]) -> FernetCredentialVault:
+    return FernetCredentialVault(settings.app_secret_key)
+
+
+def abuse_limiter(settings: Annotated[Settings, Depends(get_settings)]) -> AbuseLimiter:
+    if settings.is_local:
+        return AbuseLimiter(local_rate_limit_store)
+    store = _redis_rate_limit_stores.setdefault(settings.redis_url, RedisRateLimitStore(settings.redis_url))
+    return AbuseLimiter(store)
+
+
+def captcha_verifier(settings: Annotated[Settings, Depends(get_settings)]) -> TurnstileVerifier:
+    return TurnstileVerifier(settings)
+
+
 def email_sender(settings: Annotated[Settings, Depends(get_settings)]) -> EmailSender:
     if settings.mail_delivery == "smtp":
         return SmtpEmailSender(settings)
     return NullEmailSender()
+
+
+def mfa_service(
+    repo: Annotated[SqlRepository, Depends(get_repo)],
+    passwords: Annotated[PasswordService, Depends(password_service)],
+    vault: Annotated[FernetCredentialVault, Depends(credential_vault)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> MfaService:
+    return MfaService(repo, passwords, vault, settings.mfa_issuer)
 
 
 def auth_service(
@@ -84,8 +95,9 @@ def auth_service(
     tokens: Annotated[TokenService, Depends(token_service)],
     sender: Annotated[EmailSender, Depends(email_sender)],
     settings: Annotated[Settings, Depends(get_settings)],
+    mfa: Annotated[MfaService, Depends(mfa_service)],
 ) -> AuthService:
-    return AuthService(repo, passwords, tokens, sender, settings.public_app_url, settings.is_local)
+    return AuthService(repo, passwords, tokens, sender, settings.public_app_url, settings.is_local, mfa)
 
 
 def project_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> ProjectService:
@@ -167,9 +179,30 @@ def require_csrf(
         raise AuthenticationError("CSRF token is missing or invalid.")
 
 
-def rate_limit_login(request: Request) -> None:
-    login_limiter.check(f"login:{request.client.host if request.client else 'unknown'}")
+def client_identity(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or "unknown"
+    return request.client.host if request.client else "unknown"
 
 
-def rate_limit_expensive(context: Annotated[AuthContext, Depends(current_context)]) -> None:
-    expensive_limiter.check(f"expensive:{context.user.id}")
+def check_auth_rate_limit(
+    request: Request,
+    limiter: AbuseLimiter,
+    settings: Settings,
+    action: str,
+    email: str | None = None,
+) -> None:
+    ip = client_identity(request)
+    ip_limit = settings.login_rate_limit_per_minute if action == "login" else settings.auth_ip_rate_limit_per_minute
+    limiter.check(LimitRule(f"auth:{action}:ip", ip_limit, 60), ip)
+    if email:
+        limiter.check(LimitRule(f"auth:{action}:email", settings.auth_email_rate_limit_per_hour, 3600), email.lower())
+
+
+def rate_limit_expensive(
+    context: Annotated[AuthContext, Depends(current_context)],
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> None:
+    limiter.check(LimitRule("expensive:user", settings.expensive_rate_limit_per_minute, 60), context.user.id)

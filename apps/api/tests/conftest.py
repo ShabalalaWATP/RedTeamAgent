@@ -9,15 +9,14 @@ from fastapi.testclient import TestClient
 
 from app.core.database import engine
 from app.infrastructure.db.models import Base
-from app.interfaces.api.dependencies import expensive_limiter, login_limiter
+from app.interfaces.api.dependencies import local_rate_limit_store
 from app.main import create_app
 
 
 @pytest.fixture(autouse=True)
 def clean_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     monkeypatch.chdir(tmp_path)
-    login_limiter.hits.clear()
-    expensive_limiter.hits.clear()
+    local_rate_limit_store.clear()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
