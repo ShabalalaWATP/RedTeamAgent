@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/auth/captcha/challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Captcha Challenge */
+        get: operations["captcha_challenge_auth_captcha_challenge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -117,6 +134,74 @@ export interface paths {
         get: operations["me_auth_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mfa Status */
+        get: operations["mfa_status_auth_mfa_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mfa Setup */
+        post: operations["mfa_setup_auth_mfa_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mfa Enable */
+        post: operations["mfa_enable_auth_mfa_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mfa Disable */
+        post: operations["mfa_disable_auth_mfa_disable_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1274,6 +1359,31 @@ export interface components {
             /** File */
             file: string;
         };
+        /** CaptchaChallengeView */
+        CaptchaChallengeView: {
+            /** Required */
+            required: boolean;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "disabled" | "turnstile" | "challenge";
+            /**
+             * Token
+             * @default
+             */
+            token: string;
+            /**
+             * Prompt
+             * @default
+             */
+            prompt: string;
+            /**
+             * Expires In Seconds
+             * @default 0
+             */
+            expires_in_seconds: number;
+        };
         /** ContextPackCreate */
         ContextPackCreate: {
             /** Workspace Id */
@@ -1565,6 +1675,10 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Captcha Token */
+            captcha_token?: null;
+            /** Mfa Code */
+            mfa_code?: string | null;
         };
         /** MemberView */
         MemberView: {
@@ -1580,6 +1694,27 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** MfaCodeRequest */
+        MfaCodeRequest: {
+            /** Code */
+            code: string;
+        };
+        /** MfaSetupView */
+        MfaSetupView: {
+            /** Enabled */
+            enabled: boolean;
+            /** Secret */
+            secret: string;
+            /** Provisioning Uri */
+            provisioning_uri: string;
+            /** Recovery Codes */
+            recovery_codes: string[];
+        };
+        /** MfaStatusView */
+        MfaStatusView: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** ModelCreate */
         ModelCreate: {
             /** Workspace Id */
@@ -1589,7 +1724,7 @@ export interface components {
             /** Model Identifier */
             model_identifier: string;
             /** Capabilities */
-            capabilities: string[];
+            capabilities?: string[];
             /**
              * Provenance
              * @default manual
@@ -1739,6 +1874,8 @@ export interface components {
              * Format: email
              */
             email: string;
+            /** Captcha Token */
+            captcha_token?: string | null;
         };
         /** PastedTextRequest */
         PastedTextRequest: {
@@ -1875,6 +2012,8 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Captcha Token */
+            captcha_token?: string | null;
         };
         /** ReportActionCreate */
         ReportActionCreate: {
@@ -2414,6 +2553,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    captcha_challenge_auth_captcha_challenge_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptchaChallengeView"];
+                };
+            };
+        };
+    };
     register_auth_register_post: {
         parameters: {
             query?: never;
@@ -2625,6 +2784,140 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_status_auth_mfa_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatusView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_setup_auth_mfa_setup_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaSetupView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_enable_auth_mfa_enable_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_disable_auth_mfa_disable_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

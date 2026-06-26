@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,6 +26,8 @@ class Settings(BaseSettings):
     daily_review_run_limit: int = Field(default=20, ge=0)
     public_app_url: str = "http://localhost:5173"
     captcha_required: bool = False
+    captcha_provider: Literal["auto", "turnstile", "challenge"] = "auto"
+    captcha_challenge_ttl_seconds: int = Field(default=300, ge=60, le=900)
     turnstile_secret_key: str = ""
     mfa_issuer: str = "RedTeamAgent"
     login_rate_limit_per_minute: int = Field(default=10, ge=1)

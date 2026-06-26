@@ -5,6 +5,7 @@ import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
+import { CaptchaChallenge } from './CaptchaChallenge';
 import './auth.css';
 
 const AUTH_FEATURES = [
@@ -29,16 +30,6 @@ type AuthMode = 'login' | 'register' | 'reset';
 
 const PASSWORD_HINT = 'Use 14-128 characters with uppercase, lowercase, a number and a symbol.';
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (element: HTMLElement, options: Record<string, unknown>) => string;
-      reset: (widgetId?: string) => void;
-      remove: (widgetId: string) => void;
-    };
-  }
-}
 
 function passwordMeetsPolicy(value: string) {
   return (
@@ -90,7 +81,8 @@ export function AuthPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const verificationAttempted = useRef(false);
-  const captchaReady = !TURNSTILE_SITE_KEY || Boolean(captchaToken);
+  const captchaActive = mode === 'register' || mode === 'reset';
+  const captchaReady = !captchaActive || Boolean(captchaToken);
   const canRegister = Boolean(email) && passwordMeetsPolicy(password) && captchaReady;
   const canConfirmReset = Boolean(resetToken) && passwordMeetsPolicy(newPassword);
 
@@ -264,7 +256,12 @@ export function AuthPage() {
           ) : null}
 
           {mode === 'register' || mode === 'reset' ? (
-            <TurnstileChallenge siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />
+            <CaptchaChallenge
+              active={captchaActive}
+              siteKey={TURNSTILE_SITE_KEY}
+              onToken={setCaptchaToken}
+              onError={setError}
+            />
           ) : null}
 
           {mode === 'register' && verificationToken ? (
@@ -337,47 +334,3 @@ export function AuthPage() {
     </div>
   );
 }
-
-/* v8 ignore start -- external Turnstile script lifecycle is exercised by browser integration, not unit tests. */
-function TurnstileChallenge({ siteKey, onToken }: { siteKey?: string; onToken: (token: string) => void }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const widgetRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!siteKey || !containerRef.current) return;
-    let cancelled = false;
-
-    const render = () => {
-      if (cancelled || !containerRef.current || !window.turnstile || widgetRef.current) return;
-      widgetRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: (token: string) => onToken(token),
-        'expired-callback': () => onToken(''),
-        'error-callback': () => onToken('')
-      });
-    };
-
-    const existing = document.querySelector<HTMLScriptElement>('script[src*="challenges.cloudflare.com/turnstile"]');
-    if (existing) {
-      render();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-      script.async = true;
-      script.defer = true;
-      script.onload = render;
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      cancelled = true;
-      if (widgetRef.current && window.turnstile) window.turnstile.remove(widgetRef.current);
-      widgetRef.current = null;
-      onToken('');
-    };
-  }, [onToken, siteKey]);
-
-  if (!siteKey) return null;
-  return <div className="auth-turnstile" ref={containerRef} />;
-}
-/* v8 ignore stop */

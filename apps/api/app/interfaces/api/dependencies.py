@@ -29,7 +29,7 @@ from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.extractors import SourceExtractor
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
 from app.infrastructure.providers.adapters import ProviderRegistry
-from app.infrastructure.security.captcha import TurnstileVerifier
+from app.infrastructure.security.captcha import CaptchaVerifier
 from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule, MemoryRateLimitStore, RedisRateLimitStore
 from app.infrastructure.storage.object_storage import LocalObjectStorage
 
@@ -80,8 +80,8 @@ def abuse_limiter(settings: Annotated[Settings, Depends(get_settings)]) -> Abuse
     return AbuseLimiter(store)
 
 
-def captcha_verifier(settings: Annotated[Settings, Depends(get_settings)]) -> TurnstileVerifier:
-    return TurnstileVerifier(settings)
+def captcha_verifier(settings: Annotated[Settings, Depends(get_settings)]) -> CaptchaVerifier:
+    return CaptchaVerifier(settings)
 
 
 def email_sender(settings: Annotated[Settings, Depends(get_settings)]) -> EmailSender:

@@ -11,6 +11,14 @@ export const authSchema = z.object({
   reset_token: z.string().nullable().optional()
 });
 
+export const captchaChallengeSchema = z.object({
+  required: z.boolean(),
+  provider: z.enum(['disabled', 'turnstile', 'challenge']),
+  token: z.string(),
+  prompt: z.string(),
+  expires_in_seconds: z.number()
+});
+
 export const mfaStatusSchema = z.object({
   enabled: z.boolean()
 });

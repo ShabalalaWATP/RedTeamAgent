@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { AuthProvider, useAuth } from '../src/app/AuthContext';
 import { ProviderSettings } from '../src/features/providers/ProviderSettings';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
+import { authState, captchaChallengeResponse, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -175,6 +175,7 @@ describe('edge UI flows', () => {
   it('uses privacy-preserving password reset copy when no local token is returned', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
+      if (url.includes('/auth/captcha/challenge')) return captchaChallengeResponse();
       if (url.includes('/auth/password-reset/request')) {
         return jsonResponse({
           user: { id: 'zero', email: 'new@example.com', is_verified: false },
@@ -186,6 +187,7 @@ describe('edge UI flows', () => {
     renderApp('/auth');
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
+    await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
   });
@@ -193,6 +195,7 @@ describe('edge UI flows', () => {
   it('handles missing local auth tokens from register and login responses', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
+      if (url.includes('/auth/captcha/challenge')) return captchaChallengeResponse();
       if (url.includes('/auth/register')) {
         return jsonResponse({
           user: { id: 'user-1', email: 'alex@example.com', is_verified: false },
@@ -212,6 +215,7 @@ describe('edge UI flows', () => {
     await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
     await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /verify email/i })).not.toBeInTheDocument();
@@ -389,10 +393,6 @@ describe('edge UI flows', () => {
   });
 });
 
-function renderWithNoProvider(element: ReactElement) {
-  return render(element);
-}
+function renderWithNoProvider(element: ReactElement) { return render(element); }
 
-function renderProviderSettings() {
-  return render(<AuthProvider><ProviderSettings /></AuthProvider>);
-}
+function renderProviderSettings() { return render(<AuthProvider><ProviderSettings /></AuthProvider>); }

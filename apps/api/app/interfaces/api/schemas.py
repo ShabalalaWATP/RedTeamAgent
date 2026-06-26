@@ -58,6 +58,14 @@ class AuthResponse(BaseModel):
     reset_token: str | None = None
 
 
+class CaptchaChallengeView(BaseModel):
+    required: bool
+    provider: Literal["disabled", "turnstile", "challenge"]
+    token: str = Field(default="", max_length=4096)
+    prompt: str = Field(default="", max_length=120)
+    expires_in_seconds: int = Field(default=0, ge=0, le=900)
+
+
 class MfaStatusView(BaseModel):
     enabled: bool
 

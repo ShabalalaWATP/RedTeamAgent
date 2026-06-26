@@ -5,6 +5,27 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/auth/captcha/challenge": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Captcha Challenge",
+        "operationId": "captcha_challenge_auth_captcha_challenge_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaChallengeView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": [
@@ -289,6 +310,256 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Mfa Status",
+        "operationId": "mfa_status_auth_mfa_status_get",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaStatusView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/setup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Mfa Setup",
+        "operationId": "mfa_setup_auth_mfa_setup_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaSetupView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/enable": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Mfa Enable",
+        "operationId": "mfa_enable_auth_mfa_enable_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/disable": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Mfa Disable",
+        "operationId": "mfa_disable_auth_mfa_disable_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -6469,6 +6740,48 @@
         ],
         "title": "Body_upload_source_reviews__review_id__sources_upload_post"
       },
+      "CaptchaChallengeView": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "turnstile",
+              "challenge"
+            ],
+            "title": "Provider"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 4096,
+            "title": "Token",
+            "default": ""
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Prompt",
+            "default": ""
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "maximum": 900.0,
+            "minimum": 0.0,
+            "title": "Expires In Seconds",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "required",
+          "provider"
+        ],
+        "title": "CaptchaChallengeView"
+      },
       "ContextPackCreate": {
         "properties": {
           "workspace_id": {
@@ -6477,15 +6790,19 @@
           },
           "name": {
             "type": "string",
+            "maxLength": 220,
             "minLength": 1,
             "title": "Name"
           },
           "agent_key": {
             "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
             "title": "Agent Key"
           },
           "markdown": {
             "type": "string",
+            "maxLength": 50000,
             "minLength": 1,
             "title": "Markdown"
           }
@@ -7111,8 +7428,25 @@
           },
           "password": {
             "type": "string",
-            "minLength": 12,
+            "maxLength": 128,
+            "minLength": 14,
             "title": "Password"
+          },
+          "captcha_token": {
+            "type": "null",
+            "title": "Captcha Token"
+          },
+          "mfa_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfa Code"
           }
         },
         "type": "object",
@@ -7151,6 +7485,65 @@
         ],
         "title": "MemberView"
       },
+      "MfaCodeRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 6,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "MfaCodeRequest"
+      },
+      "MfaSetupView": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "secret": {
+            "type": "string",
+            "title": "Secret"
+          },
+          "provisioning_uri": {
+            "type": "string",
+            "title": "Provisioning Uri"
+          },
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "secret",
+          "provisioning_uri",
+          "recovery_codes"
+        ],
+        "title": "MfaSetupView"
+      },
+      "MfaStatusView": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "MfaStatusView"
+      },
       "ModelCreate": {
         "properties": {
           "workspace_id": {
@@ -7163,6 +7556,8 @@
           },
           "model_identifier": {
             "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
             "title": "Model Identifier"
           },
           "capabilities": {
@@ -7170,10 +7565,12 @@
               "type": "string"
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Capabilities"
           },
           "provenance": {
             "type": "string",
+            "maxLength": 120,
             "title": "Provenance",
             "default": "manual"
           },
@@ -7187,8 +7584,7 @@
         "required": [
           "workspace_id",
           "provider_connection_id",
-          "model_identifier",
-          "capabilities"
+          "model_identifier"
         ],
         "title": "ModelCreate"
       },
@@ -7200,6 +7596,8 @@
           },
           "adapter": {
             "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
             "title": "Adapter"
           },
           "config": {
@@ -7482,7 +7880,8 @@
           },
           "password": {
             "type": "string",
-            "minLength": 12,
+            "maxLength": 128,
+            "minLength": 14,
             "title": "Password"
           }
         },
@@ -7499,6 +7898,18 @@
             "type": "string",
             "format": "email",
             "title": "Email"
+          },
+          "captcha_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captcha Token"
           }
         },
         "type": "object",
@@ -7511,6 +7922,7 @@
         "properties": {
           "text": {
             "type": "string",
+            "maxLength": 50000,
             "minLength": 1,
             "title": "Text"
           }
@@ -7529,10 +7941,14 @@
           },
           "name": {
             "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
             "title": "Name"
           },
           "agent_key": {
             "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
             "title": "Agent Key"
           },
           "model_record_id": {
@@ -7606,6 +8022,7 @@
           },
           "description": {
             "type": "string",
+            "maxLength": 5000,
             "title": "Description",
             "default": ""
           }
@@ -7678,6 +8095,7 @@
           },
           "description": {
             "type": "string",
+            "maxLength": 5000,
             "title": "Description",
             "default": ""
           }
@@ -7724,10 +8142,14 @@
           },
           "adapter": {
             "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
             "title": "Adapter"
           },
           "name": {
             "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
             "title": "Name"
           },
           "config": {
@@ -7799,8 +8221,21 @@
           },
           "password": {
             "type": "string",
-            "minLength": 12,
+            "maxLength": 128,
+            "minLength": 14,
             "title": "Password"
+          },
+          "captcha_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captcha Token"
           }
         },
         "type": "object",
@@ -8237,6 +8672,7 @@
           },
           "proposal_text": {
             "type": "string",
+            "maxLength": 50000,
             "minLength": 1,
             "title": "Proposal Text"
           },
@@ -8255,6 +8691,7 @@
               "type": "string"
             },
             "type": "array",
+            "maxItems": 12,
             "title": "Focus Chips"
           },
           "external_research": {
@@ -8272,6 +8709,7 @@
               "type": "string"
             },
             "type": "array",
+            "maxItems": 25,
             "title": "Domain Allowlist"
           },
           "domain_blocklist": {
@@ -8279,6 +8717,7 @@
               "type": "string"
             },
             "type": "array",
+            "maxItems": 25,
             "title": "Domain Blocklist"
           }
         },

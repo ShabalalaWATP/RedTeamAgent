@@ -4,6 +4,7 @@ import {
   API_BASE,
   apiTokenSchema,
   authSchema,
+  captchaChallengeSchema,
   catalogueModelSchema,
   contextPackSchema,
   enterpriseAuditSchema,
@@ -46,6 +47,10 @@ export class ApiRequestError extends Error {
 }
 
 export class ApiClient {
+  async captchaChallenge() {
+    return captchaChallengeSchema.parse(await this.request('/auth/captcha/challenge', 'GET'));
+  }
+
   async register(email: string, password: string, captchaToken?: string) {
     return authSchema.parse(
       await this.request('/auth/register', 'POST', { body: { email, password, captcha_token: captchaToken } })

@@ -13,6 +13,15 @@ describe('RedTeamAgent app flows', () => {
   it('registers, verifies and logs in with cookie auth metadata', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
+      if (url.includes('/auth/captcha/challenge')) {
+        return jsonResponse({
+          required: true,
+          provider: 'challenge',
+          token: 'signed-challenge',
+          prompt: 'What is 2 + 3?',
+          expires_in_seconds: 300
+        });
+      }
       if (url.includes('/auth/register')) {
         return jsonResponse({
           user: { id: 'user-1', email: 'alex@example.com', is_verified: false },
@@ -37,6 +46,7 @@ describe('RedTeamAgent app flows', () => {
     await user.type(screen.getByLabelText(/^email$/i), 'alex@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
     await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /verify email/i }));

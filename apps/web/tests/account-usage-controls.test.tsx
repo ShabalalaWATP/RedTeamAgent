@@ -12,6 +12,15 @@ describe('account and usage controls', () => {
   it('shows auth errors, supports reset and updates fields', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
+      if (url.includes('/auth/captcha/challenge')) {
+        return jsonResponse({
+          required: true,
+          provider: 'challenge',
+          token: 'signed-challenge',
+          prompt: 'What is 2 + 3?',
+          expires_in_seconds: 300
+        });
+      }
       if (url.includes('/auth/register')) return jsonResponse({ message: 'duplicate' }, 409);
       if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);
       if (url.includes('/auth/login')) return jsonResponse({ message: 'bad login' }, 401);
@@ -29,12 +38,14 @@ describe('account and usage controls', () => {
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Another-Safe-42!');
     await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('duplicate');
     await user.click(screen.getByRole('button', { name: /back to sign in/i }));
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
+    await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /send reset code/i }));
     expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/new password/i), 'Another-Safe-43!');

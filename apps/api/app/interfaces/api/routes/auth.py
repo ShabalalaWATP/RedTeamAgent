@@ -9,7 +9,7 @@ from app.application.mfa_service import MfaService
 from app.core.config import Settings, get_settings
 from app.domain.exceptions import AuthenticationError
 from app.infrastructure.auth.security import new_csrf_token
-from app.infrastructure.security.captcha import TurnstileVerifier
+from app.infrastructure.security.captcha import CaptchaVerifier
 from app.infrastructure.security.rate_limit import AbuseLimiter
 from app.interfaces.api.dependencies import (
     AuthContext,
@@ -24,6 +24,7 @@ from app.interfaces.api.dependencies import (
 )
 from app.interfaces.api.schemas import (
     AuthResponse,
+    CaptchaChallengeView,
     LoginRequest,
     MfaCodeRequest,
     MfaSetupView,
@@ -39,13 +40,24 @@ from app.interfaces.api.schemas import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.get("/captcha/challenge", response_model=CaptchaChallengeView)
+def captcha_challenge(
+    request: Request,
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    captcha: Annotated[CaptchaVerifier, Depends(captcha_verifier)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CaptchaChallengeView:
+    check_auth_rate_limit(request, limiter, settings, "captcha")
+    return CaptchaChallengeView.model_validate(captcha.issue_challenge(client_identity(request)), from_attributes=True)
+
+
 @router.post("/register", response_model=AuthResponse)
 def register(
     payload: RegisterRequest,
     request: Request,
     service: Annotated[AuthService, Depends(auth_service)],
     limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
-    captcha: Annotated[TurnstileVerifier, Depends(captcha_verifier)],
+    captcha: Annotated[CaptchaVerifier, Depends(captcha_verifier)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "register", str(payload.email))
@@ -117,7 +129,7 @@ def request_password_reset(
     request: Request,
     service: Annotated[AuthService, Depends(auth_service)],
     limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
-    captcha: Annotated[TurnstileVerifier, Depends(captcha_verifier)],
+    captcha: Annotated[CaptchaVerifier, Depends(captcha_verifier)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "password_reset", str(payload.email))

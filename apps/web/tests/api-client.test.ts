@@ -74,6 +74,15 @@ describe('ApiClient', () => {
         ]);
       }
       if (url.includes('/auth/mfa/status')) return jsonResponse({ enabled: true });
+      if (url.includes('/auth/captcha/challenge')) {
+        return jsonResponse({
+          required: true,
+          provider: 'challenge',
+          token: 'signed-challenge',
+          prompt: 'What is 2 + 3?',
+          expires_in_seconds: 300
+        });
+      }
       if (url.includes('/auth/mfa/setup')) {
         return jsonResponse({
           enabled: false,
@@ -218,6 +227,7 @@ describe('ApiClient', () => {
     await expect(client.exportReport('run-1', 'markdown')).resolves.toBe('# report');
     await expect(client.exportReportPdf('run-1')).resolves.toMatchObject({ size: 8 });
     await expect(client.runStage2Evaluation('csrf', 'workspace-1')).resolves.toMatchObject({ fixture_count: 10 });
+    await expect(client.captchaChallenge()).resolves.toMatchObject({ provider: 'challenge' });
     await expect(client.mfaStatus()).resolves.toMatchObject({ enabled: true });
     await expect(client.setupMfa('csrf')).resolves.toMatchObject({ secret: 'JBSWY3DPEHPK3PXP' });
     await expect(client.enableMfa('csrf', '123456')).resolves.toBeUndefined();

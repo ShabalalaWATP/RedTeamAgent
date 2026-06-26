@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -39,6 +40,42 @@ def test_captcha_required_for_registration_and_password_reset(client: TestClient
         json={"email": "captcha@example.com", "captcha_token": "test-turnstile-token"},
     )
     assert reset.status_code == 200, reset.text
+
+    client.app.dependency_overrides.clear()
+
+
+def test_signed_captcha_challenge_allows_registration_without_turnstile(client: TestClient) -> None:
+    settings = Settings(captcha_required=True, captcha_provider="challenge")
+    client.app.dependency_overrides[get_settings] = lambda: settings
+
+    challenge = client.get("/auth/captcha/challenge")
+    assert challenge.status_code == 200, challenge.text
+    payload = challenge.json()
+    assert payload["required"] is True
+    assert payload["provider"] == "challenge"
+    match = re.search(r"What is (\d+) \+ (\d+)", payload["prompt"])
+    assert match is not None
+    answer = str(int(match.group(1)) + int(match.group(2)))
+
+    blocked = client.post(
+        "/auth/register",
+        json={
+            "email": "signed-captcha@example.com",
+            "password": "Correct-Horse-42!",
+            "captcha_token": f"challenge:{payload['token']}:wrong",
+        },
+    )
+    assert blocked.status_code == 422
+
+    registered = client.post(
+        "/auth/register",
+        json={
+            "email": "signed-captcha@example.com",
+            "password": "Correct-Horse-42!",
+            "captcha_token": f"challenge:{payload['token']}:{answer}",
+        },
+    )
+    assert registered.status_code == 200, registered.text
 
     client.app.dependency_overrides.clear()
 
