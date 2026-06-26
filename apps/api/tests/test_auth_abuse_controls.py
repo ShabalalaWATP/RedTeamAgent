@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
+from starlette.datastructures import Headers
 
 from app.core.config import Settings, get_settings
 from app.domain.exceptions import ValidationFailure
 from app.infrastructure.auth.mfa import current_totp
-from app.interfaces.api.dependencies import captcha_verifier
+from app.interfaces.api.dependencies import captcha_verifier, client_identity
 from tests.conftest import csrf_headers, register_verified
 
 
@@ -72,6 +75,43 @@ def test_login_rate_limit_blocks_password_spraying(client: TestClient) -> None:
     assert client.post("/auth/login", json=bad).status_code == 401
     assert client.post("/auth/login", json=bad).status_code == 401
     blocked = client.post("/auth/login", json=bad)
+    assert blocked.status_code == 429
+
+    client.app.dependency_overrides.clear()
+
+
+def test_client_identity_only_trusts_proxy_headers_from_private_peers() -> None:
+    untrusted = SimpleNamespace(
+        client=SimpleNamespace(host="203.0.113.10"),
+        headers=Headers({"x-forwarded-for": "198.51.100.99", "x-real-ip": "198.51.100.100"}),
+    )
+    assert client_identity(untrusted) == "203.0.113.10"
+
+    trusted = SimpleNamespace(
+        client=SimpleNamespace(host="172.20.0.5"),
+        headers=Headers({"x-real-ip": "198.51.100.100", "x-forwarded-for": "198.51.100.99"}),
+    )
+    assert client_identity(trusted) == "198.51.100.100"
+
+
+def test_spoofed_forwarded_for_does_not_bypass_login_rate_limit(client: TestClient) -> None:
+    settings = Settings(login_rate_limit_per_minute=3, auth_email_rate_limit_per_hour=10)
+    client.app.dependency_overrides[get_settings] = lambda: settings
+    auth = register_verified(client, "spoofed@example.com")
+
+    for spoofed_ip in ("198.51.100.1", "198.51.100.2"):
+        response = client.post(
+            "/auth/login",
+            headers={"x-forwarded-for": spoofed_ip},
+            json={"email": auth["email"], "password": "Wrong-Password-42!"},
+        )
+        assert response.status_code == 401
+
+    blocked = client.post(
+        "/auth/login",
+        headers={"x-forwarded-for": "198.51.100.3"},
+        json={"email": auth["email"], "password": "Wrong-Password-42!"},
+    )
     assert blocked.status_code == 429
 
     client.app.dependency_overrides.clear()

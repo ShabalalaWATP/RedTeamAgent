@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ipaddress import ip_address, ip_network
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -41,6 +42,15 @@ class AuthContext:
 
 local_rate_limit_store = MemoryRateLimitStore()
 _redis_rate_limit_stores: dict[str, RedisRateLimitStore] = {}
+TRUSTED_PROXY_NETWORKS = (
+    ip_network("127.0.0.0/8"),
+    ip_network("10.0.0.0/8"),
+    ip_network("172.16.0.0/12"),
+    ip_network("192.168.0.0/16"),
+    ip_network("::1/128"),
+    ip_network("fc00::/7"),
+    ip_network("fe80::/10"),
+)
 
 
 def get_repo(db: Annotated[Session, Depends(get_db)]) -> SqlRepository:
@@ -179,11 +189,36 @@ def require_csrf(
         raise AuthenticationError("CSRF token is missing or invalid.")
 
 
+def _is_trusted_proxy(peer_host: str | None) -> bool:
+    if not peer_host:
+        return False
+    try:
+        peer_ip = ip_address(peer_host)
+    except ValueError:
+        return False
+    return any(peer_ip in network for network in TRUSTED_PROXY_NETWORKS)
+
+
+def _header_ip(value: str | None) -> str | None:
+    if not value:
+        return None
+    candidate = value.split(",", 1)[0].strip()
+    if not candidate:
+        return None
+    try:
+        ip_address(candidate)
+    except ValueError:
+        return None
+    return candidate
+
+
 def client_identity(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        return forwarded_for.split(",", 1)[0].strip() or "unknown"
-    return request.client.host if request.client else "unknown"
+    peer = request.client.host if request.client else None
+    if _is_trusted_proxy(peer):
+        real_ip = _header_ip(request.headers.get("x-real-ip")) or _header_ip(request.headers.get("x-forwarded-for"))
+        if real_ip:
+            return real_ip
+    return peer or "unknown"
 
 
 def check_auth_rate_limit(
