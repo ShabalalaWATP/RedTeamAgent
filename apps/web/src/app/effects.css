@@ -88,6 +88,56 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+/* Theme toggle and topbar chrome */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--panel-raised);
+  color: var(--accent);
+}
+
+.theme-toggle svg { color: var(--accent); flex: 0 0 auto; }
+.theme-toggle-label { font-size: 0.9rem; }
+
+/* Techy accent hairline under the sticky topbar */
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--accent-soft) 18%, var(--accent) 50%, var(--accent-soft) 82%, transparent);
+  opacity: 0.6;
+}
+
+@media (max-width: 480px) {
+  .theme-toggle-label { display: none; }
+  .theme-toggle { padding: 0 11px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 

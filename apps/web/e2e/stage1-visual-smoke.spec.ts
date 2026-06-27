@@ -34,12 +34,25 @@ const seededApi = {
   modelProfiles: [modelProfileResponse()]
 };
 
+// The app defaults to dark and persists an explicit choice; drive that choice
+// the way the UI toggle does (localStorage), read by the pre-paint bootstrap.
+async function applyColourScheme(page: Page, scheme: (typeof colourSchemes)[number]) {
+  await page.addInitScript((value) => {
+    try {
+      window.localStorage.setItem('rta.theme', value);
+    } catch {
+      /* ignore storage failures in the test browser */
+    }
+  }, scheme);
+  await page.emulateMedia({ colorScheme: scheme });
+}
+
 test('stage 1 screens have accessibility coverage and visual baselines', async ({ page }) => {
   test.setTimeout(120_000);
   await mockApi(page, seededApi);
-  await page.emulateMedia({ colorScheme: 'dark' });
+  await applyColourScheme(page, 'dark');
   await verifyVisualJourney(page, '');
-  await page.emulateMedia({ colorScheme: 'light' });
+  await applyColourScheme(page, 'light');
   await verifyVisualJourney(page, '-light');
 });
 
@@ -92,7 +105,7 @@ test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, 
   await mockApi(page, seededApi);
 
   for (const colourScheme of colourSchemes) {
-    await page.emulateMedia({ colorScheme: colourScheme });
+    await applyColourScheme(page, colourScheme);
     for (const viewport of auditViewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await auditAuth(page);

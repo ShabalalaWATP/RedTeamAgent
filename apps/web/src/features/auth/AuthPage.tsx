@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
+import { ThemeToggle } from '../../app/ThemeToggle';
 import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
@@ -167,6 +168,7 @@ export function AuthPage() {
   return (
     <div className="auth-shell">
       <section className="auth-card" aria-labelledby="auth-title">
+        <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-brand-panel">
           <div className="auth-brand-top">
             <img className="auth-logo" src={logo} alt="" width="192" height="192" />
@@ -175,6 +177,12 @@ export function AuthPage() {
               <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
             </div>
           </div>
+          <p className="auth-status" aria-hidden="true">
+            <span className="auth-status-dot" />
+            <span>Encrypted session</span>
+            <span className="auth-status-sep">//</span>
+            <span>Evidence-bound analysis</span>
+          </p>
           <ul className="auth-features">
             {AUTH_FEATURES.map(({ icon: Icon, title, body }) => (
               <li key={title}>

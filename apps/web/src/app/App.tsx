@@ -11,6 +11,7 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { WorkflowHistory } from '../features/workflows/WorkflowHistory';
 import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
+import { ThemeToggle } from './ThemeToggle';
 import './theme.css';
 import './styles.css';
 import './components.css';
@@ -51,7 +52,10 @@ function Layout() {
               <span className={`role-badge ${isAdmin ? 'is-admin' : ''}`}>{roleLabel(auth.workspaceRole)}</span>
             </div>
           </div>
-          <Button onClick={logout}>Log out</Button>
+          <div className="topbar-actions">
+            <ThemeToggle />
+            <Button onClick={logout}>Log out</Button>
+          </div>
         </header>
         <Outlet />
         <footer className="method-note">
