@@ -178,6 +178,7 @@ SPECIALIST_REGISTRY: tuple[SpecialistAgent, ...] = (
         ("accessibility", "inclusive", "wcag", "human factors", "disability"),
         "standard",
         "Assess accessibility, inclusion and human-factor concerns.",
+        knowledge_refs=("wcag-22",),
     ),
     SpecialistAgent(
         AgentKey.COMMERCIAL_FINANCIAL,

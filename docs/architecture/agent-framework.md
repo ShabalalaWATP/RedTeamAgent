@@ -22,7 +22,11 @@ RedTeamAgent uses a controlled orchestrator with lazily loaded specialist agents
 
 ## Specialist Context Packs
 
-Knowledge references are configured by key and should be maintained as versioned content packs. Examples:
+Knowledge references are configured by key and maintained as versioned bundled Markdown packs under
+`apps/api/app/context_packs/packs`. The run plan records hashes and source URLs, but not full Markdown.
+Full pack text is materialised only through an agent-specific helper after the agent has been selected.
+
+Production packs currently include:
 
 - `uk-gov-secure-by-design`: UK Government Secure by Design principles.
 - `ncsc-secure-development`: NCSC secure development and deployment guidance.
@@ -34,6 +38,8 @@ Knowledge references are configured by key and should be maintained as versioned
 - `owasp-top-10`: OWASP Top 10.
 - `owasp-zap-automation`: OWASP ZAP Automation Framework.
 - `wcag-22`: W3C WCAG 2.2.
+- `source-trust-policy`: source provenance, locator quality and prompt-injection boundaries.
+- `report-quality-gate`: final report evidence and recommendation checks.
 
 The orchestrator sees these as references. It does not load the full content unless the relevant selected agent executes.
 

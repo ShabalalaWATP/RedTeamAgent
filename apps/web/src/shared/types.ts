@@ -176,8 +176,14 @@ export type ContextPackProvenance = {
   id: string;
   name: string;
   agent_key: string;
+  referenced_by_agents?: string[];
+  knowledge_ref?: string;
   version: number;
   markdown_sha256: string;
+  source?: string;
+  source_urls?: string[];
+  licence?: string;
+  curated_at?: string;
   load_strategy?: string;
   materialised_for_orchestrator?: boolean;
 };

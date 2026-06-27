@@ -4,6 +4,12 @@ import socket
 
 import pytest
 
+from app.application.provenance import context_pack_snapshot
+from app.context_packs.catalog import (
+    BUNDLED_CONTEXT_PACKS,
+    materialise_bundled_context_for_agent,
+    missing_bundled_knowledge_refs,
+)
 from app.domain.enums import ReviewMode, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, ProviderPolicyError, ValidationFailure
 from app.domain.policies import (
@@ -91,6 +97,50 @@ def test_dynamic_vulnerability_agent_has_controlled_zap_tools() -> None:
     assert decision.tool_manifest["zap_passive_scan"]["sensitivity"] == "network_passive_scan"
     assert decision.tool_manifest["zap_active_scan"]["enabled"] is False
     assert decision.tool_manifest["zap_active_scan"]["requires_explicit_authorisation"] is True
+
+
+def test_agent_knowledge_refs_have_bundled_context_packs() -> None:
+    assert missing_bundled_knowledge_refs() == set()
+    assert "uk-gov-secure-by-design" in BUNDLED_CONTEXT_PACKS
+    assert "owasp-zap-automation" in BUNDLED_CONTEXT_PACKS
+    assert "ico-lawful-basis" in BUNDLED_CONTEXT_PACKS
+
+
+def test_bundled_context_materialises_only_for_selected_agent() -> None:
+    selected = {"secure_by_design"}
+    materialised = materialise_bundled_context_for_agent("secure_by_design", selected)
+
+    assert {pack["knowledge_ref"] for pack in materialised} == {
+        "uk-gov-secure-by-design",
+        "ncsc-secure-development",
+        "ncsc-caf",
+    }
+    assert all(pack["materialised_for_orchestrator"] is False for pack in materialised)
+    assert all("markdown" in pack for pack in materialised)
+    assert materialise_bundled_context_for_agent("uk_data_protection", selected) == []
+
+
+def test_context_pack_snapshot_includes_only_selected_agent_references() -> None:
+    decision = route_agents(
+        ReviewMode.IN_DEPTH,
+        ["secure by design", "uk gdpr", "zap"],
+        "Secure by design GDPR staging assessment",
+        "Assess secure-by-design controls, personal data governance and passive ZAP checks.",
+    )
+    context_agents = {agent.value for agent in [*decision.selected_agents, *decision.assurance_agents]}
+    snapshots = context_pack_snapshot([], context_agents)
+    refs = {pack["knowledge_ref"] for pack in snapshots if pack.get("source") == "bundled"}
+
+    assert {
+        "uk-gov-secure-by-design",
+        "ico-uk-gdpr-principles",
+        "owasp-zap-automation",
+        "source-trust-policy",
+        "report-quality-gate",
+    } <= refs
+    assert "clean-architecture" not in refs
+    assert all(pack["materialised_for_orchestrator"] is False for pack in snapshots)
+    assert all("markdown" not in pack for pack in snapshots)
 
 
 def test_provider_registry_and_fake_scenarios() -> None:

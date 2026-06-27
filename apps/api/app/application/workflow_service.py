@@ -54,9 +54,13 @@ class WorkflowService:
             source_types,
         )
         selected_agents = [agent.value for agent in decision.selected_agents]
+        context_agent_keys = {
+            agent.value
+            for agent in [*decision.selected_agents, *decision.assurance_agents]
+        }
         context_packs = context_pack_snapshot(
             self.repo.list_context_packs(review.workspace_id),
-            set(selected_agents),
+            context_agent_keys,
         )
         routing_metadata = self._routing_metadata(review, selected_agents)
         self._validate_governance(review.workspace_id, user_id)

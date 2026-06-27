@@ -113,6 +113,13 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert body["context_packs"][0]["markdown_sha256"] == policy_hash
     assert body["context_packs"][0]["load_strategy"] == "lazy_selected_agent_only"
     assert body["context_packs"][0]["materialised_for_orchestrator"] is False
+    bundled_refs = {
+        pack["knowledge_ref"]
+        for pack in body["context_packs"]
+        if pack.get("source") == "bundled"
+    }
+    assert {"owasp-top-10", "owasp-asvs", "source-trust-policy", "report-quality-gate"} <= bundled_refs
+    assert all("markdown" not in pack for pack in body["context_packs"])
 
     run = client.post(
         f"/reviews/{ids['review_id']}/runs",
@@ -127,6 +134,12 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert run_context["agent_key"] == "policy_governance"
     assert run_context["markdown_sha256"] == policy_hash
     assert run_context["materialised_for_orchestrator"] is False
+    run_refs = {
+        pack["knowledge_ref"]
+        for pack in completed_run.json()["routing_plan"]["context_packs"]
+        if pack.get("source") == "bundled"
+    }
+    assert {"owasp-top-10", "source-trust-policy", "report-quality-gate"} <= run_refs
     assert completed_run.json()["routing_plan"]["assurance_agents"] == ["source_provenance", "quality_fact_checker"]
 
     events = client.get(f"/runs/{run.json()['id']}/events")
@@ -147,6 +160,7 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report_data["coverage_map"]["retrieved_evidence"] == 1
     assert "professional sign-off" in report_data["assumptions"][0]
     assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
+    assert all("markdown" not in pack for pack in report_data["context_packs"])
     assert report_data["quality_assurance"]["status"] == "passed"
     assert "hybrid evidence retrieval" in report_data["methodology"]
 

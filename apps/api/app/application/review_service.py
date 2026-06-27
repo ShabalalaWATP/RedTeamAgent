@@ -139,8 +139,11 @@ class ReviewService:
             review.proposal_text,
             source_types,
         )
-        selected_agent_keys = {agent.value for agent in decision.selected_agents}
         selected_agents = [agent.value for agent in decision.selected_agents]
+        context_agent_keys = {
+            agent.value
+            for agent in [*decision.selected_agents, *decision.assurance_agents]
+        }
         return {
             "review_id": review.id,
             "sources": [self._source_view(source) for source in sources],
@@ -169,7 +172,7 @@ class ReviewService:
             **self._routing_metadata(review, selected_agents),
             "context_packs": context_pack_snapshot(
                 self.repo.list_context_packs(review.workspace_id),
-                selected_agent_keys,
+                context_agent_keys,
             ),
         }
 

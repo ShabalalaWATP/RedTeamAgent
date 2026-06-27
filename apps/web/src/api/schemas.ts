@@ -175,8 +175,14 @@ const contextPackProvenanceSchema = z.object({
   id: z.string(),
   name: z.string(),
   agent_key: z.string(),
+  referenced_by_agents: z.array(z.string()).default([]),
+  knowledge_ref: z.string().optional(),
   version: z.number(),
   markdown_sha256: z.string(),
+  source: z.string().default('workspace'),
+  source_urls: z.array(z.string()).default([]),
+  licence: z.string().optional(),
+  curated_at: z.string().optional(),
   load_strategy: z.string().default('lazy_selected_agent_only'),
   materialised_for_orchestrator: z.boolean().default(false)
 });
