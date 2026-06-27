@@ -2970,6 +2970,318 @@
         }
       }
     },
+    "/site-admin/users": {
+      "get": {
+        "tags": [
+          "site-admin"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_site_admin_users_get",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteUserView"
+                  },
+                  "title": "Response List Users Site Admin Users Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site-admin/users/{user_id}": {
+      "put": {
+        "tags": [
+          "site-admin"
+        ],
+        "summary": "Update User",
+        "operationId": "update_user_site_admin_users__user_id__put",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteUserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "site-admin"
+        ],
+        "summary": "Delete User",
+        "operationId": "delete_user_site_admin_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteUserView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site-admin/visits": {
+      "get": {
+        "tags": [
+          "site-admin"
+        ],
+        "summary": "List Visits",
+        "operationId": "list_visits_site_admin_visits_get",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteVisitView"
+                  },
+                  "title": "Response List Visits Site Admin Visits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "site-admin"
+        ],
+        "summary": "Record Visit",
+        "operationId": "record_visit_site_admin_visits_post",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteVisitCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/enterprise/workspaces": {
       "post": {
         "tags": [
@@ -7429,7 +7741,7 @@
           "password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 14,
+            "minLength": 12,
             "title": "Password"
           },
           "captcha_token": {
@@ -7881,7 +8193,7 @@
           "password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 14,
+            "minLength": 12,
             "title": "Password"
           }
         },
@@ -8222,7 +8534,7 @@
           "password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 14,
+            "minLength": 12,
             "title": "Password"
           },
           "captcha_token": {
@@ -9117,6 +9429,260 @@
         ],
         "title": "SharedReportView"
       },
+      "SiteUserUpdate": {
+        "properties": {
+          "account_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "owner",
+                  "admin",
+                  "user"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Type"
+          },
+          "account_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "suspended",
+                  "banned",
+                  "deleted"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Status"
+          },
+          "status_message": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Status Message",
+            "default": ""
+          },
+          "admin_scope": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "all",
+                  "selected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Scope"
+          },
+          "admin_managed_user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Admin Managed User Ids"
+          }
+        },
+        "type": "object",
+        "title": "SiteUserUpdate"
+      },
+      "SiteUserView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified"
+          },
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "user"
+            ],
+            "title": "Account Type"
+          },
+          "account_status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "banned",
+              "deleted"
+            ],
+            "title": "Account Status"
+          },
+          "status_message": {
+            "type": "string",
+            "title": "Status Message",
+            "default": ""
+          },
+          "admin_scope": {
+            "type": "string",
+            "enum": [
+              "none",
+              "all",
+              "selected"
+            ],
+            "title": "Admin Scope",
+            "default": "none"
+          },
+          "admin_managed_user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Admin Managed User Ids"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "last_login_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login Ip"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "last_seen_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen Ip"
+          },
+          "run_count": {
+            "type": "integer",
+            "title": "Run Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "is_verified",
+          "account_type",
+          "account_status",
+          "created_at"
+        ],
+        "title": "SiteUserView"
+      },
+      "SiteVisitCreate": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Path",
+            "default": "/"
+          }
+        },
+        "type": "object",
+        "title": "SiteVisitCreate"
+      },
+      "SiteVisitView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "ip_address": {
+            "type": "string",
+            "title": "Ip Address"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "user_agent": {
+            "type": "string",
+            "title": "User Agent"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ip_address",
+          "method",
+          "path",
+          "user_agent",
+          "created_at"
+        ],
+        "title": "SiteVisitView"
+      },
       "SourceView": {
         "properties": {
           "id": {
@@ -9210,6 +9776,16 @@
           "is_verified": {
             "type": "boolean",
             "title": "Is Verified"
+          },
+          "account_type": {
+            "type": "string",
+            "title": "Account Type",
+            "default": "user"
+          },
+          "account_status": {
+            "type": "string",
+            "title": "Account Status",
+            "default": "active"
           }
         },
         "type": "object",

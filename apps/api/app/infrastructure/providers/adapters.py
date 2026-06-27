@@ -128,9 +128,8 @@ class StaticProviderAdapter:
 
 
 class ProviderRegistry:
-    def __init__(self, self_hosted_mode: bool = False) -> None:
+    def __init__(self, self_hosted_mode: bool = False, allow_fake_provider: bool = True) -> None:
         self._adapters: dict[str, ProviderAdapter] = {
-            "fake": FakeProviderAdapter(),
             "openai": OpenAIProviderAdapter(
                 AdapterSchema(
                     key="openai",
@@ -181,6 +180,8 @@ class ProviderRegistry:
                 self_hosted_mode=self_hosted_mode,
             ),
         }
+        if allow_fake_provider:
+            self._adapters["fake"] = FakeProviderAdapter()
         self._adapters.update(_stage2_adapters())
 
     def schemas(self) -> list[AdapterSchema]:

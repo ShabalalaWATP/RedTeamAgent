@@ -1,4 +1,5 @@
 import { AccountSecurityPanel } from './AccountSecurityPanel';
+import { SiteAdminPanel } from './SiteAdminPanel';
 import { ProviderSettings } from '../providers/ProviderSettings';
 import './settings.css';
 
@@ -13,6 +14,7 @@ export function SettingsPage() {
       </div>
       <div className="settings-stack">
         <AccountSecurityPanel />
+        <SiteAdminPanel />
         <ProviderSettings embedded />
       </div>
     </section>

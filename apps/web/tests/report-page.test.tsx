@@ -178,6 +178,29 @@ describe('ReportPage run controls', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('renders an empty successful report comparison', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/report/compare')) {
+        return jsonResponse({
+          left_run_id: 'run-1',
+          right_run_id: 'run-previous',
+          changed_risks: [],
+          changed_assumptions: [],
+          changed_evidence_gaps: [],
+          changed_recommendations: []
+        });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    render(<ReportComparisonPanel runId="run-1" />);
+
+    await user.type(screen.getByLabelText(/other run id/i), 'run-previous');
+    await user.click(screen.getByRole('button', { name: /compare reports/i }));
+
+    expect(await screen.findAllByText(/no change recorded/i)).toHaveLength(4);
+  });
+
   it('renders completed action status without relying on colour', () => {
     const report: ReportData = {
       ...reportResponse(),

@@ -95,10 +95,14 @@ class WorkflowService:
             self.repo.commit()
         if self._is_cancelled(run.id):
             return self.repo.get_run(run.id)
-        provider_output = self.registry.get("fake").generate_structured(
-            review.proposal_text,
-            "specialist_output",
-        )
+        try:
+            provider = self.registry.get("fake")
+        except KeyError:
+            self.repo.update_run(run.id, RunState.FAILED.value)
+            self.repo.add_run_event(run.id, RunState.FAILED.value, "No production AI provider is configured.")
+            self.repo.commit()
+            return self.repo.get_run(run.id)
+        provider_output = provider.generate_structured(review.proposal_text, "specialist_output")
         if "claims" not in provider_output:
             self.repo.update_run(run.id, RunState.FAILED.value)
             self.repo.add_run_event(run.id, RunState.FAILED.value, "Provider output failed strict schema validation.")

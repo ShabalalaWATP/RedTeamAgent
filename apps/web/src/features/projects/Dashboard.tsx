@@ -48,6 +48,7 @@ export function Dashboard() {
   };
 
   const saveEdit = async (projectId: string) => {
+    /* v8 ignore next -- edit controls only render after authenticated project loading. */
     if (!auth) return;
     setProjectError(null);
     setPendingProjectId(projectId);
@@ -63,6 +64,7 @@ export function Dashboard() {
   };
 
   const deleteProject = async (projectId: string) => {
+    /* v8 ignore next -- delete controls only render after authenticated project loading. */
     if (!auth) return;
     setProjectError(null);
     setPendingProjectId(projectId);

@@ -219,7 +219,7 @@ class ReviewService:
     def _capability_warnings(self, workspace_id: str) -> list[str]:
         models = self.repo.list_models(workspace_id)
         if not models:
-            return ["No model profiles configured. Fake provider route will be used for local demo."]
+            return ["No model profiles configured. Configure a production AI provider before starting reviews."]
         return []
 
     def _require_project_member(self, user_id: str, project_id: str) -> Any:

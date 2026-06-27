@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from app.application.ports.notifications import EmailSender
@@ -54,12 +55,25 @@ class AuthService:
         self.repo.audit(None, user_id, "auth.email_verified", {})
         self.repo.commit()
 
-    def login(self, email: str, password: str, csrf_token: str, mfa_code: str | None = None) -> dict[str, Any]:
+    def login(
+        self,
+        email: str,
+        password: str,
+        csrf_token: str,
+        mfa_code: str | None = None,
+        remote_ip: str | None = None,
+    ) -> dict[str, Any]:
         user = self.repo.get_user_by_email(email)
         if user is None or not self.passwords.verify(user.password_hash, password):
             self.repo.audit(None, None, "auth.login_failed", {"reason": "invalid_credentials"})
             self.repo.commit()
             raise AuthenticationError("Invalid email or password.")
+        try:
+            self._require_active_user(user)
+        except AuthenticationError:
+            self.repo.audit(None, user.id, "auth.login_failed", {"reason": user.account_status})
+            self.repo.commit()
+            raise
         if not user.is_verified:
             self.repo.audit(None, user.id, "auth.login_failed", {"reason": "email_unverified"})
             self.repo.commit()
@@ -69,6 +83,10 @@ class AuthService:
             self.repo.commit()
             raise MfaRequiredError("Multi-factor authentication code required.")
         session = self.repo.create_session(user.id, csrf_token)
+        user.last_login_at = datetime.now(UTC)
+        user.last_login_ip = remote_ip
+        user.last_seen_at = user.last_login_at
+        user.last_seen_ip = remote_ip
         workspace = self.repo.list_workspaces(user.id)[0]
         workspace_role = self.repo.membership_role(workspace.id, user.id)
         self.repo.audit(workspace.id, user.id, "auth.login", {})
@@ -111,8 +129,8 @@ class AuthService:
     @staticmethod
     def _validate_password(password: str) -> None:
         missing: list[str] = []
-        if len(password) < 14:
-            missing.append("be at least 14 characters")
+        if len(password) < 12:
+            missing.append("be at least 12 characters")
         if len(password) > 128:
             missing.append("be no more than 128 characters")
         if not any(character.islower() for character in password):
@@ -127,6 +145,19 @@ class AuthService:
             missing.append("not start or end with a space")
         if missing:
             raise ValidationFailure(f"Password must {', '.join(missing)}.")
+
+    @staticmethod
+    def _require_active_user(user: Any) -> None:
+        status = str(getattr(user, "account_status", "active"))
+        if status == "active":
+            return
+        default = {
+            "suspended": "Your account has been suspended.",
+            "banned": "Your account has been banned.",
+            "deleted": "This account has been deleted.",
+        }.get(status, "This account is not active.")
+        message = str(getattr(user, "status_message", "") or default)
+        raise AuthenticationError(message)
 
     def _send_verification_email(self, email: str, token: str) -> None:
         link = f"{self.public_app_url}/auth?verification_token={token}"

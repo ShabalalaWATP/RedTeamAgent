@@ -24,6 +24,8 @@ import {
   reportSchema,
   reviewSchema,
   runSchema,
+  siteUserSchema,
+  siteVisitSchema,
   sourceSchema,
   usageLimitsSchema,
   webhookSchema,
@@ -95,6 +97,26 @@ export class ApiClient {
 
   async disableMfa(csrf: string, code: string) {
     await this.request('/auth/mfa/disable', 'POST', { csrf, body: { code } });
+  }
+
+  async recordVisit(path: string) {
+    await this.request('/site-admin/visits', 'POST', { body: { path } });
+  }
+
+  async siteUsers() {
+    return z.array(siteUserSchema).parse(await this.request('/site-admin/users', 'GET'));
+  }
+
+  async siteVisits() {
+    return z.array(siteVisitSchema).parse(await this.request('/site-admin/visits', 'GET'));
+  }
+
+  async updateSiteUser(csrf: string, userId: string, body: Record<string, unknown>) {
+    return siteUserSchema.parse(await this.request(`/site-admin/users/${userId}`, 'PUT', { csrf, body }));
+  }
+
+  async deleteSiteUser(csrf: string, userId: string) {
+    return siteUserSchema.parse(await this.request(`/site-admin/users/${userId}`, 'DELETE', { csrf }));
   }
 
   async createProject(csrf: string, workspaceId: string, title: string, description: string) {

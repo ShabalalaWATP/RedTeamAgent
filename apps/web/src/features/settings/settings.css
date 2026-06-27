@@ -33,6 +33,104 @@
   padding: 8px;
 }
 
+.site-admin-panel {
+  gap: 18px;
+}
+
+.site-user-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.site-user-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--panel-raised);
+}
+
+.site-user-card header,
+.site-admin-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.site-user-card small,
+.visit-row small {
+  display: block;
+  color: var(--muted);
+}
+
+.site-user-card dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 18px;
+  margin: 0;
+}
+
+.site-user-card dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.site-user-card dd {
+  margin: 0;
+}
+
+.site-admin-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.managed-user-list {
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field-bg);
+}
+
+.managed-user-list label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.site-visits {
+  display: grid;
+  gap: 8px;
+}
+
+.site-visits h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+
+.visit-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.visit-row small {
+  grid-column: 2;
+}
+
 .settings-disclosure summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

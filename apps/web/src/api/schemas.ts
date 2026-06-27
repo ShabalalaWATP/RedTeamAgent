@@ -3,7 +3,13 @@ import { z } from 'zod';
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 export const authSchema = z.object({
-  user: z.object({ id: z.string(), email: z.string(), is_verified: z.boolean() }),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    is_verified: z.boolean(),
+    account_type: z.enum(['owner', 'admin', 'user']).default('user'),
+    account_status: z.enum(['active', 'suspended', 'banned', 'deleted']).default('active')
+  }),
   workspace: z.object({ id: z.string(), name: z.string() }),
   workspace_role: z.string().nullable().optional(),
   csrf_token: z.string().nullable().optional(),
@@ -28,6 +34,33 @@ export const mfaSetupSchema = z.object({
   secret: z.string(),
   provisioning_uri: z.string(),
   recovery_codes: z.array(z.string())
+});
+
+export const siteUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  is_verified: z.boolean(),
+  account_type: z.enum(['owner', 'admin', 'user']),
+  account_status: z.enum(['active', 'suspended', 'banned', 'deleted']),
+  status_message: z.string().default(''),
+  admin_scope: z.enum(['none', 'all', 'selected']).default('none'),
+  admin_managed_user_ids: z.array(z.string()).default([]),
+  created_at: z.string(),
+  last_login_at: z.string().nullable().optional(),
+  last_login_ip: z.string().nullable().optional(),
+  last_seen_at: z.string().nullable().optional(),
+  last_seen_ip: z.string().nullable().optional(),
+  run_count: z.number().default(0)
+});
+
+export const siteVisitSchema = z.object({
+  id: z.string(),
+  user_id: z.string().nullable().optional(),
+  ip_address: z.string(),
+  method: z.string(),
+  path: z.string(),
+  user_agent: z.string(),
+  created_at: z.string()
 });
 
 export const projectSchema = z.object({

@@ -28,6 +28,15 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    account_type: Mapped[str] = mapped_column(String(20), default="user")
+    account_status: Mapped[str] = mapped_column(String(20), default="active")
+    status_message: Mapped[str] = mapped_column(Text, default="")
+    admin_scope: Mapped[str] = mapped_column(String(20), default="none")
+    admin_managed_user_ids: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -217,3 +226,15 @@ class AuditEvent(Base):
     action: Mapped[str] = mapped_column(String(120))
     metadata_json: Mapped[dict[str, object]] = mapped_column("metadata", JsonType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class SiteVisit(Base):
+    __tablename__ = "site_visits"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(64), index=True)
+    method: Mapped[str] = mapped_column(String(16))
+    path: Mapped[str] = mapped_column(String(500))
+    user_agent: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)

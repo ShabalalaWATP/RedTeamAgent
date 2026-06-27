@@ -6,6 +6,7 @@ import { useAuth } from '../../app/AuthContext';
 import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
+import { PasswordField, passwordMeetsPolicy } from './PasswordField';
 import './auth.css';
 
 const AUTH_FEATURES = [
@@ -28,20 +29,8 @@ const AUTH_FEATURES = [
 
 type AuthMode = 'login' | 'register' | 'reset';
 
-const PASSWORD_HINT = 'Use 14-128 characters with uppercase, lowercase, a number and a symbol.';
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-
-function passwordMeetsPolicy(value: string) {
-  return (
-    value.length >= 14 &&
-    value.length <= 128 &&
-    value.trim() === value &&
-    /[a-z]/.test(value) &&
-    /[A-Z]/.test(value) &&
-    /\d/.test(value) &&
-    /[^\dA-Za-z\s]/.test(value)
-  );
-}
+const SHOW_LOCAL_AUTH_TOKENS = import.meta.env.MODE !== 'production';
 
 function initialMode(searchParams: URLSearchParams): AuthMode {
   if (searchParams.get('reset_token')) return 'reset';
@@ -120,9 +109,10 @@ export function AuthPage() {
     setError(null);
     try {
       const response = await api.register(email, password, captchaToken || undefined);
-      setVerificationToken(response.verification_token ?? '');
+      const localToken = SHOW_LOCAL_AUTH_TOKENS ? response.verification_token ?? '' : '';
+      setVerificationToken(localToken);
       setMessage(
-        response.verification_token ? 'Local verification token issued.' : 'Check your email for the verification link.'
+        localToken ? 'Local verification token issued.' : 'Check your email for the verification link.'
       );
     } catch (err) {
       setError((err as Error).message);
@@ -150,6 +140,8 @@ export function AuthPage() {
         workspaceId: response.workspace.id,
         workspaceName: response.workspace.name,
         workspaceRole: response.workspace_role ?? 'member',
+        accountType: response.user.account_type,
+        accountStatus: response.user.account_status,
         csrfToken: response.csrf_token ?? ''
       });
       navigate('/workflows');
@@ -168,9 +160,10 @@ export function AuthPage() {
     setError(null);
     try {
       const response = await api.resetPassword(email, captchaToken || undefined);
-      setResetToken(response.reset_token ?? '');
+      const localToken = SHOW_LOCAL_AUTH_TOKENS ? response.reset_token ?? '' : '';
+      setResetToken(localToken);
       setMessage(
-        response.reset_token ? 'Local password reset token issued.' : 'If the account exists, a reset link was sent.'
+        localToken ? 'Local password reset token issued.' : 'If the account exists, a reset link was sent.'
       );
     } catch (err) {
       setError((err as Error).message);
@@ -244,15 +237,13 @@ export function AuthPage() {
             </Field>
           )}
           {mode === 'reset' ? null : (
-            <Field label="Password" hint={mode === 'register' ? PASSWORD_HINT : undefined}>
-              <input
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                maxLength={128}
-              />
-            </Field>
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              showRequirements={mode === 'register'}
+            />
           )}
           {mode === 'login' && requiresMfa ? (
             <Field label="Authenticator or recovery code">
@@ -273,7 +264,7 @@ export function AuthPage() {
             />
           ) : null}
 
-          {mode === 'register' && verificationToken ? (
+          {SHOW_LOCAL_AUTH_TOKENS && mode === 'register' && verificationToken ? (
             <div className="auth-inline-panel">
               <Field label="Verification token" hint="Returned only in local development.">
                 <input value={verificationToken} onChange={(event) => setVerificationToken(event.target.value)} />
@@ -284,18 +275,18 @@ export function AuthPage() {
 
           {mode === 'reset' && resetToken ? (
             <div className="auth-inline-panel">
-              <Field label="Reset token" hint="Returned only in local development.">
-                <input value={resetToken} onChange={(event) => setResetToken(event.target.value)} />
-              </Field>
-              <Field label="New password" hint={PASSWORD_HINT}>
-                <input
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  type="password"
-                  autoComplete="new-password"
-                  maxLength={128}
-                />
-              </Field>
+              {SHOW_LOCAL_AUTH_TOKENS ? (
+                <Field label="Reset token" hint="Returned only in local development.">
+                  <input value={resetToken} onChange={(event) => setResetToken(event.target.value)} />
+                </Field>
+              ) : null}
+              <PasswordField
+                label="New password"
+                value={newPassword}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+                showRequirements
+              />
               <Button type="button" onClick={confirmReset} disabled={!canConfirmReset}>
                 Confirm reset
               </Button>

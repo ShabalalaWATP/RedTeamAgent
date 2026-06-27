@@ -20,6 +20,7 @@ from app.interfaces.api.routes import (
     providers,
     reviews,
     runs,
+    site_admin,
 )
 
 
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(providers.router)
     app.include_router(runs.router)
     app.include_router(evaluations.router)
+    app.include_router(site_admin.router)
     app.include_router(enterprise_admin.router)
     app.include_router(enterprise_collaboration.router)
     app.include_router(enterprise_integrations.router)

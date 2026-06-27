@@ -6,7 +6,40 @@ export type AuthState = {
   workspaceId: string;
   workspaceName: string;
   workspaceRole: string;
+  accountType: AccountType;
+  accountStatus: AccountStatus;
   csrfToken: string;
+};
+
+export type AccountType = 'owner' | 'admin' | 'user';
+export type AccountStatus = 'active' | 'suspended' | 'banned' | 'deleted';
+export type AdminScope = 'none' | 'all' | 'selected';
+
+export type SiteUser = {
+  id: string;
+  email: string;
+  is_verified: boolean;
+  account_type: AccountType;
+  account_status: AccountStatus;
+  status_message: string;
+  admin_scope: AdminScope;
+  admin_managed_user_ids: string[];
+  created_at: string;
+  last_login_at?: string | null;
+  last_login_ip?: string | null;
+  last_seen_at?: string | null;
+  last_seen_ip?: string | null;
+  run_count: number;
+};
+
+export type SiteVisit = {
+  id: string;
+  user_id?: string | null;
+  ip_address: string;
+  method: string;
+  path: string;
+  user_agent: string;
+  created_at: string;
 };
 
 export type Project = {

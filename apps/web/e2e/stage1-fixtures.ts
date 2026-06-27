@@ -59,6 +59,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       await route.fulfill({ status: 204, headers: apiHeaders });
       return;
     }
+    if (url.pathname === '/site-admin/visits' && request.method() === 'POST') {
+      await route.fulfill({ status: 204, headers: apiHeaders });
+      return;
+    }
     if (url.pathname === '/auth/captcha/challenge') {
       await fulfilJson(route, { required: false, provider: 'disabled', token: '', prompt: '', expires_in_seconds: 0 });
       return;

@@ -13,7 +13,7 @@ class ApiError(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=14, max_length=128)
+    password: str = Field(min_length=12, max_length=128)
     captcha_token: str | None = Field(default=None, max_length=4096)
 
 
@@ -33,13 +33,15 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetConfirmRequest(BaseModel):
     token: str
-    password: str = Field(min_length=14, max_length=128)
+    password: str = Field(min_length=12, max_length=128)
 
 
 class UserView(BaseModel):
     id: str
     email: EmailStr
     is_verified: bool
+    account_type: str = "user"
+    account_status: str = "active"
     model_config = ConfigDict(from_attributes=True)
 
 

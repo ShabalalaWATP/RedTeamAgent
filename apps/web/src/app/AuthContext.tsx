@@ -22,6 +22,8 @@ function readStoredAuth(): AuthState | null {
       workspaceId: parsed.workspaceId,
       workspaceName: parsed.workspaceName,
       workspaceRole: parsed.workspaceRole ?? 'member',
+      accountType: parsed.accountType ?? 'user',
+      accountStatus: parsed.accountStatus ?? 'active',
       csrfToken: parsed.csrfToken ?? ''
     };
   } catch {

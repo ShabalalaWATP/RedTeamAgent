@@ -69,6 +69,26 @@ describe('account and usage controls', () => {
     expect(screen.queryByText(/422/)).not.toBeInTheDocument();
   });
 
+  it('shows password requirements and can reveal typed passwords', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/captcha/challenge')) {
+        return jsonResponse({ required: false, provider: 'disabled', token: '', prompt: '', expires_in_seconds: 0 });
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.click(screen.getByRole('button', { name: /create an account/i }));
+    await user.type(screen.getByLabelText(/^password$/i), 'short');
+
+    expect(screen.getByText(/needed: 12 to 128 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/needed: uppercase letter/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: /show password/i }));
+    expect(screen.getByLabelText(/^password$/i)).toHaveAttribute('type', 'text');
+  });
+
   it('shows a service message when sign-in cannot reach the API', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {

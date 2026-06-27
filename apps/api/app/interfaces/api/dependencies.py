@@ -119,7 +119,7 @@ def evaluation_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> Eva
 
 
 def provider_registry(settings: Annotated[Settings, Depends(get_settings)]) -> ProviderRegistry:
-    return ProviderRegistry(settings.self_hosted_provider_mode)
+    return ProviderRegistry(settings.self_hosted_provider_mode, settings.allow_fake_provider)
 
 
 def provider_governance(
@@ -178,6 +178,8 @@ def current_context(
     user = repo.get_user(session.user_id)
     if user is None:
         raise AuthenticationError("Session user not found.")
+    if getattr(user, "account_status", "active") != "active":
+        raise AuthenticationError(str(getattr(user, "status_message", "") or "This account is not active."))
     return AuthContext(user=user, session=session)
 
 

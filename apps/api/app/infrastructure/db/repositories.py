@@ -18,7 +18,8 @@ class SqlRepository:
         self.session = session
 
     def create_user(self, email: str, password_hash: str) -> models.User:
-        user = models.User(email=email.lower(), password_hash=password_hash)
+        account_type = "owner" if not self.session.scalar(select(func.count()).select_from(models.User)) else "user"
+        user = models.User(email=email.lower(), password_hash=password_hash, account_type=account_type)
         self.session.add(user)
         self.session.flush()
         return user
@@ -134,7 +135,6 @@ class SqlRepository:
                 .where(models.WorkspaceMembership.user_id == user_id)
             )
         )
-
     def create_project(self, workspace_id: str, title: str, description: str) -> models.Project:
         project = models.Project(workspace_id=workspace_id, title=title, description=description)
         self.session.add(project)

@@ -22,6 +22,8 @@ import {
 } from './providerCatalogue';
 import './providers.css';
 
+const SHOW_LOCAL_PROVIDERS = import.meta.env.MODE !== 'production';
+
 function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
@@ -36,14 +38,14 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   const [connections, setConnections] = useState<ProviderConnection[]>([]);
   const [models, setModels] = useState<ModelRecord[]>([]);
   const [profiles, setProfiles] = useState<ModelProfile[]>([]);
-  const [selected, setSelected] = useState('fake');
-  const [defaultModelIdentifier, setDefaultModelIdentifier] = useState('fake-reviewer');
+  const [selected, setSelected] = useState('openai');
+  const [defaultModelIdentifier, setDefaultModelIdentifier] = useState('');
   const [liveModelOptions, setLiveModelOptions] = useState<CatalogueModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
-  const [name, setName] = useState('Fake local provider');
+  const [name, setName] = useState('Production AI provider');
   const [values, setValues] = useState<Record<string, string>>({ scenario: 'valid' });
   const [modelConnectionId, setModelConnectionId] = useState('');
-  const [modelIdentifier, setModelIdentifier] = useState('fake-reviewer');
+  const [modelIdentifier, setModelIdentifier] = useState('');
   const [capabilities, setCapabilities] = useState('text, structured_output, streaming');
   const [provenance, setProvenance] = useState('manual');
   const [verified, setVerified] = useState(false);
@@ -78,8 +80,8 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   useEffect(() => {
     loadWorkspaceData().catch((err) => setWorkspaceError((err as Error).message));
   }, [auth?.workspaceId]);
-
-  const schema = schemas.find((item) => item.key === selected);
+  const visibleSchemas = schemas.filter((item) => SHOW_LOCAL_PROVIDERS || item.key !== 'fake');
+  const schema = visibleSchemas.find((item) => item.key === selected);
   const defaultModelOptions = modelOptionsForSetup(schema, liveModelOptions);
   const modelConnection = connections.find((connection) => connection.id === modelConnectionId);
   const manualModelSchema = schemaForConnection(schemas, modelConnection);
@@ -93,8 +95,11 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     ));
   }, [defaultModelOptionKey]);
 
+  useEffect(() => {
+    if (schema || visibleSchemas.length === 0) return;
+    setSelected(visibleSchemas[0].key);
+  }, [schema?.key, visibleSchemas.map((item) => item.key).join('|')]);
   useEffect(() => { setLiveModelOptions([]); }, [selected]);
-
   useEffect(() => {
     if (manualModelOptions.length === 0) return;
     const nextIdentifier = preferredModelIdentifier(manualModelOptions, modelIdentifier);
@@ -244,9 +249,9 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
             <EmptyState title="No adapters" body="No provider adapters are available in this environment." />
           ) : null}
           <Field label="AI provider" hint="This controls where RedTeamAgent sends AI review requests.">
-            <select value={selected} onChange={(event) => setSelected(event.target.value)}>
-              {schemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>
+              <select value={selected} onChange={(event) => setSelected(event.target.value)}>
+                {visibleSchemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+              </select>
           </Field>
           <Field
             label="Display name"

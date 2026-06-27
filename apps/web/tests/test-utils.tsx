@@ -10,6 +10,8 @@ export const authState = {
   workspaceId: 'workspace-1',
   workspaceName: "owner@example.com's workspace",
   workspaceRole: 'owner',
+  accountType: 'user',
+  accountStatus: 'active',
   csrfToken: 'csrf-token'
 };
 

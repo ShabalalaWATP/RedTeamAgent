@@ -94,7 +94,7 @@ def login(
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "login", str(payload.email))
     csrf_token = new_csrf_token()
-    result = service.login(str(payload.email), payload.password, csrf_token, payload.mfa_code)
+    result = service.login(str(payload.email), payload.password, csrf_token, payload.mfa_code, client_identity(request))
     response.set_cookie(
         "rta_session",
         result["session"].id,
