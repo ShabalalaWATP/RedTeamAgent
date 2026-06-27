@@ -141,6 +141,12 @@ export class ApiClient {
     return reviewSchema.parse(await this.request(`/projects/${projectId}/reviews`, 'POST', { csrf, body }));
   }
 
+  async createStandaloneReview(csrf: string, workspaceId: string, body: Record<string, unknown>) {
+    return reviewSchema.parse(
+      await this.request('/reviews', 'POST', { csrf, body: { workspace_id: workspaceId, ...body } })
+    );
+  }
+
   async addTextSource(csrf: string, reviewId: string, text: string) {
     return sourceSchema.parse(await this.request(`/reviews/${reviewId}/sources/text`, 'POST', { csrf, body: { text } }));
   }
@@ -238,6 +244,10 @@ export class ApiClient {
 
   async cancelRun(csrf: string, runId: string) {
     return runSchema.parse(await this.request(`/runs/${runId}/cancel`, 'POST', { csrf }));
+  }
+
+  async deleteWorkflow(csrf: string, runId: string) {
+    await this.request(`/runs/${runId}`, 'DELETE', { csrf });
   }
 
   eventStreamUrl(runId: string) {

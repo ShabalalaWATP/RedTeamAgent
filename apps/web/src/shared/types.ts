@@ -45,6 +45,7 @@ export type SiteVisit = {
 export type Project = {
   id: string;
   workspace_id: string;
+  created_by_user_id?: string | null;
   title: string;
   description: string;
 };
@@ -52,7 +53,7 @@ export type Project = {
 export type Review = {
   id: string;
   workspace_id: string;
-  project_id: string;
+  project_id: string | null;
   title: string;
   proposal_text: string;
   mode: 'basic' | 'standard' | 'in_depth';
@@ -120,9 +121,20 @@ export type Run = {
 };
 
 export type UsageLimits = {
-  daily_review_run_limit: number;
+  account_type: AccountType;
+  tier_name: string;
+  project_limit: number | null;
+  projects_used: number;
+  projects_remaining: number | null;
+  workflow_total_limit: number | null;
+  workflows_used: number;
+  workflows_remaining: number | null;
+  workflow_weekly_limit: number | null;
+  workflows_started_this_week: number;
+  weekly_workflows_remaining: number | null;
+  daily_review_run_limit: number | null;
   runs_started_today: number;
-  runs_remaining_today: number;
+  runs_remaining_today: number | null;
   resets_at: string;
 };
 
@@ -131,7 +143,7 @@ export type WorkflowSummary = {
   workspace_id: string;
   review_id: string;
   review_title: string;
-  project_id: string;
+  project_id: string | null;
   project_title: string;
   mode: string;
   state: string;

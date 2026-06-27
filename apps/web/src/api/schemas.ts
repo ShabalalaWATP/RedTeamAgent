@@ -66,6 +66,7 @@ export const siteVisitSchema = z.object({
 export const projectSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),
+  created_by_user_id: z.string().nullable().optional(),
   title: z.string(),
   description: z.string()
 });
@@ -73,7 +74,7 @@ export const projectSchema = z.object({
 export const reviewSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),
-  project_id: z.string(),
+  project_id: z.string().nullable(),
   title: z.string(),
   proposal_text: z.string(),
   mode: z.enum(['basic', 'standard', 'in_depth']),
@@ -112,9 +113,20 @@ export const runSchema = z.object({
 });
 
 export const usageLimitsSchema = z.object({
-  daily_review_run_limit: z.number(),
-  runs_started_today: z.number(),
-  runs_remaining_today: z.number(),
+  account_type: z.enum(['owner', 'admin', 'user']).default('user'),
+  tier_name: z.string().default('User'),
+  project_limit: z.number().nullable().default(null),
+  projects_used: z.number().default(0),
+  projects_remaining: z.number().nullable().default(null),
+  workflow_total_limit: z.number().nullable().default(null),
+  workflows_used: z.number().default(0),
+  workflows_remaining: z.number().nullable().default(null),
+  workflow_weekly_limit: z.number().nullable().default(null),
+  workflows_started_this_week: z.number().default(0),
+  weekly_workflows_remaining: z.number().nullable().default(null),
+  daily_review_run_limit: z.number().nullable().default(null),
+  runs_started_today: z.number().default(0),
+  runs_remaining_today: z.number().nullable().default(null),
   resets_at: z.string()
 });
 
@@ -123,7 +135,7 @@ export const workflowSummarySchema = z.object({
   workspace_id: z.string(),
   review_id: z.string(),
   review_title: z.string(),
-  project_id: z.string(),
+  project_id: z.string().nullable(),
   project_title: z.string(),
   mode: z.string(),
   state: z.string(),

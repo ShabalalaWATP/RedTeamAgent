@@ -145,7 +145,7 @@ describe('account and usage controls', () => {
     expect(screen.queryByLabelText(/verification token/i)).not.toBeInTheDocument();
   });
 
-  it('starts from the proposal box and surfaces daily quota errors', async () => {
+  it('starts from the proposal box and surfaces weekly quota errors', async () => {
     storeAuth();
     const user = userEvent.setup();
     let usageCalls = 0;
@@ -174,23 +174,34 @@ describe('account and usage controls', () => {
         });
       }
       if (url.includes('/reviews/review-quota/runs') && init?.method === 'POST') {
-        return jsonResponse({ message: 'Daily review run limit reached.' }, 429);
+        return jsonResponse({ message: 'Weekly workflow limit reached.' }, 429);
       }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
     renderApp('/projects/project-1/reviews/new');
-    expect(await screen.findByText(/1 runs left today/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 left this week/i)).toBeInTheDocument();
     await user.clear(screen.getByLabelText(/^proposal$/i));
     await user.type(screen.getByLabelText(/^proposal$/i), 'Red team this hiring plan.');
     await user.click(screen.getByRole('button', { name: /run review/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Daily review run limit reached.');
-    expect(await screen.findByText(/0 runs left today/i)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Weekly workflow limit reached.');
+    expect(await screen.findByText(/0 left this week/i)).toBeInTheDocument();
   });
 });
 
 function usageResponse(callCount: number) {
   return jsonResponse({
+    account_type: 'user',
+    tier_name: 'User',
+    project_limit: 5,
+    projects_used: 0,
+    projects_remaining: 5,
+    workflow_total_limit: 20,
+    workflows_used: 0,
+    workflows_remaining: 20,
+    workflow_weekly_limit: 1,
+    workflows_started_this_week: callCount > 1 ? 1 : 0,
+    weekly_workflows_remaining: callCount > 1 ? 0 : 1,
     daily_review_run_limit: 1,
     runs_started_today: callCount > 1 ? 1 : 0,
     runs_remaining_today: callCount > 1 ? 0 : 1,

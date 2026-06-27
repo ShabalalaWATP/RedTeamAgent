@@ -33,6 +33,7 @@ def initialise_database() -> None:
             connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
     upgrade_site_account_schema()
+    upgrade_workflow_quota_schema()
 
 
 def upgrade_site_account_schema() -> None:
@@ -59,6 +60,25 @@ def upgrade_site_account_schema() -> None:
                 "AND NOT EXISTS (SELECT 1 FROM users WHERE account_type = 'owner')"
             )
         )
+
+
+def upgrade_workflow_quota_schema() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "projects" in table_names:
+        project_columns = {column["name"] for column in inspector.get_columns("projects")}
+        with engine.begin() as connection:
+            if "created_by_user_id" not in project_columns:
+                connection.execute(text("ALTER TABLE projects ADD COLUMN created_by_user_id VARCHAR(36)"))
+            connection.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_projects_created_by_user_id ON projects (created_by_user_id)")
+            )
+    if "reviews" in table_names and engine.dialect.name == "postgresql":
+        review_columns = {column["name"]: column for column in inspector.get_columns("reviews")}
+        project_column = review_columns.get("project_id")
+        if project_column and not project_column.get("nullable", True):
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE reviews ALTER COLUMN project_id DROP NOT NULL"))
 
 
 def _json_column_default() -> str:

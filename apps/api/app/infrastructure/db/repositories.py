@@ -3,14 +3,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.domain.enums import RunState, SourceState, WorkspaceRole
 from app.infrastructure.auth.security import new_session_expiry
 from app.infrastructure.db import models
+from app.infrastructure.db.evidence_queries import search_evidence_chunks
 from app.infrastructure.db.workflow_summary import workflow_summary
-from app.infrastructure.search.evidence_search import EvidenceCandidate, embedding_for_text, rank_candidates
+from app.infrastructure.search.evidence_search import embedding_for_text
 
 
 class SqlRepository:
@@ -135,8 +136,19 @@ class SqlRepository:
                 .where(models.WorkspaceMembership.user_id == user_id)
             )
         )
-    def create_project(self, workspace_id: str, title: str, description: str) -> models.Project:
-        project = models.Project(workspace_id=workspace_id, title=title, description=description)
+    def create_project(
+        self,
+        workspace_id: str,
+        created_by_user_id: str,
+        title: str,
+        description: str,
+    ) -> models.Project:
+        project = models.Project(
+            workspace_id=workspace_id,
+            created_by_user_id=created_by_user_id,
+            title=title,
+            description=description,
+        )
         self.session.add(project)
         self.session.flush()
         return project
@@ -146,6 +158,10 @@ class SqlRepository:
 
     def list_projects(self, workspace_id: str) -> list[models.Project]:
         return list(self.session.scalars(select(models.Project).where(models.Project.workspace_id == workspace_id)))
+
+    def count_user_projects(self, user_id: str) -> int:
+        statement = select(func.count()).select_from(models.Project).where(models.Project.created_by_user_id == user_id)
+        return int(self.session.scalar(statement) or 0)
 
     def update_project(self, project_id: str, title: str, description: str) -> models.Project:
         project = self.session.get(models.Project, project_id)
@@ -161,7 +177,7 @@ class SqlRepository:
         if project:
             self.session.delete(project)
 
-    def create_review(self, workspace_id: str, project_id: str, data: dict[str, Any]) -> models.Review:
+    def create_review(self, workspace_id: str, project_id: str | None, data: dict[str, Any]) -> models.Review:
         review = models.Review(workspace_id=workspace_id, project_id=project_id, **data)
         self.session.add(review)
         self.session.flush()
@@ -207,37 +223,7 @@ class SqlRepository:
     def search_evidence_chunks(
         self, workspace_id: str, review_id: str, query: str, limit: int
     ) -> list[dict[str, object]]:
-        rows = self._evidence_rows(workspace_id, review_id, query, max(limit * 4, limit))
-        candidates = [
-            EvidenceCandidate(
-                source_id=source.id,
-                source_filename=source.filename,
-                locator=chunk.locator,
-                text=chunk.text,
-                embedding=[float(value) for value in chunk.embedding],
-            )
-            for chunk, source in rows
-        ]
-        return rank_candidates(candidates, query, limit)
-
-    def _evidence_rows(self, workspace_id: str, review_id: str, query: str, limit: int) -> list[Any]:
-        statement = (
-            select(models.EvidenceChunk, models.Source)
-            .join(models.Source, models.Source.id == models.EvidenceChunk.source_id)
-            .where(models.EvidenceChunk.workspace_id == workspace_id, models.Source.review_id == review_id)
-        )
-        if self.session.get_bind().dialect.name == "postgresql" and query.strip():
-            ts_query = func.websearch_to_tsquery("english", query)
-            vector = func.to_tsvector("english", models.EvidenceChunk.text)
-            query_embedding = embedding_for_text(query)
-            ranked = statement.where(vector.op("@@")(ts_query)).order_by(
-                desc(func.ts_rank_cd(vector, ts_query)),
-                models.EvidenceChunk.embedding.cosine_distance(query_embedding),
-            )
-            rows = list(self.session.execute(ranked.limit(limit)).all())
-            if rows:
-                return rows
-        return list(self.session.execute(statement.limit(limit)).all())
+        return search_evidence_chunks(self.session, workspace_id, review_id, query, limit)
 
     def create_context_pack(self, workspace_id: str, data: dict[str, Any]) -> models.ContextPack:
         pack = models.ContextPack(workspace_id=workspace_id, **data)
@@ -331,9 +317,15 @@ class SqlRepository:
         self.session.flush()
         return run
 
-    def count_user_runs_since(self, user_id: str, since: datetime) -> int:
-        statement = select(func.count()).select_from(models.Run).where(
-            models.Run.created_by_user_id == user_id, models.Run.created_at >= since
+    def count_user_workflows(self, user_id: str) -> int:
+        statement = select(func.count()).select_from(models.Run).where(models.Run.created_by_user_id == user_id)
+        return int(self.session.scalar(statement) or 0)
+
+    def count_user_workflow_creations_since(self, user_id: str, since: datetime) -> int:
+        statement = select(func.count()).select_from(models.AuditEvent).where(
+            models.AuditEvent.actor_user_id == user_id,
+            models.AuditEvent.action == "run.started",
+            models.AuditEvent.created_at >= since,
         )
         return int(self.session.scalar(statement) or 0)
 
@@ -347,7 +339,7 @@ class SqlRepository:
         statement = (
             select(models.Run, models.Review, models.Project, models.Report)
             .join(models.Review, models.Review.id == models.Run.review_id)
-            .join(models.Project, models.Project.id == models.Review.project_id)
+            .outerjoin(models.Project, models.Project.id == models.Review.project_id)
             .outerjoin(models.Report, models.Report.run_id == models.Run.id)
             .where(models.Run.workspace_id == workspace_id)
             .order_by(desc(models.Run.created_at))
@@ -363,6 +355,13 @@ class SqlRepository:
             run.state = state
             if usage is not None:
                 run.usage = usage
+
+    def delete_run(self, run_id: str) -> None:
+        self.session.execute(delete(models.Report).where(models.Report.run_id == run_id))
+        self.session.execute(delete(models.RunEvent).where(models.RunEvent.run_id == run_id))
+        run = self.session.get(models.Run, run_id)
+        if run:
+            self.session.delete(run)
 
     def add_run_event(self, run_id: str, state: str, message: str) -> models.RunEvent:
         sequence = len(self.list_run_events(run_id)) + 1

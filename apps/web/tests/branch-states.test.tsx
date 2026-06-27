@@ -133,6 +133,36 @@ describe('unauthenticated and alternate branch states', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('shows workflow delete errors without removing the saved workflow', async () => {
+    const user = userEvent.setup();
+    mockFetch((url, init) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) {
+        return jsonResponse([{
+          id: 'run-1',
+          workspace_id: 'workspace-1',
+          review_id: 'review-1',
+          review_title: 'Saved workflow',
+          project_id: null,
+          project_title: 'Standalone',
+          mode: 'standard',
+          state: 'completed',
+          created_at: '2026-06-24T00:00:00Z',
+          selected_agents: [], top_risks: [],
+          finding_count: 0,
+          has_report: true
+        }]);
+      }
+      if (url.endsWith('/runs/run-1') && init?.method === 'DELETE') return jsonResponse({ message: 'delete failed' }, 500);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
+    renderWithAuth(<WorkflowHistory />);
+    expect(await screen.findByText('Saved workflow')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('delete failed');
+    expect(screen.getByText('Saved workflow')).toBeInTheDocument();
+  });
+
   it('keeps disabled provider model actions defensive without selections', async () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch((url) => {

@@ -8,12 +8,12 @@ from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
 from app.application.provider_governance import ProviderGovernanceService
 from app.application.report_assurance import enforce_quality_gate, quality_assurance_record
-from app.application.search_service import DeterministicSearchProvider, research_queries
+from app.application.report_composer import compose_report
+from app.application.usage_policy import UsagePolicy
 from app.application.workflow_retry import retry_policy_snapshot
-from app.domain.agents import AGENT_LABELS
-from app.domain.enums import AgentKey, ReviewMode, RunState
+from app.domain.enums import ReviewMode, RunState, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError, QualityGateError, RateLimitExceeded
-from app.domain.policies import route_agents
+from app.domain.policies import require_write, route_agents
 
 STAGES = [
     RunState.INTAKE,
@@ -35,16 +35,17 @@ class WorkflowService:
         repo: RepositoryPorts,
         registry: Any,
         governance: ProviderGovernanceService | None = None,
-        daily_run_limit: int = 20,
+        usage_policy: UsagePolicy | None = None,
     ) -> None:
         self.repo = repo
         self.registry = registry
         self.governance = governance
-        self.daily_run_limit = daily_run_limit
+        self.usage_policy = usage_policy or UsagePolicy()
 
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
+        user = self._require_user(user_id)
         review = self._require_review(user_id, review_id)
-        self._enforce_daily_run_quota(user_id)
+        self._enforce_workflow_quota(user)
         source_types = [source.content_type for source in self.repo.list_sources(review.id)]
         decision = route_agents(
             ReviewMode(review.mode),
@@ -75,12 +76,29 @@ class WorkflowService:
         return self.repo.get_run(run.id)
 
     def usage_limits(self, user_id: str) -> dict[str, Any]:
-        runs_started_today = self.repo.count_user_runs_since(user_id, self._today_start())
+        user = self._require_user(user_id)
+        quota = self.usage_policy.quota_for(getattr(user, "account_type", "user"))
+        week_start = self._week_start()
+        projects_used = self.repo.count_user_projects(user_id)
+        workflows_used = self.repo.count_user_workflows(user_id)
+        workflows_started_this_week = self.repo.count_user_workflow_creations_since(user_id, week_start)
+        weekly_remaining = quota.remaining_weekly_workflows(workflows_started_this_week)
         return {
-            "daily_review_run_limit": self.daily_run_limit,
-            "runs_started_today": runs_started_today,
-            "runs_remaining_today": max(0, self.daily_run_limit - runs_started_today),
-            "resets_at": self._today_start() + timedelta(days=1),
+            "account_type": quota.account_type,
+            "tier_name": quota.tier_name,
+            "project_limit": quota.project_limit,
+            "projects_used": projects_used,
+            "projects_remaining": quota.remaining_projects(projects_used),
+            "workflow_total_limit": quota.workflow_total_limit,
+            "workflows_used": workflows_used,
+            "workflows_remaining": quota.remaining_workflows(workflows_used),
+            "workflow_weekly_limit": quota.workflow_weekly_limit,
+            "workflows_started_this_week": workflows_started_this_week,
+            "weekly_workflows_remaining": weekly_remaining,
+            "resets_at": week_start + timedelta(days=7),
+            "daily_review_run_limit": quota.workflow_weekly_limit,
+            "runs_started_today": workflows_started_this_week,
+            "runs_remaining_today": weekly_remaining,
         }
 
     def execute_run(self, run_id: str, actor_user_id: str | None = None) -> Any:
@@ -115,7 +133,7 @@ class WorkflowService:
             self.repo.commit()
             return self.repo.get_run(run.id)
         routing_plan = run.routing_plan if isinstance(run.routing_plan, dict) else {}
-        report_data = self._compose_report(review, run.id, routing_plan)
+        report_data = compose_report(self.repo, review, run.id, routing_plan)
         report_data["quality_assurance"] = quality_assurance_record(report_data)
         try:
             enforce_quality_gate(report_data)
@@ -141,6 +159,13 @@ class WorkflowService:
             self.repo.audit(run.workspace_id, user_id, "run.cancelled", {"run_id": run.id})
             self.repo.commit()
         return self.repo.get_run(run.id)
+
+    def delete_workflow(self, user_id: str, run_id: str) -> None:
+        run = self._require_run(user_id, run_id)
+        self._require_write(user_id, run.workspace_id)
+        self.repo.delete_run(run.id)
+        self.repo.audit(run.workspace_id, user_id, "run.deleted", {"run_id": run.id})
+        self.repo.commit()
 
     def get_run(self, user_id: str, run_id: str) -> Any:
         return self._require_run(user_id, run_id)
@@ -172,120 +197,6 @@ class WorkflowService:
             "changed_recommendations": self._changed(left.data, right.data, "recommended_actions"),
         }
 
-    def _compose_report(self, review: Any, run_id: str, routing_plan: dict[str, Any]) -> dict[str, Any]:
-        sources = self.repo.list_sources(review.id)
-        source_labels = [f"{source.filename}:{source.id}" for source in sources]
-        evidence_query = " ".join([review.title, review.proposal_text, *review.focus_chips])
-        retrieved_evidence = self.repo.search_evidence_chunks(review.workspace_id, review.id, evidence_query, 5)
-        primary_evidence = retrieved_evidence[0] if retrieved_evidence else None
-        evidence_label = str(primary_evidence["locator"]) if primary_evidence else "assumption"
-        evidence_type = "source" if primary_evidence else "assumption"
-        context_packs = self._safe_list(routing_plan.get("context_packs", []))
-        external_sources = self._external_sources(review)
-        findings = [
-            {
-                "id": "finding-1",
-                "title": "Review evidence needs explicit ownership before launch.",
-                "severity": "medium",
-                "confidence": "high" if primary_evidence else "low",
-                "agent": "operations_delivery",
-                "category": "delivery",
-                "evidence_type": evidence_type,
-                "evidence_label": evidence_label,
-                "evidence_excerpt": str(primary_evidence["excerpt"]) if primary_evidence else "",
-                "summary": "The proposal should assign owners for validation, rollout and operational follow-up.",
-                "recommended_action": "Assign named owners and acceptance criteria for each high-risk dependency.",
-            }
-        ]
-        action_items = [
-            {
-                "id": "action-1",
-                "title": "Assign validation owners",
-                "status": "open",
-                "owner": "Unassigned",
-                "due": None,
-                "source": evidence_label,
-            }
-        ]
-        return {
-            "id": f"report-{run_id}",
-            "title": review.title,
-            "provisional_recommendation": "Proceed with controls and validation before irreversible rollout.",
-            "executive_summary": "The review found manageable risk with evidence gaps that need active closure.",
-            "coverage_map": {
-                "sources": len(sources),
-                "agents": routing_plan["selected_agents"],
-                "retrieved_evidence": len(retrieved_evidence),
-                "external_sources": len(external_sources),
-            },
-            "top_risks": [finding["title"] for finding in findings],
-            "dependencies": ["Provider routing policy", "Evidence quality", "Operational ownership"],
-            "blockers": [] if primary_evidence else ["No retrievable evidence was available."],
-            "assumptions": ["Report is decision support and not professional sign-off."],
-            "evidence_gaps": [] if primary_evidence else ["No source-backed evidence was retrieved."],
-            "specialist_findings": [
-                {"agent": key, "label": AGENT_LABELS[AgentKey(key)]}
-                for key in routing_plan["selected_agents"]
-                if key in {agent.value for agent in AgentKey}
-            ],
-            "context_packs": context_packs,
-            "agent_cards": self._safe_list(routing_plan.get("agent_cards", [])),
-            "assurance_agents": self._safe_list(routing_plan.get("assurance_cards", [])),
-            "tool_manifest": routing_plan.get("tool_manifest", {}),
-            "context_strategy": routing_plan.get("context_strategy", {}),
-            "findings": findings,
-            "retrieved_evidence": retrieved_evidence,
-            "external_sources": external_sources,
-            "risk_matrix": [
-                {
-                    "risk": finding["title"],
-                    "likelihood": "medium",
-                    "impact": finding["severity"],
-                    "colour_independent_label": "M/M",
-                }
-                for finding in findings
-            ],
-            "dependency_graph": [
-                {"from": "Evidence quality", "to": "Operational ownership"},
-                {"from": "Provider routing policy", "to": "Evidence quality"},
-            ],
-            "time_horizons": {
-                "near": ["Close ownership and evidence gaps before rollout."],
-                "mid": ["Run validation experiments against assumptions."],
-                "long": ["Monitor second-order stakeholder and operating impacts."],
-            },
-            "evidence_quality": {"retrieval_score": retrieved_evidence[0]["score"] if retrieved_evidence else 0.0},
-            "cross_agent_disagreements": [
-                {
-                    "topic": "Proceed timing",
-                    "positions": ["Operations favours gated rollout.", "Policy asks for stronger evidence first."],
-                }
-            ],
-            "strongest_case_for": "A staged rollout can reduce uncertainty while preserving reversibility.",
-            "strongest_case_against": (
-                "Proceeding without named owners can turn manageable gaps into operational failure."
-            ),
-            "pre_mortem": [
-                "The decision fails because rollback ownership and support coverage were assumed, not verified."
-            ],
-            "scenarios": {
-                "best": "Validation closes key gaps and the rollout proceeds with low disruption.",
-                "base": "Some evidence remains incomplete, requiring a narrower launch.",
-                "worst": "Unsupported assumptions create avoidable operational and reputational impact.",
-            },
-            "validation_experiments": [
-                "Run a tabletop rollback rehearsal.",
-                "Ask support to simulate peak incident coverage.",
-            ],
-            "action_items": action_items,
-            "recommended_actions": [finding["recommended_action"] for finding in findings],
-            "sources": source_labels,
-            "methodology": (
-                "Deterministic Stage 2 workflow with hybrid evidence retrieval, optional external research, "
-                "full specialist routing, source-linked quality gate and context-pack version snapshot."
-            ),
-        }
-
     def _validate_governance(self, workspace_id: str, actor_user_id: str) -> None:
         if self.governance is None:
             return
@@ -299,31 +210,27 @@ class WorkflowService:
             actor_user_id,
         )
 
-    def _external_sources(self, review: Any) -> list[dict[str, Any]]:
-        if not review.external_research:
-            return []
-        provider = DeterministicSearchProvider()
-        results: list[dict[str, Any]] = []
-        for query in research_queries(review.title, review.focus_chips, review.private_research):
-            results.extend(provider.search(query, review.domain_allowlist, review.domain_blocklist))
-        return results
-
-    @staticmethod
-    def _safe_list(value: object) -> list[dict[str, Any]]:
-        if not isinstance(value, list):
-            return []
-        return [item for item in value if isinstance(item, dict)]
-
-    def _enforce_daily_run_quota(self, user_id: str) -> None:
-        if self.repo.count_user_runs_since(user_id, self._today_start()) >= self.daily_run_limit:
+    def _enforce_workflow_quota(self, user: Any) -> None:
+        user_id = str(user.id)
+        quota = self.usage_policy.quota_for(getattr(user, "account_type", "user"))
+        workflows_used = self.repo.count_user_workflows(user_id)
+        if quota.workflow_total_limit is not None and workflows_used >= quota.workflow_total_limit:
             raise RateLimitExceeded(
-                "Daily review run limit reached. Try again tomorrow or increase DAILY_REVIEW_RUN_LIMIT."
+                f"{quota.tier_name} workflow storage limit reached ({quota.workflow_total_limit}). "
+                "Delete an unused workflow before creating another."
+            )
+        weekly_used = self.repo.count_user_workflow_creations_since(user_id, self._week_start())
+        if quota.workflow_weekly_limit is not None and weekly_used >= quota.workflow_weekly_limit:
+            raise RateLimitExceeded(
+                f"{quota.tier_name} weekly workflow limit reached ({quota.workflow_weekly_limit}). "
+                "Wait until the weekly allowance resets before starting another workflow."
             )
 
     @staticmethod
-    def _today_start() -> datetime:
+    def _week_start() -> datetime:
         now = datetime.now(UTC)
-        return now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start = now - timedelta(days=now.weekday())
+        return start.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def _routing_metadata(self, review: Any, selected_agents: list[str]) -> dict[str, Any]:
         models = self.repo.list_models(review.workspace_id)
@@ -377,9 +284,21 @@ class WorkflowService:
         self._require_member(user_id, review.workspace_id)
         return review
 
+    def _require_user(self, user_id: str) -> Any:
+        user = self.repo.get_user(user_id)
+        if user is None:
+            raise AuthorisationError("Workspace access denied.")
+        return user
+
     def _require_member(self, user_id: str, workspace_id: str) -> None:
         if self.repo.membership_role(workspace_id, user_id) is None:
             raise AuthorisationError("Workspace access denied.")
+
+    def _require_write(self, user_id: str, workspace_id: str) -> None:
+        role = self.repo.membership_role(workspace_id, user_id)
+        if role is None:
+            raise AuthorisationError("Workspace access denied.")
+        require_write(WorkspaceRole(role))
 
     def _is_cancelled(self, run_id: str) -> bool:
         run = self.repo.get_run(run_id)

@@ -8,7 +8,7 @@ from app.infrastructure.db import models
 def workflow_summary(
     run: models.Run,
     review: models.Review,
-    project: models.Project,
+    project: models.Project | None,
     report: models.Report | None,
 ) -> dict[str, Any]:
     report_data = report.data if report else {}
@@ -22,8 +22,8 @@ def workflow_summary(
         "workspace_id": run.workspace_id,
         "review_id": run.review_id,
         "review_title": review.title,
-        "project_id": project.id,
-        "project_title": project.title,
+        "project_id": project.id if project else None,
+        "project_title": project.title if project else "Standalone",
         "mode": review.mode,
         "state": run.state,
         "created_at": run.created_at,

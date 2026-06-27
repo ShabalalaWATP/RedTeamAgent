@@ -71,7 +71,7 @@ Edit `.env.production`:
 - Set `COOKIE_SECURE=true`.
 - Set `CORS_ORIGINS=https://your-domain`.
 - Set `PUBLIC_APP_URL=https://your-domain`.
-- Set `DAILY_REVIEW_RUN_LIMIT` to the number of review runs one user may start per UTC day.
+- Set `USER_PROJECT_LIMIT`, `USER_WORKFLOW_TOTAL_LIMIT`, `USER_WORKFLOW_WEEKLY_LIMIT` and `ADMIN_USAGE_MULTIPLIER`.
 - Set `LOGIN_RATE_LIMIT_PER_MINUTE`, `AUTH_EMAIL_RATE_LIMIT_PER_HOUR`, `AUTH_IP_RATE_LIMIT_PER_MINUTE` and `EXPENSIVE_RATE_LIMIT_PER_MINUTE`.
 - To enable the built-in one-question challenge without external keys, set `CAPTCHA_REQUIRED=true` and `CAPTCHA_PROVIDER=challenge`.
 - To use Cloudflare Turnstile instead, create a Turnstile widget, set `CAPTCHA_REQUIRED=true`, set `CAPTCHA_PROVIDER=turnstile`, set `TURNSTILE_SECRET_KEY` and set `VITE_TURNSTILE_SITE_KEY`.

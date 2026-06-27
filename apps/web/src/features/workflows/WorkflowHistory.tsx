@@ -1,4 +1,4 @@
-import { History, ListChecks } from 'lucide-react';
+import { History, ListChecks, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
@@ -18,7 +18,7 @@ export function WorkflowHistory() {
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -28,23 +28,20 @@ export function WorkflowHistory() {
       .catch((err) => setError((err as Error).message));
   }, [auth?.workspaceId]);
 
-  const startWorkflow = async () => {
-    if (!auth) return;
+  const startWorkflow = () => {
+    navigate('/reviews/new');
+  };
+
+  const deleteWorkflow = async (workflowId: string) => {
     setError(null);
-    setStarting(true);
+    setDeletingId(workflowId);
     try {
-      const projects = await api.listProjects(auth.workspaceId);
-      const project = projects[0] ?? await api.createProject(
-        auth.csrfToken,
-        auth.workspaceId,
-        'General workflows',
-        'Default group for workflows that do not need a project.'
-      );
-      navigate(`/projects/${project.id}/reviews/new`);
+      await api.deleteWorkflow(auth!.csrfToken, workflowId);
+      setWorkflows((current) => current.filter((workflow) => workflow.id !== workflowId));
     } catch (err) {
       setError((err as Error).message);
     } finally {
-      setStarting(false);
+      setDeletingId(null);
     }
   };
 
@@ -55,9 +52,7 @@ export function WorkflowHistory() {
           <h1>Workflows</h1>
           <p className="muted">Start a red-team review or reopen previous work.</p>
         </div>
-        <Button type="button" variant="primary" onClick={startWorkflow} disabled={starting}>
-          {starting ? 'Starting...' : 'Start workflow'}
-        </Button>
+        <Button type="button" variant="primary" onClick={startWorkflow}>Start workflow</Button>
       </div>
       <ErrorState message={error} />
       <div className="panel stack">
@@ -95,9 +90,19 @@ export function WorkflowHistory() {
                     <p className="muted">No top risks recorded yet.</p>
                   )}
                 </div>
-                <Button asLink to={`/runs/${workflow.id}`} disabled={!workflow.has_report}>
-                  <ListChecks size={16} /> Open report
-                </Button>
+                <div className="row">
+                  <Button asLink to={`/runs/${workflow.id}`}>
+                    <ListChecks size={16} /> Open workflow
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => deleteWorkflow(workflow.id)}
+                    disabled={deletingId === workflow.id}
+                  >
+                    <Trash2 size={16} /> {deletingId === workflow.id ? 'Deleting' : 'Delete'}
+                  </Button>
+                </div>
               </article>
             ))}
           </div>

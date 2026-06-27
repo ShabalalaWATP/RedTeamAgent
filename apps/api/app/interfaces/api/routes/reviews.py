@@ -20,6 +20,7 @@ from app.interfaces.api.schemas import (
     ReviewCreate,
     ReviewView,
     SourceView,
+    StandaloneReviewCreate,
     WebsiteSourceRequest,
     source_view,
 )
@@ -35,6 +36,17 @@ def create_review(
     service: Annotated[ReviewService, Depends(review_service)],
 ) -> ReviewView:
     review = service.create_review(context.user.id, project_id, payload.model_dump())
+    return ReviewView.model_validate(review)
+
+
+@router.post("/reviews", response_model=ReviewView, dependencies=[Depends(require_csrf)])
+def create_standalone_review(
+    payload: StandaloneReviewCreate,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ReviewService, Depends(review_service)],
+) -> ReviewView:
+    data = payload.model_dump(exclude={"workspace_id"})
+    review = service.create_standalone_review(context.user.id, payload.workspace_id, data)
     return ReviewView.model_validate(review)
 
 

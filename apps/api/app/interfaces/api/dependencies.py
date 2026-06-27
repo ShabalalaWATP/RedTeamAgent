@@ -18,6 +18,7 @@ from app.application.project_service import ProjectService
 from app.application.provider_governance import ProviderGovernanceService
 from app.application.provider_service import ProviderService
 from app.application.review_service import ReviewService
+from app.application.usage_policy import UsagePolicy
 from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
@@ -90,6 +91,15 @@ def email_sender(settings: Annotated[Settings, Depends(get_settings)]) -> EmailS
     return NullEmailSender()
 
 
+def usage_policy(settings: Annotated[Settings, Depends(get_settings)]) -> UsagePolicy:
+    return UsagePolicy(
+        user_project_limit=settings.user_project_limit,
+        user_workflow_total_limit=settings.user_workflow_total_limit,
+        user_workflow_weekly_limit=settings.user_workflow_weekly_limit,
+        admin_usage_multiplier=settings.admin_usage_multiplier,
+    )
+
+
 def mfa_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     passwords: Annotated[PasswordService, Depends(password_service)],
@@ -110,8 +120,11 @@ def auth_service(
     return AuthService(repo, passwords, tokens, sender, settings.public_app_url, settings.is_local, mfa)
 
 
-def project_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> ProjectService:
-    return ProjectService(repo)
+def project_service(
+    repo: Annotated[SqlRepository, Depends(get_repo)],
+    policy: Annotated[UsagePolicy, Depends(usage_policy)],
+) -> ProjectService:
+    return ProjectService(repo, policy)
 
 
 def evaluation_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> EvaluationService:
@@ -149,9 +162,9 @@ def workflow_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     governance: Annotated[ProviderGovernanceService, Depends(provider_governance)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    policy: Annotated[UsagePolicy, Depends(usage_policy)],
 ) -> WorkflowService:
-    return WorkflowService(repo, registry, governance, settings.daily_review_run_limit)
+    return WorkflowService(repo, registry, governance, policy)
 
 
 def enterprise_service(

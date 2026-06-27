@@ -27,7 +27,7 @@ export function updatedProjectResponse() {
   };
 }
 
-export function reviewResponse() {
+export function reviewResponse(overrides: Record<string, unknown> = {}) {
   return {
     id: 'review-1',
     workspace_id: 'workspace-1',
@@ -39,7 +39,8 @@ export function reviewResponse() {
     external_research: true,
     private_research: true,
     domain_allowlist: ['example.com'],
-    domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
+    domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254'],
+    ...overrides
   };
 }
 

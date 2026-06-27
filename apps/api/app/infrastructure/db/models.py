@@ -84,6 +84,7 @@ class Project(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    created_by_user_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
     title: Mapped[str] = mapped_column(String(220))
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -95,7 +96,11 @@ class Review(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
+    )
     title: Mapped[str] = mapped_column(String(220))
     proposal_text: Mapped[str] = mapped_column(Text)
     mode: Mapped[str] = mapped_column(String(40))

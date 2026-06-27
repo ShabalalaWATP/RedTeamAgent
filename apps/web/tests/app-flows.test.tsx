@@ -128,14 +128,7 @@ describe('RedTeamAgent app flows', () => {
           domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
         });
       }
-      if (url.includes('/usage/limits')) {
-        return jsonResponse({
-          daily_review_run_limit: 20,
-          runs_started_today: 0,
-          runs_remaining_today: 20,
-          resets_at: '2026-06-25T00:00:00Z'
-        });
-      }
+      if (url.includes('/usage/limits')) return jsonResponse(usageLimits());
       if (url.includes('/sources/text')) {
         return jsonResponse({ id: 'source-1', filename: 'proposal.md', content_type: 'text/markdown', state: 'ingested', metadata: {}, warnings: [] });
       }
@@ -282,7 +275,9 @@ describe('RedTeamAgent app flows', () => {
 
   it('shows previous workflows for the signed-in account', async () => {
     storeAuth();
-    mockFetch((url) => {
+    const user = userEvent.setup();
+    let deleted = false;
+    mockFetch((url, init) => {
       if (url.includes('/workspaces/workspace-1/workflows')) {
         return jsonResponse([
           {
@@ -302,13 +297,20 @@ describe('RedTeamAgent app flows', () => {
           }
         ]);
       }
+      if (url.endsWith('/runs/run-1') && init?.method === 'DELETE') {
+        deleted = true;
+        return jsonResponse(null, 204);
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/workflows');
     expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Previous workflows' })).toBeInTheDocument();
     expect(screen.getByText('Essay argument review')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
+    expect(screen.getByRole('link', { name: /open workflow/i })).toHaveAttribute('href', '/runs/run-1');
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await waitFor(() => expect(screen.queryByText('Essay argument review')).not.toBeInTheDocument());
+    expect(deleted).toBe(true);
   });
 
   it('starts a workflow without requiring a project first', async () => {
@@ -316,26 +318,18 @@ describe('RedTeamAgent app flows', () => {
     const user = userEvent.setup();
     mockFetch((url, init) => {
       if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
-      if (url.includes('/projects?workspace_id=')) return jsonResponse([]);
-      if (url.endsWith('/projects') && init?.method === 'POST') {
-        expect(JSON.parse(String(init.body))).toMatchObject({
-          title: 'General workflows',
-          description: 'Default group for workflows that do not need a project.'
-        });
-        return jsonResponse({
-          id: 'project-1',
-          workspace_id: authState.workspaceId,
-          title: 'General workflows',
-          description: 'Default group for workflows that do not need a project.'
-        });
-      }
       if (url.includes('/context-packs?')) return jsonResponse([]);
-      if (url.includes('/usage/limits')) {
+      if (url.includes('/usage/limits')) return jsonResponse(usageLimits());
+      if (url.endsWith('/reviews') && init?.method === 'POST') {
+        expect(JSON.parse(String(init.body))).toMatchObject({ workspace_id: authState.workspaceId });
         return jsonResponse({
-          daily_review_run_limit: 20,
-          runs_started_today: 0,
-          runs_remaining_today: 20,
-          resets_at: '2026-06-25T00:00:00Z'
+          id: 'review-standalone',
+          workspace_id: authState.workspaceId,
+          project_id: null,
+          title: 'Decision readiness review',
+          proposal_text: 'proposal',
+          mode: 'standard',
+          focus_chips: ['security']
         });
       }
       return jsonResponse({ message: 'unexpected' }, 500);
@@ -344,52 +338,48 @@ describe('RedTeamAgent app flows', () => {
     renderApp('/workflows');
     await user.click(await screen.findByRole('button', { name: /start workflow/i }));
     expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
+    expect(screen.getByText('Standalone workflow')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /create review/i }));
+    expect(await screen.findByText('Review created')).toBeInTheDocument();
   });
 
-  it('starts a workflow in an existing optional project group', async () => {
+  it('does not fetch projects when starting a standalone workflow', async () => {
     storeAuth();
     const user = userEvent.setup();
     const requests: string[] = [];
     mockFetch((url, init) => {
       requests.push(`${init?.method ?? 'GET'} ${url}`);
       if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
-      if (url.includes('/projects?workspace_id=')) {
-        return jsonResponse([{
-          id: 'project-existing',
-          workspace_id: authState.workspaceId,
-          title: 'Decision reviews',
-          description: ''
-        }]);
-      }
       if (url.includes('/context-packs?')) return jsonResponse([]);
-      if (url.includes('/usage/limits')) {
-        return jsonResponse({
-          daily_review_run_limit: 20,
-          runs_started_today: 0,
-          runs_remaining_today: 20,
-          resets_at: '2026-06-25T00:00:00Z'
-        });
-      }
+      if (url.includes('/usage/limits')) return jsonResponse(usageLimits());
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
     renderApp('/workflows');
     await user.click(await screen.findByRole('button', { name: /start workflow/i }));
     expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
-    expect(requests.some((request) => request.includes('POST http://localhost:8000/projects'))).toBe(false);
+    expect(requests.some((request) => request.includes('/projects'))).toBe(false);
   });
 
-  it('shows an error when workflow launch cannot load projects', async () => {
-    storeAuth();
-    const user = userEvent.setup();
-    mockFetch((url) => {
-      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
-      if (url.includes('/projects?workspace_id=')) return jsonResponse({ message: 'project list failed' }, 503);
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-
-    renderApp('/workflows');
-    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('project list failed');
-  });
 });
+
+function usageLimits(overrides: Record<string, unknown> = {}) {
+  return {
+    account_type: 'user',
+    tier_name: 'User',
+    project_limit: 5,
+    projects_used: 0,
+    projects_remaining: 5,
+    workflow_total_limit: 20,
+    workflows_used: 0,
+    workflows_remaining: 20,
+    workflow_weekly_limit: 10,
+    workflows_started_this_week: 0,
+    weekly_workflows_remaining: 10,
+    daily_review_run_limit: 10,
+    runs_started_today: 0,
+    runs_remaining_today: 10,
+    resets_at: '2026-06-25T00:00:00Z',
+    ...overrides
+  };
+}

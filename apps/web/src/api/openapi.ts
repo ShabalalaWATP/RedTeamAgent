@@ -262,6 +262,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Standalone Review */
+        post: operations["create_standalone_review_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/{review_id}/sources/text": {
         parameters: {
             query?: never;
@@ -566,7 +583,8 @@ export interface paths {
         get: operations["get_run_runs__run_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Workflow */
+        delete: operations["delete_workflow_runs__run_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -685,6 +703,59 @@ export interface paths {
         put?: never;
         /** Run Stage2 Evaluation */
         post: operations["run_stage2_evaluation_workspaces__workspace_id__evaluations_stage2_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/site-admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_site_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/site-admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update User */
+        put: operations["update_user_site_admin_users__user_id__put"];
+        post?: never;
+        /** Delete User */
+        delete: operations["delete_user_site_admin_users__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/site-admin/visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Visits */
+        get: operations["list_visits_site_admin_visits_get"];
+        put?: never;
+        /** Record Visit */
+        post: operations["record_visit_site_admin_visits_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1964,6 +2035,8 @@ export interface components {
             id: string;
             /** Workspace Id */
             workspace_id: string;
+            /** Created By User Id */
+            created_by_user_id?: string | null;
             /** Title */
             title: string;
             /** Description */
@@ -2213,7 +2286,7 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
             /** Project Id */
-            project_id: string;
+            project_id: string | null;
             /** Title */
             title: string;
             /** Proposal Text */
@@ -2382,6 +2455,100 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** SiteUserUpdate */
+        SiteUserUpdate: {
+            /** Account Type */
+            account_type?: ("owner" | "admin" | "user") | null;
+            /** Account Status */
+            account_status?: ("active" | "suspended" | "banned" | "deleted") | null;
+            /**
+             * Status Message
+             * @default
+             */
+            status_message: string;
+            /** Admin Scope */
+            admin_scope?: ("none" | "all" | "selected") | null;
+            /** Admin Managed User Ids */
+            admin_managed_user_ids?: string[];
+        };
+        /** SiteUserView */
+        SiteUserView: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Is Verified */
+            is_verified: boolean;
+            /**
+             * Account Type
+             * @enum {string}
+             */
+            account_type: "owner" | "admin" | "user";
+            /**
+             * Account Status
+             * @enum {string}
+             */
+            account_status: "active" | "suspended" | "banned" | "deleted";
+            /**
+             * Status Message
+             * @default
+             */
+            status_message: string;
+            /**
+             * Admin Scope
+             * @default none
+             * @enum {string}
+             */
+            admin_scope: "none" | "all" | "selected";
+            /** Admin Managed User Ids */
+            admin_managed_user_ids?: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Login At */
+            last_login_at?: string | null;
+            /** Last Login Ip */
+            last_login_ip?: string | null;
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /** Last Seen Ip */
+            last_seen_ip?: string | null;
+            /**
+             * Run Count
+             * @default 0
+             */
+            run_count: number;
+        };
+        /** SiteVisitCreate */
+        SiteVisitCreate: {
+            /**
+             * Path
+             * @default /
+             */
+            path: string;
+        };
+        /** SiteVisitView */
+        SiteVisitView: {
+            /** Id */
+            id: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Ip Address */
+            ip_address: string;
+            /** Method */
+            method: string;
+            /** Path */
+            path: string;
+            /** User Agent */
+            user_agent: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** SourceView */
         SourceView: {
             /** Id */
@@ -2403,19 +2570,75 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
+        /** StandaloneReviewCreate */
+        StandaloneReviewCreate: {
+            /** Title */
+            title: string;
+            /** Proposal Text */
+            proposal_text: string;
+            /**
+             * Mode
+             * @default standard
+             * @enum {string}
+             */
+            mode: "basic" | "standard" | "in_depth";
+            /** Focus Chips */
+            focus_chips?: string[];
+            /**
+             * External Research
+             * @default false
+             */
+            external_research: boolean;
+            /**
+             * Private Research
+             * @default true
+             */
+            private_research: boolean;
+            /** Domain Allowlist */
+            domain_allowlist?: string[];
+            /** Domain Blocklist */
+            domain_blocklist?: string[];
+            /** Workspace Id */
+            workspace_id: string;
+        };
         /** UsageLimitsView */
         UsageLimitsView: {
-            /** Daily Review Run Limit */
-            daily_review_run_limit: number;
-            /** Runs Started Today */
-            runs_started_today: number;
-            /** Runs Remaining Today */
-            runs_remaining_today: number;
+            /** Account Type */
+            account_type: string;
+            /** Tier Name */
+            tier_name: string;
+            /** Project Limit */
+            project_limit: number | null;
+            /** Projects Used */
+            projects_used: number;
+            /** Projects Remaining */
+            projects_remaining: number | null;
+            /** Workflow Total Limit */
+            workflow_total_limit: number | null;
+            /** Workflows Used */
+            workflows_used: number;
+            /** Workflows Remaining */
+            workflows_remaining: number | null;
+            /** Workflow Weekly Limit */
+            workflow_weekly_limit: number | null;
+            /** Workflows Started This Week */
+            workflows_started_this_week: number;
+            /** Weekly Workflows Remaining */
+            weekly_workflows_remaining: number | null;
             /**
              * Resets At
              * Format: date-time
              */
             resets_at: string;
+            /** Daily Review Run Limit */
+            daily_review_run_limit?: number | null;
+            /**
+             * Runs Started Today
+             * @default 0
+             */
+            runs_started_today: number;
+            /** Runs Remaining Today */
+            runs_remaining_today?: number | null;
         };
         /** UserView */
         UserView: {
@@ -2428,6 +2651,16 @@ export interface components {
             email: string;
             /** Is Verified */
             is_verified: boolean;
+            /**
+             * Account Type
+             * @default user
+             */
+            account_type: string;
+            /**
+             * Account Status
+             * @default active
+             */
+            account_status: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -2516,7 +2749,7 @@ export interface components {
             /** Review Title */
             review_title: string;
             /** Project Id */
-            project_id: string;
+            project_id: string | null;
             /** Project Title */
             project_title: string;
             /** Mode */
@@ -3121,6 +3354,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReviewCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_standalone_review_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StandaloneReviewCreate"];
             };
         };
         responses: {
@@ -3915,6 +4185,39 @@ export interface operations {
             };
         };
     };
+    delete_workflow_runs__run_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_workflows_workspaces__workspace_id__workflows_get: {
         parameters: {
             query?: never;
@@ -4140,6 +4443,175 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EvaluationResultView"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_site_admin_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteUserView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_site_admin_users__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteUserUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteUserView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_user_site_admin_users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteUserView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_visits_site_admin_visits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteVisitView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_visit_site_admin_visits_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteVisitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

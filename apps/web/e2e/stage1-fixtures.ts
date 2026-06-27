@@ -89,6 +89,17 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (url.pathname === '/usage/limits') {
       await fulfilJson(route, {
+        account_type: 'user',
+        tier_name: 'User',
+        project_limit: 5,
+        projects_used: state.projects.length,
+        projects_remaining: Math.max(0, 5 - state.projects.length),
+        workflow_total_limit: 20,
+        workflows_used: 2,
+        workflows_remaining: 18,
+        workflow_weekly_limit: 10,
+        workflows_started_this_week: 2,
+        weekly_workflows_remaining: 8,
         daily_review_run_limit: 20,
         runs_started_today: 2,
         runs_remaining_today: 18,
@@ -119,6 +130,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (url.pathname === '/projects/project-1/reviews') {
       await fulfilJson(route, reviewResponse());
+      return;
+    }
+    if (url.pathname === '/reviews' && request.method() === 'POST') {
+      await fulfilJson(route, reviewResponse({ project_id: null }));
       return;
     }
     if (url.pathname === '/reviews/review-1/sources/text') {

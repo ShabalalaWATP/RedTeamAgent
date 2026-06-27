@@ -66,6 +66,15 @@ def cancel_run(
     return RunView.model_validate(service.cancel_run(context.user.id, run_id))
 
 
+@router.delete("/runs/{run_id}", status_code=204, dependencies=[Depends(require_csrf)])
+def delete_workflow(
+    run_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[WorkflowService, Depends(workflow_service)],
+) -> None:
+    service.delete_workflow(context.user.id, run_id)
+
+
 @router.get("/runs/{run_id}", response_model=RunView)
 def get_run(
     run_id: str,

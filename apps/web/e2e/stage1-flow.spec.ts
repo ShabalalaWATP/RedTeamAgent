@@ -61,7 +61,7 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Previous workflows' })).toBeVisible();
   await expect(page.getByText('Checkout provider migration')).toBeVisible();
-  await expect(page.getByRole('link', { name: /open report/i })).toHaveAttribute('href', '/runs/run-1');
+  await expect(page.getByRole('link', { name: /open workflow/i })).toHaveAttribute('href', '/runs/run-1');
 });
 
 test('stage 2 core workflow is keyboard operable', async ({ page }) => {

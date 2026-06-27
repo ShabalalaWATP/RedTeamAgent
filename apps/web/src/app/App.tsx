@@ -114,6 +114,7 @@ function AppRoutes() {
           <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
           <Route path="/providers" element={<Navigate to="/settings" replace />} />
           <Route path="/enterprise" element={<Navigate to="/settings" replace />} />
+          <Route path="/reviews/new" element={<NewReviewPage />} />
           <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
           <Route path="/runs/:runId" element={<ReportPage />} />
         </Route>

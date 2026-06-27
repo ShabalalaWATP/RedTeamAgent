@@ -27,6 +27,13 @@ class ReviewService:
         self.repo.commit()
         return review
 
+    def create_standalone_review(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
+        require_write(self._role(user_id, workspace_id))
+        review = self.repo.create_review(workspace_id, None, data)
+        self.repo.audit(workspace_id, user_id, "review.created", {"review_id": review.id, "project_id": None})
+        self.repo.commit()
+        return review
+
     def list_reviews(self, user_id: str, project_id: str) -> list[Any]:
         project = self._require_project_member(user_id, project_id)
         return self.repo.list_reviews(project.id)

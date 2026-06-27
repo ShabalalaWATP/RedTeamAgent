@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     self_hosted_provider_mode: bool = False
     cors_origins: str = "http://localhost:5173"
     max_upload_bytes: int = 10 * 1024 * 1024
-    daily_review_run_limit: int = Field(default=20, ge=0)
+    user_project_limit: int = Field(default=5, ge=0)
+    user_workflow_total_limit: int = Field(default=20, ge=0)
+    user_workflow_weekly_limit: int = Field(default=10, ge=0)
+    admin_usage_multiplier: int = Field(default=3, ge=1)
     public_app_url: str = "http://localhost:5173"
     captcha_required: bool = False
     captcha_provider: Literal["auto", "turnstile", "challenge"] = "auto"

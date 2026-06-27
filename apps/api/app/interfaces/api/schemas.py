@@ -97,6 +97,7 @@ class ProjectUpdate(BaseModel):
 class ProjectView(BaseModel):
     id: str
     workspace_id: str
+    created_by_user_id: str | None = None
     title: str
     description: str
     model_config = ConfigDict(from_attributes=True)
@@ -113,10 +114,14 @@ class ReviewCreate(BaseModel):
     domain_blocklist: list[str] = Field(default_factory=list, max_length=25)
 
 
+class StandaloneReviewCreate(ReviewCreate):
+    workspace_id: str
+
+
 class ReviewView(BaseModel):
     id: str
     workspace_id: str
-    project_id: str
+    project_id: str | None
     title: str
     proposal_text: str
     mode: str
@@ -250,10 +255,21 @@ class RunView(BaseModel):
 
 
 class UsageLimitsView(BaseModel):
-    daily_review_run_limit: int
-    runs_started_today: int
-    runs_remaining_today: int
+    account_type: str
+    tier_name: str
+    project_limit: int | None
+    projects_used: int
+    projects_remaining: int | None
+    workflow_total_limit: int | None
+    workflows_used: int
+    workflows_remaining: int | None
+    workflow_weekly_limit: int | None
+    workflows_started_this_week: int
+    weekly_workflows_remaining: int | None
     resets_at: datetime
+    daily_review_run_limit: int | None = None
+    runs_started_today: int = 0
+    runs_remaining_today: int | None = None
 
 
 class WorkflowSummaryView(BaseModel):
@@ -261,7 +277,7 @@ class WorkflowSummaryView(BaseModel):
     workspace_id: str
     review_id: str
     review_title: str
-    project_id: str
+    project_id: str | None
     project_title: str
     mode: str
     state: str

@@ -91,7 +91,7 @@ Workspace governance can centrally restrict provider adapters, model identifiers
 
 ## Usage Controls
 
-`DAILY_REVIEW_RUN_LIMIT` controls how many AI review runs one signed-in user can start per UTC day. The API enforces this before a run is queued, so direct API calls and browser clicks are covered. Source ingestion and other expensive actions also keep the existing per-minute limiter.
+`USER_PROJECT_LIMIT`, `USER_WORKFLOW_TOTAL_LIMIT` and `USER_WORKFLOW_WEEKLY_LIMIT` define the standard account quotas. The default standard account can keep 5 projects, keep 20 workflows and start 10 workflows per week. `ADMIN_USAGE_MULTIPLIER` defaults to 3, so admin accounts receive triple the standard allowance. Owner accounts are unlimited. Deleting a project or workflow frees the stored quota, while weekly workflow starts are counted from audit history. Source ingestion and other expensive actions also keep the existing per-minute limiter.
 
 ## Admin Settings
 

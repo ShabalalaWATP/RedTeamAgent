@@ -64,8 +64,8 @@ export function NewReviewPage() {
   }, [auth]);
 
   const createReviewDraft = async () => {
-    if (!auth || !projectId) throw new Error('Project or session is missing.');
-    const next = await api.createReview(auth.csrfToken, projectId, {
+    if (!auth) throw new Error('Session is missing.');
+    const body = {
       title,
       proposal_text: proposal,
       mode,
@@ -74,7 +74,10 @@ export function NewReviewPage() {
       private_research: privateResearch,
       domain_allowlist: toList(allowlist),
       domain_blocklist: toList(blocklist)
-    });
+    };
+    const next = projectId
+      ? await api.createReview(auth.csrfToken, projectId, body)
+      : await api.createStandaloneReview(auth.csrfToken, auth.workspaceId, body);
     setReview(next);
     return next;
   };
@@ -173,9 +176,10 @@ export function NewReviewPage() {
           <p className="muted">Use any source material, inspect routing, then run the structured decision workflow.</p>
         </div>
         <Status tone={review ? 'ok' : 'info'}>{review ? 'Review created' : 'Draft'}</Status>
+        <Status tone="info">{projectId ? 'Project workflow' : 'Standalone workflow'}</Status>
         {usage ? (
-          <Status tone={usage.runs_remaining_today > 0 ? 'ok' : 'warn'}>
-            {usage.runs_remaining_today} runs left today
+          <Status tone={isWorkflowQuotaBlocked(usage) ? 'warn' : 'ok'}>
+            {workflowQuotaLabel(usage)}
           </Status>
         ) : null}
       </div>
@@ -284,7 +288,7 @@ export function NewReviewPage() {
               type="button"
               variant="primary"
               onClick={startRun}
-              disabled={starting || !title.trim() || !proposal.trim() || usage?.runs_remaining_today === 0}
+              disabled={starting || !title.trim() || !proposal.trim() || isWorkflowQuotaBlocked(usage)}
             >
               <Play size={16} /> {starting ? 'Starting' : 'Run review'}
             </Button>
@@ -308,4 +312,19 @@ function preview(markdown: string) {
 
 function toList(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function isWorkflowQuotaBlocked(usage: UsageLimits | null) {
+  return usage?.weekly_workflows_remaining === 0 || usage?.workflows_remaining === 0;
+}
+
+function workflowQuotaLabel(usage: UsageLimits) {
+  if (usage.workflow_weekly_limit === null && usage.workflow_total_limit === null) {
+    return 'Unlimited workflows';
+  }
+  return `${remainingLabel(usage.weekly_workflows_remaining)} left this week, ${remainingLabel(usage.workflows_remaining)} saved slots`;
+}
+
+function remainingLabel(value: number | null) {
+  return value === null ? 'unlimited' : String(value);
 }

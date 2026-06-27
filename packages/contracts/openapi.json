@@ -1002,6 +1002,81 @@
         }
       }
     },
+    "/reviews": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Create Standalone Review",
+        "operationId": "create_standalone_review_reviews_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StandaloneReviewCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reviews/{review_id}/sources/text": {
       "post": {
         "tags": [
@@ -2469,6 +2544,71 @@
       }
     },
     "/runs/{run_id}": {
+      "delete": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Delete Workflow",
+        "operationId": "delete_workflow_runs__run_id__delete",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "runs"
@@ -8428,6 +8568,17 @@
             "type": "string",
             "title": "Workspace Id"
           },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -9051,7 +9202,14 @@
             "title": "Workspace Id"
           },
           "project_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Project Id"
           },
           "title": {
@@ -9733,31 +9891,211 @@
         ],
         "title": "SourceView"
       },
+      "StandaloneReviewCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 220,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "proposal_text": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Proposal Text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "basic",
+              "standard",
+              "in_depth"
+            ],
+            "title": "Mode",
+            "default": "standard"
+          },
+          "focus_chips": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Focus Chips"
+          },
+          "external_research": {
+            "type": "boolean",
+            "title": "External Research",
+            "default": false
+          },
+          "private_research": {
+            "type": "boolean",
+            "title": "Private Research",
+            "default": true
+          },
+          "domain_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "title": "Domain Allowlist"
+          },
+          "domain_blocklist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "title": "Domain Blocklist"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "proposal_text",
+          "workspace_id"
+        ],
+        "title": "StandaloneReviewCreate"
+      },
       "UsageLimitsView": {
         "properties": {
-          "daily_review_run_limit": {
-            "type": "integer",
-            "title": "Daily Review Run Limit"
+          "account_type": {
+            "type": "string",
+            "title": "Account Type"
           },
-          "runs_started_today": {
-            "type": "integer",
-            "title": "Runs Started Today"
+          "tier_name": {
+            "type": "string",
+            "title": "Tier Name"
           },
-          "runs_remaining_today": {
+          "project_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Limit"
+          },
+          "projects_used": {
             "type": "integer",
-            "title": "Runs Remaining Today"
+            "title": "Projects Used"
+          },
+          "projects_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projects Remaining"
+          },
+          "workflow_total_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Total Limit"
+          },
+          "workflows_used": {
+            "type": "integer",
+            "title": "Workflows Used"
+          },
+          "workflows_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflows Remaining"
+          },
+          "workflow_weekly_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Weekly Limit"
+          },
+          "workflows_started_this_week": {
+            "type": "integer",
+            "title": "Workflows Started This Week"
+          },
+          "weekly_workflows_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Workflows Remaining"
           },
           "resets_at": {
             "type": "string",
             "format": "date-time",
             "title": "Resets At"
+          },
+          "daily_review_run_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Review Run Limit"
+          },
+          "runs_started_today": {
+            "type": "integer",
+            "title": "Runs Started Today",
+            "default": 0
+          },
+          "runs_remaining_today": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runs Remaining Today"
           }
         },
         "type": "object",
         "required": [
-          "daily_review_run_limit",
-          "runs_started_today",
-          "runs_remaining_today",
+          "account_type",
+          "tier_name",
+          "project_limit",
+          "projects_used",
+          "projects_remaining",
+          "workflow_total_limit",
+          "workflows_used",
+          "workflows_remaining",
+          "workflow_weekly_limit",
+          "workflows_started_this_week",
+          "weekly_workflows_remaining",
           "resets_at"
         ],
         "title": "UsageLimitsView"
@@ -10011,7 +10349,14 @@
             "title": "Review Title"
           },
           "project_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Project Id"
           },
           "project_title": {
