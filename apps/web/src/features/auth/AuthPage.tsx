@@ -30,7 +30,6 @@ const AUTH_FEATURES = [
 type AuthMode = 'login' | 'register' | 'reset';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-const SHOW_LOCAL_AUTH_TOKENS = import.meta.env.MODE !== 'production';
 
 function initialMode(searchParams: URLSearchParams): AuthMode {
   if (searchParams.get('reset_token')) return 'reset';
@@ -59,7 +58,6 @@ export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>(() => initialMode(searchParams));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [verificationToken, setVerificationToken] = useState('');
   const [resetToken, setResetToken] = useState(searchParams.get('reset_token') ?? '');
   const [newPassword, setNewPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -108,23 +106,8 @@ export function AuthPage() {
   const register = async () => {
     setError(null);
     try {
-      const response = await api.register(email, password, captchaToken || undefined);
-      const localToken = SHOW_LOCAL_AUTH_TOKENS ? response.verification_token ?? '' : '';
-      setVerificationToken(localToken);
-      setMessage(
-        localToken ? 'Local verification token issued.' : 'Check your email for the verification link.'
-      );
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  };
-
-  const verify = async () => {
-    setError(null);
-    try {
-      await api.verifyEmail(verificationToken);
-      setMode('login');
-      setMessage('Email verified. Sign in to continue.');
+      await api.register(email, password, captchaToken || undefined);
+      setMessage('Check your email for the verification link.');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -159,12 +142,8 @@ export function AuthPage() {
   const reset = async () => {
     setError(null);
     try {
-      const response = await api.resetPassword(email, captchaToken || undefined);
-      const localToken = SHOW_LOCAL_AUTH_TOKENS ? response.reset_token ?? '' : '';
-      setResetToken(localToken);
-      setMessage(
-        localToken ? 'Local password reset token issued.' : 'If the account exists, a reset link was sent.'
-      );
+      await api.resetPassword(email, captchaToken || undefined);
+      setMessage('If the account exists, a reset link was sent.');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -264,22 +243,8 @@ export function AuthPage() {
             />
           ) : null}
 
-          {SHOW_LOCAL_AUTH_TOKENS && mode === 'register' && verificationToken ? (
-            <div className="auth-inline-panel">
-              <Field label="Verification token" hint="Returned only in local development.">
-                <input value={verificationToken} onChange={(event) => setVerificationToken(event.target.value)} />
-              </Field>
-              <Button type="button" onClick={verify} disabled={!verificationToken}>Verify email</Button>
-            </div>
-          ) : null}
-
           {mode === 'reset' && resetToken ? (
             <div className="auth-inline-panel">
-              {SHOW_LOCAL_AUTH_TOKENS ? (
-                <Field label="Reset token" hint="Returned only in local development.">
-                  <input value={resetToken} onChange={(event) => setResetToken(event.target.value)} />
-                </Field>
-              ) : null}
               <PasswordField
                 label="New password"
                 value={newPassword}

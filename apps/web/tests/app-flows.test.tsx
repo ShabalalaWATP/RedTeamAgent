@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe('RedTeamAgent app flows', () => {
-  it('registers, verifies and logs in with cookie auth metadata', async () => {
+  it('registers and logs in with cookie auth metadata', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
       if (url.includes('/auth/captcha/challenge')) {
@@ -48,8 +48,9 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /create an account/i }));
     await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /create account/i }));
-    expect(await screen.findByText(/token issued/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /verify email/i }));
+    expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /verify email/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /back to sign in/i }));
     await user.click(screen.getByRole('button', { name: /sign in/i }));
     expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();

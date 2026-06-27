@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 describe('account and usage controls', () => {
-  it('shows auth errors, supports reset and updates fields', async () => {
+  it('shows auth errors and requests a password reset link', async () => {
     const user = userEvent.setup();
     mockFetch((url) => {
       if (url.includes('/auth/captcha/challenge')) {
@@ -47,10 +47,8 @@ describe('account and usage controls', () => {
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     await user.type(await screen.findByLabelText(/security check/i), '5');
     await user.click(screen.getByRole('button', { name: /send reset link/i }));
-    expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/new password/i), 'Another-Safe-43!');
-    await user.click(screen.getByRole('button', { name: /confirm reset/i }));
-    expect(await screen.findByText(/password updated/i)).toBeInTheDocument();
+    expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/new password/i)).not.toBeInTheDocument();
   });
 
   it('hides raw validation status on malformed sign-in attempts', async () => {

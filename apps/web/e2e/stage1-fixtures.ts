@@ -295,8 +295,9 @@ export async function signIn(page: Page) {
   await page.getByLabel('Password', { exact: true }).fill(validPassword);
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
-  await page.getByRole('button', { name: 'Verify email' }).click();
+  await expect(page.getByText(/check your email/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Verify email' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to sign in' }).click();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
 }

@@ -15,8 +15,9 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
   await page.getByLabel('Password', { exact: true }).fill(validPassword);
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
-  await page.getByRole('button', { name: 'Verify email' }).click();
+  await expect(page.getByText(/check your email/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Verify email' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to sign in' }).click();
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page.getByRole('heading', { name: 'Workflows', level: 1 })).toBeVisible();
@@ -74,9 +75,9 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: 'Create account' }));
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
-
-  await tabTo(page, page.getByRole('button', { name: 'Verify email' }));
+  await expect(page.getByText(/check your email/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Verify email' })).toHaveCount(0);
+  await tabTo(page, page.getByRole('button', { name: 'Back to sign in' }));
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: 'Sign in' }));
   await page.keyboard.press('Enter');
