@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { contextPackResponse, modelResponse, reportResponse, runResponse } from './app-flow-fixtures';
+import { contextPackResponse, reportResponse, runResponse } from './app-flow-fixtures';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
 
 afterEach(() => {

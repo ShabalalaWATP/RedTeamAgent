@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import boto3
+from botocore.exceptions import ClientError
 
 from app.core.config import Settings
 from app.domain.exceptions import ValidationFailure
@@ -38,7 +39,7 @@ class S3ObjectStorage:
             aws_access_key_id=settings.s3_access_key_id,
             aws_secret_access_key=settings.s3_secret_access_key,
         )
-        self.client.create_bucket(Bucket=self.bucket)
+        self._ensure_bucket()
 
     def put(self, key: str, content: bytes, content_type: str) -> None:
         self.client.put_object(Bucket=self.bucket, Key=key, Body=content, ContentType=content_type)
@@ -49,3 +50,11 @@ class S3ObjectStorage:
         if not isinstance(body, bytes):
             raise TypeError("S3 body did not return bytes.")
         return body
+
+    def _ensure_bucket(self) -> None:
+        try:
+            self.client.create_bucket(Bucket=self.bucket)
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code not in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+                raise

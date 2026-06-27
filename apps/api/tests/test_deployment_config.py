@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings, validate_production_settings
+from app.infrastructure.storage.object_storage import LocalObjectStorage
+from app.interfaces.api import dependencies
 
 
 def test_production_csp_allows_configured_turnstile_origin() -> None:
@@ -94,3 +96,29 @@ def test_production_settings_reject_challenge_captcha_and_plain_smtp() -> None:
     message = str(exc.value)
     assert "CAPTCHA_PROVIDER must be turnstile" in message
     assert "SMTP_STARTTLS must be true" in message
+
+
+def test_object_storage_dependency_uses_local_fallback_without_s3_secret() -> None:
+    settings = Settings(s3_secret_access_key="")
+
+    storage = dependencies.object_storage(settings)
+
+    assert isinstance(storage, LocalObjectStorage)
+
+
+def test_object_storage_dependency_uses_s3_when_credentials_exist(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeS3ObjectStorage:
+        def __init__(self, settings: Settings) -> None:
+            self.settings = settings
+
+    monkeypatch.setattr(dependencies, "S3ObjectStorage", FakeS3ObjectStorage)
+    settings = Settings(
+        s3_endpoint_url="http://minio:9000",
+        s3_access_key_id="minio",
+        s3_secret_access_key="secret",  # noqa: S106 - deterministic test value.
+    )
+
+    storage = dependencies.object_storage(settings)
+
+    assert isinstance(storage, FakeS3ObjectStorage)
+    assert storage.settings is settings

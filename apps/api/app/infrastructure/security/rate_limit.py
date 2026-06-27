@@ -8,7 +8,6 @@ from typing import Protocol
 from redis import Redis
 from redis.exceptions import RedisError
 
-from app.core.config import Settings
 from app.domain.exceptions import RateLimitExceeded
 
 
@@ -62,9 +61,3 @@ class AbuseLimiter:
         key = f"{self.prefix}:rate:{rule.name}:{safe_identity}"
         if self.store.increment(key, rule.window_seconds) > rule.limit:
             raise RateLimitExceeded("Too many requests. Try again later.")
-
-
-def store_for_settings(settings: Settings) -> RateLimitStore:
-    if settings.is_local:
-        return MemoryRateLimitStore()
-    return RedisRateLimitStore(settings.redis_url)

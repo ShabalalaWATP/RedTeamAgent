@@ -52,7 +52,6 @@ describe('unauthenticated and alternate branch states', () => {
   });
 
   it('renders no-auth workflow and no-run report states without network calls', async () => {
-    const user = userEvent.setup();
     const fetchMock = mockFetch(() => jsonResponse({ message: 'unexpected' }, 500));
     renderWithAuth(<WorkflowHistory />);
     expect(screen.getByText('No workflows yet')).toBeInTheDocument();

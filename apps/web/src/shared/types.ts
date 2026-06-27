@@ -343,13 +343,3 @@ export type ApiToken = {
   revoked: boolean;
   plain_token?: string | null;
 };
-
-export type WebhookEndpoint = {
-  id: string;
-  workspace_id: string;
-  name: string;
-  url: string;
-  events: string[];
-  enabled: boolean;
-  signing_secret?: string | null;
-};

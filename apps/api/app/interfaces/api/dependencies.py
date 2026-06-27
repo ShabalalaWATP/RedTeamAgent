@@ -14,6 +14,7 @@ from app.application.enterprise_service import EnterpriseService
 from app.application.evaluation_service import EvaluationService
 from app.application.mfa_service import MfaService
 from app.application.ports.notifications import EmailSender
+from app.application.ports.storage import ObjectStoragePort
 from app.application.project_service import ProjectService
 from app.application.provider_governance import ProviderGovernanceService
 from app.application.provider_service import ProviderService
@@ -34,7 +35,7 @@ from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSen
 from app.infrastructure.providers.adapters import ProviderRegistry
 from app.infrastructure.security.captcha import CaptchaVerifier
 from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule, MemoryRateLimitStore, RedisRateLimitStore
-from app.infrastructure.storage.object_storage import LocalObjectStorage
+from app.infrastructure.storage.object_storage import LocalObjectStorage, S3ObjectStorage
 
 
 @dataclass(frozen=True)
@@ -161,11 +162,17 @@ def provider_service(
     return ProviderService(repo, registry, FernetCredentialVault(settings.app_secret_key), governance)
 
 
+def object_storage(settings: Annotated[Settings, Depends(get_settings)]) -> ObjectStoragePort:
+    if settings.s3_endpoint_url and settings.s3_access_key_id and settings.s3_secret_access_key:
+        return S3ObjectStorage(settings)
+    return LocalObjectStorage(Path(".local-object-storage"))
+
+
 def review_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     settings: Annotated[Settings, Depends(get_settings)],
+    storage: Annotated[ObjectStoragePort, Depends(object_storage)],
 ) -> ReviewService:
-    storage = LocalObjectStorage(Path(".local-object-storage"))
     return ReviewService(repo, storage, SourceExtractor(), SafeExternalSourceIngestor(), settings.max_upload_bytes)
 
 

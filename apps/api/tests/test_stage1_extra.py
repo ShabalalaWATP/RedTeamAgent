@@ -4,6 +4,7 @@ from io import BytesIO
 from typing import Any
 
 import pytest
+from botocore.exceptions import ClientError
 from docx import Document
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
@@ -336,6 +337,14 @@ def test_extractor_storage_and_token_services(tmp_path: Any, monkeypatch: pytest
     s3 = S3ObjectStorage(settings)
     s3.put("key", b"value", "text/plain")
     assert s3.get("key") == b"s3"
+
+    class ExistingBucketClient(FakeS3Client):
+        def create_bucket(self, Bucket: str) -> None:
+            del Bucket
+            raise ClientError({"Error": {"Code": "BucketAlreadyOwnedByYou"}}, "CreateBucket")
+
+    monkeypatch.setattr(object_storage.boto3, "client", lambda *args, **kwargs: ExistingBucketClient())
+    S3ObjectStorage(settings)
 
     passwords = PasswordService()
     password_hash = passwords.hash("Correct-Horse-42!")

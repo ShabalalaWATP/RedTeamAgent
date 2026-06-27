@@ -8,7 +8,7 @@ import { ReportComparisonPanel } from '../src/features/reports/ReportComparisonP
 import { ReportPage } from '../src/features/reports/ReportPage';
 import type { ReportData } from '../src/shared/types';
 import { largeReportResponse, reportResponse, runResponse } from './report-fixtures';
-import { authState, jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
+import { jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
