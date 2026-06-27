@@ -33,6 +33,7 @@ EXCLUDED_SUFFIXES = {
     ".sqlite3",
 }
 EXCLUDED_NAMES = {".coverage", "openapi.ts"}
+WARNING_LIMIT = 350
 LIMIT = 400
 
 
@@ -42,6 +43,7 @@ def is_excluded(path: Path) -> bool:
 
 
 def main() -> int:
+    warnings: list[str] = []
     failures: list[str] = []
     for path in ROOT.rglob("*"):
         if not path.is_file() or is_excluded(path):
@@ -49,11 +51,22 @@ def main() -> int:
         line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
         if line_count > LIMIT:
             failures.append(f"{path.relative_to(ROOT)} has {line_count} lines, limit is {LIMIT}")
+        elif line_count > WARNING_LIMIT:
+            warnings.append(
+                f"{path.relative_to(ROOT)} has {line_count} lines, target is {WARNING_LIMIT}"
+            )
     if failures:
         print("Line-count check failed:")
         print("\n".join(failures))
         return 1
-    print(f"Line-count check passed: no hand-written source file exceeds {LIMIT} lines.")
+    if warnings:
+        print("Line-count warnings:")
+        print("\n".join(warnings))
+    print(
+        "Line-count check passed: "
+        f"no hand-written source file exceeds {LIMIT} lines "
+        f"({WARNING_LIMIT} line target warns)."
+    )
     return 0
 
 

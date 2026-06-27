@@ -66,7 +66,7 @@ These are not optional style preferences. They are architectural acceptance crit
 ### Small-code and anti-god-object gate
 
 - The 400-line limit is a hard failure, not a formatting preference.
-- Treat 300 lines as a refactoring warning.
+- Treat 350 lines as a refactoring warning.
 - Do not evade the rule with giant functions, huge JSX blocks, nested local components, catch-all `utils` modules or meaningless file fragmentation.
 - No route handler may contain business workflow logic. A route validates transport input, calls one use case and translates the result.
 - No React route component may act as data loader, state store, form controller, presentation layer and API mapper at the same time.

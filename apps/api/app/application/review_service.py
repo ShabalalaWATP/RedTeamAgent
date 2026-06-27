@@ -4,20 +4,28 @@ from typing import Any
 from uuid import uuid4
 
 from app.application.agent_plan import assurance_agent_views, selected_agent_views
+from app.application.ports.ingestion import ExternalSourceIngestor
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
 from app.domain.agents import AGENT_LABELS
 from app.domain.enums import ReviewMode, SourceState, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError
 from app.domain.policies import require_write, route_agents, validate_upload
-from app.infrastructure.ingestion.web_sources import repository_snapshot, website_snapshot
 
 
 class ReviewService:
-    def __init__(self, repo: RepositoryPorts, storage: Any, extractor: Any, max_upload_bytes: int) -> None:
+    def __init__(
+        self,
+        repo: RepositoryPorts,
+        storage: Any,
+        extractor: Any,
+        external_sources: ExternalSourceIngestor,
+        max_upload_bytes: int,
+    ) -> None:
         self.repo = repo
         self.storage = storage
         self.extractor = extractor
+        self.external_sources = external_sources
         self.max_upload_bytes = max_upload_bytes
 
     def create_review(self, user_id: str, project_id: str, data: dict[str, Any]) -> Any:
@@ -44,7 +52,7 @@ class ReviewService:
 
     def add_website(self, user_id: str, review_id: str, url: str) -> Any:
         review = self._require_review_write(user_id, review_id)
-        snapshot = website_snapshot(url, review.domain_allowlist, review.domain_blocklist)
+        snapshot = self.external_sources.website_snapshot(url, review.domain_allowlist, review.domain_blocklist)
         return self._add_extracted_source(
             user_id,
             review,
@@ -57,7 +65,7 @@ class ReviewService:
 
     def add_repository(self, user_id: str, review_id: str, url: str) -> Any:
         review = self._require_review_write(user_id, review_id)
-        snapshot = repository_snapshot(url)
+        snapshot = self.external_sources.repository_snapshot(url)
         return self._add_extracted_source(
             user_id,
             review,

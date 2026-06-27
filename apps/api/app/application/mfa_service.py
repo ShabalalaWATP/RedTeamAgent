@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.ports.credentials import CredentialVault
+from app.application.ports.mfa import MfaProvider
 from app.domain.exceptions import AuthorisationError
-from app.infrastructure.auth.credentials import FernetCredentialVault
-from app.infrastructure.auth.mfa import generate_recovery_codes, generate_totp_secret, provisioning_uri, verify_totp
 
 
 class MfaService:
-    def __init__(self, repo: Any, passwords: Any, vault: FernetCredentialVault, issuer: str) -> None:
+    def __init__(self, repo: Any, passwords: Any, vault: CredentialVault, mfa: MfaProvider, issuer: str) -> None:
         self.repo = repo
         self.passwords = passwords
         self.vault = vault
+        self.mfa = mfa
         self.issuer = issuer
 
     def status(self, user_id: str) -> dict[str, bool]:
@@ -22,8 +23,8 @@ class MfaService:
         existing = self.repo.get_mfa_setting(user_id)
         if existing is not None and existing.enabled:
             raise AuthorisationError("Multi-factor authentication is already enabled.")
-        secret = generate_totp_secret()
-        recovery_codes = generate_recovery_codes()
+        secret = self.mfa.generate_totp_secret()
+        recovery_codes = self.mfa.generate_recovery_codes()
         sealed = self.vault.seal({"totp": secret})["totp"]
         hashes = [self.passwords.hash(code) for code in recovery_codes]
         self.repo.upsert_mfa_setting(user_id, sealed, hashes, enabled=False)
@@ -32,7 +33,7 @@ class MfaService:
         return {
             "enabled": False,
             "secret": secret,
-            "provisioning_uri": provisioning_uri(secret, email, self.issuer),
+            "provisioning_uri": self.mfa.provisioning_uri(secret, email, self.issuer),
             "recovery_codes": recovery_codes,
         }
 
@@ -67,7 +68,7 @@ class MfaService:
 
     def _verify_totp(self, ciphertext: str, code: str) -> bool:
         secret = self.vault.unseal({"totp": ciphertext})["totp"]
-        return verify_totp(secret, code)
+        return self.mfa.verify_totp(secret, code)
 
     def _consume_recovery_code(self, user_id: str, code: str, hashes: list[str]) -> bool:
         remaining: list[str] = []

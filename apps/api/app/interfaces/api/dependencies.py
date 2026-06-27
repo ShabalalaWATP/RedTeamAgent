@@ -24,9 +24,11 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.domain.exceptions import AuthenticationError, ValidationFailure
 from app.infrastructure.auth.credentials import FernetCredentialVault
+from app.infrastructure.auth.mfa_provider import BuiltInMfaProvider
 from app.infrastructure.auth.security import PasswordService, TokenService
 from app.infrastructure.db.enterprise_repository import SqlEnterpriseRepository
 from app.infrastructure.db.repositories import SqlRepository
+from app.infrastructure.ingestion.external_sources import SafeExternalSourceIngestor
 from app.infrastructure.ingestion.extractors import SourceExtractor
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
 from app.infrastructure.providers.adapters import ProviderRegistry
@@ -101,7 +103,7 @@ def mfa_service(
     vault: Annotated[FernetCredentialVault, Depends(credential_vault)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> MfaService:
-    return MfaService(repo, passwords, vault, settings.mfa_issuer)
+    return MfaService(repo, passwords, vault, BuiltInMfaProvider(), settings.mfa_issuer)
 
 
 def auth_service(
@@ -164,7 +166,7 @@ def review_service(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ReviewService:
     storage = LocalObjectStorage(Path(".local-object-storage"))
-    return ReviewService(repo, storage, SourceExtractor(), settings.max_upload_bytes)
+    return ReviewService(repo, storage, SourceExtractor(), SafeExternalSourceIngestor(), settings.max_upload_bytes)
 
 
 def workflow_service(

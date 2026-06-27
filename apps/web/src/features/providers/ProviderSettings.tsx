@@ -1,16 +1,17 @@
-import { PlugZap, RefreshCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
-import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ModelProfile, ModelRecord, ProviderConnection } from '../../shared/types';
-import { Button, EmptyState, ErrorState, Field } from '../../shared/ui';
+import { ErrorState } from '../../shared/ui';
+import { AgentAssignmentsPanel } from './AgentAssignmentsPanel';
+import { AgentProfileForm } from './AgentProfileForm';
 import { EvaluationPanel } from './EvaluationPanel';
-import { ModelDropdown } from './ModelDropdown';
+import { ManualModelRecordForm } from './ManualModelRecordForm';
+import { ModelCataloguePanel } from './ModelCataloguePanel';
+import { ProviderConnectionForm } from './ProviderConnectionForm';
 import { SavedConnectionsPanel } from './SavedConnectionsPanel';
 import { providerConfig, providerCredentials } from './providerFormData';
 import {
-  adapterFieldHint,
   capabilitiesForModel,
   modelOptionKey,
   modelOptionsForConnection,
@@ -233,6 +234,15 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     }
   };
 
+  const updateManualModelIdentifier = (next: string) => {
+    setModelIdentifier(next);
+    setCapabilities(capabilitiesForModel(
+      manualModelOptions,
+      next,
+      manualModelSchema?.default_capabilities ?? []
+    ).join(', '));
+  };
+
   return (
     <section className={embedded ? 'settings-block stack' : 'screen'}>
       <div className="screen-header">
@@ -243,46 +253,23 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
       </div>
       <ErrorState message={error || workspaceError} />
       <div className="grid provider-primary-grid">
-        <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-          <h2>Connect an AI provider</h2>
-          {schemas.length === 0 ? (
-            <EmptyState title="No adapters" body="No provider adapters are available in this environment." />
-          ) : null}
-          <Field label="AI provider" hint="This controls where RedTeamAgent sends AI review requests.">
-              <select value={selected} onChange={(event) => setSelected(event.target.value)}>
-                {visibleSchemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-              </select>
-          </Field>
-          <Field
-            label="Display name"
-            hint="An internal label, for example 'OpenAI production'. This is not a URL."
-          >
-            <input value={name} onChange={(event) => setName(event.target.value)} />
-          </Field>
-          {schema?.fields.map((field) => (
-            <Field key={field.name} label={field.label} hint={adapterFieldHint(field)}>
-              <input
-                type={field.secret ? 'password' : field.input_type}
-                value={values[field.name] ?? ''}
-                onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
-                required={field.required}
-              />
-            </Field>
-          ))}
-          <Button type="button" onClick={loadProviderModels} disabled={!schema || loadingModels}>
-            <RefreshCcw size={16} /> {loadingModels ? 'Loading models' : 'Load models'}
-          </Button>
-          <Field label="Model" hint="Load the provider's live model list, then choose the model RedTeamAgent should use.">
-            <ModelDropdown
-              value={defaultModelIdentifier}
-              options={defaultModelOptions}
-              onChange={setDefaultModelIdentifier}
-            />
-          </Field>
-          <Button type="button" variant="primary" onClick={createConnection} disabled={!schema || !defaultModelIdentifier}>
-            <PlugZap size={16} /> Test and save
-          </Button>
-        </form>
+        <ProviderConnectionForm
+          schemas={schemas}
+          visibleSchemas={visibleSchemas}
+          schema={schema}
+          selected={selected}
+          name={name}
+          values={values}
+          defaultModelIdentifier={defaultModelIdentifier}
+          defaultModelOptions={defaultModelOptions}
+          loadingModels={loadingModels}
+          onSelectedChange={setSelected}
+          onNameChange={setName}
+          onValuesChange={setValues}
+          onDefaultModelIdentifierChange={setDefaultModelIdentifier}
+          onLoadProviderModels={() => void loadProviderModels()}
+          onCreateConnection={() => void createConnection()}
+        />
         <SavedConnectionsPanel
           connections={connections}
           result={result}
@@ -296,102 +283,37 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
           <small>Optional model records, agent pins, capability probes and evaluation checks.</small>
         </summary>
         <div className="grid">
-          <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-            <h2>Manual model record</h2>
-            <Field label="Provider connection">
-              <select value={modelConnectionId} onChange={(event) => setModelConnectionId(event.target.value)}>
-                <option value="">Select a connection</option>
-                {connections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Model" hint="Choose from the selected provider connection's discovered model list.">
-              <ModelDropdown
-                value={modelIdentifier}
-                options={manualModelOptions}
-                disabled={!modelConnectionId}
-                onChange={(next) => {
-                  setModelIdentifier(next);
-                  setCapabilities(capabilitiesForModel(
-                    manualModelOptions,
-                    next,
-                    manualModelSchema?.default_capabilities ?? []
-                  ).join(', '));
-                }}
-              />
-            </Field>
-            <Field label="Capabilities" hint="Comma-separated provider-neutral capabilities.">
-              <input value={capabilities} onChange={(event) => setCapabilities(event.target.value)} />
-            </Field>
-            <Field label="Provenance" hint="Where this model record came from, for example manual or provider catalogue.">
-              <input value={provenance} onChange={(event) => setProvenance(event.target.value)} />
-            </Field>
-            <label className="check-row">
-              <input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} />
-              Capability probe verified
-            </label>
-            <Button type="button" variant="primary" onClick={createModel} disabled={!modelConnectionId}>
-              Register model
-            </Button>
-          </form>
-          <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-            <h2>Agent profile</h2>
-            <Field label="Profile name"><input value={profileName} onChange={(event) => setProfileName(event.target.value)} /></Field>
-            <Field label="Agent">
-              <select value={profileAgent} onChange={(event) => setProfileAgent(event.target.value)}>
-                {AGENT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-              </select>
-            </Field>
-            <Field label="Model record">
-              <select value={profileModelId} onChange={(event) => setProfileModelId(event.target.value)}>
-                <option value="">Select a model</option>
-                {models.map((model) => <option key={model.id} value={model.id}>{model.model_identifier}</option>)}
-              </select>
-            </Field>
-            <label className="check-row">
-              <input type="checkbox" checked={explicitPin} onChange={(event) => setExplicitPin(event.target.checked)} />
-              Explicitly pin this agent to the model
-            </label>
-            <Button type="button" variant="primary" onClick={createProfile} disabled={!profileModelId}>Assign profile</Button>
-          </form>
+          <ManualModelRecordForm
+            connections={connections}
+            modelConnectionId={modelConnectionId}
+            modelIdentifier={modelIdentifier}
+            manualModelOptions={manualModelOptions}
+            capabilities={capabilities}
+            provenance={provenance}
+            verified={verified}
+            onModelConnectionIdChange={setModelConnectionId}
+            onModelIdentifierChange={updateManualModelIdentifier}
+            onCapabilitiesChange={setCapabilities}
+            onProvenanceChange={setProvenance}
+            onVerifiedChange={setVerified}
+            onCreateModel={() => void createModel()}
+          />
+          <AgentProfileForm
+            models={models}
+            profileName={profileName}
+            profileAgent={profileAgent}
+            profileModelId={profileModelId}
+            explicitPin={explicitPin}
+            onProfileNameChange={setProfileName}
+            onProfileAgentChange={setProfileAgent}
+            onProfileModelIdChange={setProfileModelId}
+            onExplicitPinChange={setExplicitPin}
+            onCreateProfile={() => void createProfile()}
+          />
         </div>
         <div className="grid">
-          <section className="panel stack">
-            <h2>Model catalogue</h2>
-            {models.length === 0 ? (
-              <EmptyState title="No model records" body="Register a model to make capability provenance visible." />
-            ) : (
-              <div className="list">
-                {models.map((model) => (
-                  <article className="list-item" key={model.id}>
-                    <div>
-                      <strong>{model.model_identifier}</strong>
-                      <p className="muted">{model.provenance} · {model.verified ? 'verified' : 'unverified'}</p>
-                      <p className="muted">{model.capabilities.join(', ') || 'No capabilities recorded.'}</p>
-                      <small>{String(model.probe_result.source ?? 'No probe recorded')}</small>
-                    </div>
-                    <Button type="button" onClick={() => void probeModel(model.id)}>Probe</Button>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-          <section className="panel stack">
-            <h2>Agent assignments</h2>
-            {profiles.length === 0 ? (
-              <EmptyState title="No profiles" body="Assign a model profile to an agent before running policy checks." />
-            ) : (
-              <div className="list">
-                {profiles.map((profile) => (
-                  <article className="list-item" key={profile.id}>
-                    <div>
-                      <strong>{profile.name}</strong>
-                      <p className="muted">{profile.agent_key} · {profile.explicit_pin ? 'explicit pin' : 'fallback allowed'}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          <ModelCataloguePanel models={models} onProbeModel={(modelId) => void probeModel(modelId)} />
+          <AgentAssignmentsPanel profiles={profiles} />
         </div>
         <EvaluationPanel />
       </details>
