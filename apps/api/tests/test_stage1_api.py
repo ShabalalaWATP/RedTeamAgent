@@ -194,8 +194,13 @@ def test_logout_and_password_reset(client: TestClient) -> None:
         json={"token": token, "password": "Newly-Safe-44!"},
     )
     assert confirmed.status_code == 204, confirmed.text
+    replay = client.post(
+        "/auth/password-reset/confirm",
+        json={"token": token, "password": "Another-Safe-45!"},
+    )
+    assert replay.status_code == 401
     logout = client.post("/auth/logout", headers=csrf_headers(auth))
-    assert logout.status_code == 204, logout.text
+    assert logout.status_code == 401
 
 
 def test_cross_workspace_access_is_denied(client: TestClient) -> None:

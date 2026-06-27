@@ -10,7 +10,7 @@ from app.core.config import Settings, get_settings
 from app.domain.exceptions import AuthenticationError
 from app.infrastructure.auth.security import new_csrf_token
 from app.infrastructure.security.captcha import CaptchaVerifier
-from app.infrastructure.security.rate_limit import AbuseLimiter
+from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule
 from app.interfaces.api.dependencies import (
     AuthContext,
     abuse_limiter,
@@ -48,7 +48,8 @@ def captcha_challenge(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> CaptchaChallengeView:
     check_auth_rate_limit(request, limiter, settings, "captcha")
-    return CaptchaChallengeView.model_validate(captcha.issue_challenge(client_identity(request)), from_attributes=True)
+    identity = client_identity(request, settings.trusted_proxy_network_list)
+    return CaptchaChallengeView.model_validate(captcha.issue_challenge(identity), from_attributes=True)
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -61,12 +62,12 @@ def register(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "register", str(payload.email))
-    captcha.verify(payload.captcha_token, client_identity(request))
-    result = service.register(str(payload.email), payload.password)
+    captcha.verify(payload.captcha_token, client_identity(request, settings.trusted_proxy_network_list))
+    result = service.register(str(payload.email), payload.password, payload.site_owner_bootstrap_token)
     return AuthResponse(
-        user=UserView.model_validate(result["user"]),
-        workspace=WorkspaceView.model_validate(result["workspace"]),
-        workspace_role=result["workspace_role"],
+        user=UserView(id="00000000-0000-0000-0000-000000000000", email=payload.email, is_verified=False),
+        workspace=WorkspaceView(id="00000000-0000-0000-0000-000000000000", name="not returned"),
+        workspace_role=None,
         verification_token=result["verification_token"],
     )
 
@@ -94,7 +95,13 @@ def login(
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "login", str(payload.email))
     csrf_token = new_csrf_token()
-    result = service.login(str(payload.email), payload.password, csrf_token, payload.mfa_code, client_identity(request))
+    result = service.login(
+        str(payload.email),
+        payload.password,
+        csrf_token,
+        payload.mfa_code,
+        client_identity(request, settings.trusted_proxy_network_list),
+    )
     response.set_cookie(
         "rta_session",
         result["session"].id,
@@ -133,7 +140,7 @@ def request_password_reset(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
     check_auth_rate_limit(request, limiter, settings, "password_reset", str(payload.email))
-    captcha.verify(payload.captcha_token, client_identity(request))
+    captcha.verify(payload.captcha_token, client_identity(request, settings.trusted_proxy_network_list))
     result = service.request_password_reset(str(payload.email))
     return AuthResponse(
         user=UserView(id="00000000-0000-0000-0000-000000000000", email=payload.email, is_verified=False),
@@ -186,7 +193,10 @@ def mfa_enable(
     payload: MfaCodeRequest,
     context: Annotated[AuthContext, Depends(current_context)],
     service: Annotated[MfaService, Depends(mfa_service)],
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
+    _check_mfa_change_rate_limit(limiter, settings, context.user.id)
     try:
         service.enable(context.user.id, payload.code)
     except ValueError as exc:
@@ -198,8 +208,15 @@ def mfa_disable(
     payload: MfaCodeRequest,
     context: Annotated[AuthContext, Depends(current_context)],
     service: Annotated[MfaService, Depends(mfa_service)],
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
+    _check_mfa_change_rate_limit(limiter, settings, context.user.id)
     try:
         service.disable(context.user.id, payload.code)
     except ValueError as exc:
         raise AuthenticationError("Invalid multi-factor code.") from exc
+
+
+def _check_mfa_change_rate_limit(limiter: AbuseLimiter, settings: Settings, user_id: str) -> None:
+    limiter.check(LimitRule("mfa_change:user", settings.mfa_change_rate_limit_per_minute, 60), user_id)

@@ -1748,6 +1748,8 @@ export interface components {
             password: string;
             /** Captcha Token */
             captcha_token?: null;
+            /** Site Owner Bootstrap Token */
+            site_owner_bootstrap_token?: null;
             /** Mfa Code */
             mfa_code?: string | null;
         };
@@ -2087,6 +2089,8 @@ export interface components {
             password: string;
             /** Captcha Token */
             captcha_token?: string | null;
+            /** Site Owner Bootstrap Token */
+            site_owner_bootstrap_token?: string | null;
         };
         /** ReportActionCreate */
         ReportActionCreate: {

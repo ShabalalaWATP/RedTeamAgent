@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Any
 
 from app.application.ports.notifications import EmailSender
 from app.application.ports.repositories import RepositoryPorts
-from app.domain.exceptions import AuthenticationError, ConflictError, MfaRequiredError, NotFoundError, ValidationFailure
+from app.domain.exceptions import (
+    AuthenticationError,
+    AuthorisationError,
+    MfaRequiredError,
+    NotFoundError,
+    ValidationFailure,
+)
 
 
 class AuthService:
@@ -18,6 +26,8 @@ class AuthService:
         public_app_url: str,
         expose_tokens: bool,
         mfa_service: Any,
+        site_owner_bootstrap_token: str | None = None,
+        auto_bootstrap_site_owner: bool = False,
     ) -> None:
         self.repo = repo
         self.passwords = password_service
@@ -26,21 +36,24 @@ class AuthService:
         self.public_app_url = public_app_url.rstrip("/")
         self.expose_tokens = expose_tokens
         self.mfa = mfa_service
+        self.site_owner_bootstrap_token = site_owner_bootstrap_token or ""
+        self.auto_bootstrap_site_owner = auto_bootstrap_site_owner
 
-    def register(self, email: str, password: str) -> dict[str, Any]:
+    def register(self, email: str, password: str, site_owner_bootstrap_token: str | None = None) -> dict[str, Any]:
         self._validate_password(password)
-        if self.repo.get_user_by_email(email):
-            raise ConflictError("A user with this email already exists.")
-        user = self.repo.create_user(email, self.passwords.hash(password))
+        existing = self.repo.get_user_by_email(email)
+        if existing:
+            self.repo.audit(None, existing.id, "auth.registration_duplicate", {})
+            self.repo.commit()
+            return {"verification_token": None}  # nosec B105
+        account_type = self._registration_account_type(site_owner_bootstrap_token)
+        user = self.repo.create_user(email, self.passwords.hash(password), account_type=account_type)
         workspace = self.repo.create_personal_workspace(user.id, user.email)
         token = self.tokens.sign("verify-email", user.id)
         self._send_verification_email(user.email, token)
         self.repo.audit(workspace.id, user.id, "auth.registered", {"email": user.email})
         self.repo.commit()
         return {
-            "user": user,
-            "workspace": workspace,
-            "workspace_role": self.repo.membership_role(workspace.id, user.id),
             "verification_token": token if self.expose_tokens else None,
         }
 
@@ -108,7 +121,7 @@ class AuthService:
         user = self.repo.get_user_by_email(email)
         if user is None:
             return {"reset_token": ""}  # nosec
-        token = self.tokens.sign("password-reset", user.id)
+        token = self.tokens.sign("password-reset", self._password_reset_value(user))
         self._send_password_reset_email(user.email, token)
         self.repo.audit(None, user.id, "auth.password_reset_requested", {})
         self.repo.commit()
@@ -117,14 +130,40 @@ class AuthService:
     def confirm_password_reset(self, token: str, password: str) -> None:
         self._validate_password(password)
         try:
-            user_id = self.tokens.verify("password-reset", token, 60 * 30)
+            reset_value = self.tokens.verify("password-reset", token, 60 * 30)
+            user_id, password_fingerprint = reset_value.rsplit(":", 1)
         except ValueError as exc:
             raise AuthenticationError("Invalid password reset token.") from exc
-        if not self.repo.get_user(user_id):
+        user = self.repo.get_user(user_id)
+        if user is None:
             raise NotFoundError("User not found.")
+        if not secrets.compare_digest(password_fingerprint, self._password_fingerprint(user.password_hash)):
+            raise AuthenticationError("Invalid password reset token.")
         self.repo.update_password(user_id, self.passwords.hash(password))
+        self.repo.delete_user_sessions(user_id)
         self.repo.audit(None, user_id, "auth.password_reset_confirmed", {})
         self.repo.commit()
+
+    def _registration_account_type(self, site_owner_bootstrap_token: str | None) -> str:
+        if self.repo.has_site_owner():
+            return "user"
+        if self.auto_bootstrap_site_owner and not site_owner_bootstrap_token:
+            return "owner"
+        if site_owner_bootstrap_token:
+            if self.site_owner_bootstrap_token and secrets.compare_digest(
+                site_owner_bootstrap_token,
+                self.site_owner_bootstrap_token,
+            ):
+                return "owner"
+            raise AuthorisationError("Site owner bootstrap token is invalid.")
+        return "user"
+
+    def _password_reset_value(self, user: Any) -> str:
+        return f"{user.id}:{self._password_fingerprint(user.password_hash)}"
+
+    @staticmethod
+    def _password_fingerprint(password_hash: str) -> str:
+        return sha256(password_hash.encode("utf-8")).hexdigest()
 
     @staticmethod
     def _validate_password(password: str) -> None:

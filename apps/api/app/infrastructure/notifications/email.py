@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 from app.core.config import Settings
@@ -23,7 +24,7 @@ class SmtpEmailSender:
         message.set_content(body)
         with smtplib.SMTP(self.settings.smtp_host, self.settings.smtp_port, timeout=10) as client:
             if self.settings.smtp_starttls:
-                client.starttls()
+                client.starttls(context=ssl.create_default_context())
             if self.settings.smtp_username:
                 client.login(self.settings.smtp_username, self.settings.smtp_password)
             client.send_message(message)

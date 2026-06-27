@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.domain.exceptions import AuthorisationError
 from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.mfa import generate_recovery_codes, generate_totp_secret, provisioning_uri, verify_totp
 
@@ -18,6 +19,9 @@ class MfaService:
         return {"enabled": bool(setting and setting.enabled)}
 
     def setup(self, user_id: str, email: str) -> dict[str, object]:
+        existing = self.repo.get_mfa_setting(user_id)
+        if existing is not None and existing.enabled:
+            raise AuthorisationError("Multi-factor authentication is already enabled.")
         secret = generate_totp_secret()
         recovery_codes = generate_recovery_codes()
         sealed = self.vault.seal({"totp": secret})["totp"]

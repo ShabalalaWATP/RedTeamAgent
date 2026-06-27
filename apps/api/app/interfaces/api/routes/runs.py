@@ -45,7 +45,13 @@ def start_run(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RunView:
     run = service.start_run(context.user.id, review_id, execute_immediately=False)
-    background_tasks.add_task(execute_workflow_background, run.id, settings.self_hosted_provider_mode, context.user.id)
+    background_tasks.add_task(
+        execute_workflow_background,
+        run.id,
+        settings.self_hosted_provider_mode,
+        settings.allow_fake_provider,
+        context.user.id,
+    )
     return RunView.model_validate(run)
 
 

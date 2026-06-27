@@ -53,6 +53,8 @@ def test_provider_endpoint_policy(monkeypatch: pytest.MonkeyPatch) -> None:
         validate_provider_endpoint("ftp://example.test", self_hosted_mode=True)
     with pytest.raises(ProviderPolicyError):
         validate_provider_endpoint("https://169.254.169.254", self_hosted_mode=False)
+    with pytest.raises(ProviderPolicyError):
+        validate_provider_endpoint("https://user:pass@example.test", self_hosted_mode=False)
 
 
 def test_route_and_capability_policy() -> None:

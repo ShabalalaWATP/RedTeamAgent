@@ -10,6 +10,12 @@ from app.infrastructure.providers.live import (
     OpenAIProviderAdapter,
 )
 
+DEFAULT_HOSTED_PROVIDER_BASE_URLS = (
+    "https://api.openai.com",
+    "https://api.anthropic.com",
+    "https://generativelanguage.googleapis.com",
+)
+
 
 class FakeProviderAdapter:
     schema = AdapterSchema(
@@ -128,7 +134,12 @@ class StaticProviderAdapter:
 
 
 class ProviderRegistry:
-    def __init__(self, self_hosted_mode: bool = False, allow_fake_provider: bool = True) -> None:
+    def __init__(
+        self,
+        self_hosted_mode: bool = False,
+        allow_fake_provider: bool = True,
+        hosted_provider_base_urls: tuple[str, ...] = DEFAULT_HOSTED_PROVIDER_BASE_URLS,
+    ) -> None:
         self._adapters: dict[str, ProviderAdapter] = {
             "openai": OpenAIProviderAdapter(
                 AdapterSchema(
@@ -178,6 +189,7 @@ class ProviderRegistry:
                 ),
                 [{"model_identifier": "configured-openai-compatible-model"}],
                 self_hosted_mode=self_hosted_mode,
+                allowed_endpoint_base_urls=hosted_provider_base_urls,
             ),
         }
         if allow_fake_provider:

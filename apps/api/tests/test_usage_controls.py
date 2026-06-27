@@ -9,7 +9,7 @@ from tests.conftest import csrf_headers, register_verified
 
 
 def test_login_honours_secure_cookie_setting(client: TestClient) -> None:
-    settings = Settings(cookie_secure=True)
+    settings = Settings(expose_auth_tokens=True, auto_bootstrap_site_owner=True, cookie_secure=True)
     client.app.dependency_overrides[get_settings] = lambda: settings
 
     password = "Correct-Horse-42!"  # noqa: S105 - deterministic test password
@@ -27,7 +27,12 @@ def test_login_honours_secure_cookie_setting(client: TestClient) -> None:
 
 
 def test_project_quota_applies_by_account_type(client: TestClient) -> None:
-    settings = Settings(user_project_limit=1, admin_usage_multiplier=3)
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        user_project_limit=1,
+        admin_usage_multiplier=3,
+    )
     client.app.dependency_overrides[get_settings] = lambda: settings
 
     owner = register_verified(client, "owner-quota@example.com")
@@ -51,7 +56,12 @@ def test_project_quota_applies_by_account_type(client: TestClient) -> None:
 
 
 def test_workflow_storage_limit_is_freed_by_deleting_workflow(client: TestClient) -> None:
-    settings = Settings(user_workflow_total_limit=1, user_workflow_weekly_limit=2)
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        user_workflow_total_limit=1,
+        user_workflow_weekly_limit=2,
+    )
     client.app.dependency_overrides[get_settings] = lambda: settings
     register_verified(client, "workflow-owner@example.com")
     auth = register_verified(client, "workflow-user@example.com")
@@ -82,7 +92,12 @@ def test_workflow_storage_limit_is_freed_by_deleting_workflow(client: TestClient
 
 
 def test_weekly_workflow_limit_survives_deleted_runs(client: TestClient) -> None:
-    settings = Settings(user_workflow_total_limit=5, user_workflow_weekly_limit=1)
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        user_workflow_total_limit=5,
+        user_workflow_weekly_limit=1,
+    )
     client.app.dependency_overrides[get_settings] = lambda: settings
     register_verified(client, "weekly-owner@example.com")
     auth = register_verified(client, "weekly-user@example.com")

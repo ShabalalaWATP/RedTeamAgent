@@ -46,7 +46,9 @@ def test_auth_error_branches(client: TestClient) -> None:
         "/auth/register",
         json={"email": "dup@example.com", "password": "Correct-Horse-42!"},
     )
-    assert duplicate.status_code == 409
+    assert duplicate.status_code == 200
+    assert duplicate.json()["workspace_role"] is None
+    assert duplicate.json()["verification_token"] is None
 
     unverified = client.post(
         "/auth/login",
@@ -302,6 +304,8 @@ def test_extractor_storage_and_token_services(tmp_path: Any, monkeypatch: pytest
     local = LocalObjectStorage(tmp_path)
     local.put("one/two.txt", b"content", "text/plain")
     assert local.get("one/two.txt") == b"content"
+    with pytest.raises(ValidationFailure):
+        local.put("../escape.txt", b"bad", "text/plain")
 
     class FakeBody:
         def read(self) -> bytes:

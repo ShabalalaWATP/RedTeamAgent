@@ -8,8 +8,14 @@ from zipfile import ZipFile
 
 from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
 
+from app.domain.exceptions import ValidationFailure
+from app.infrastructure.ingestion.code_archives import MAX_EXPANDED_BYTES, MAX_FILES
 from app.infrastructure.ingestion.redaction import redact_secret_like
 from app.infrastructure.ingestion.types import ExtractedChunk, ExtractionResult
+
+MAX_OFFICE_XML_BYTES = 1_000_000
+MAX_OFFICE_ROWS = 500
+MAX_OFFICE_CELLS = 5_000
 
 
 def csv_result(filename: str, content: bytes) -> ExtractionResult:
@@ -29,9 +35,10 @@ def csv_result(filename: str, content: bytes) -> ExtractionResult:
 def pptx_result(filename: str, content: bytes) -> ExtractionResult:
     chunks: list[ExtractedChunk] = []
     with ZipFile(BytesIO(content)) as archive:
-        slide_names = sorted(name for name in archive.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", name))
+        slide_infos = _office_parts(archive, r"ppt/slides/slide\d+\.xml$")
+        slide_names = [info.filename for info in slide_infos]
         for index, name in enumerate(slide_names, start=1):
-            text = _office_text(archive.read(name))
+            text = _office_text(_read_office_part(archive, name))
             if text:
                 redacted, _warnings = redact_secret_like(text)
                 chunks.append(ExtractedChunk(locator=f"{filename}:slide {index}", text=redacted))
@@ -43,9 +50,10 @@ def xlsx_result(filename: str, content: bytes) -> ExtractionResult:
     chunks: list[ExtractedChunk] = []
     with ZipFile(BytesIO(content)) as archive:
         shared = _shared_strings(archive)
-        sheets = sorted(name for name in archive.namelist() if re.match(r"xl/worksheets/sheet\d+\.xml$", name))
+        sheet_infos = _office_parts(archive, r"xl/worksheets/sheet\d+\.xml$")
+        sheets = [info.filename for info in sheet_infos]
         for sheet_index, name in enumerate(sheets, start=1):
-            rows = _sheet_rows(archive.read(name), shared)
+            rows = _sheet_rows(_read_office_part(archive, name), shared)
             for row_index, row in enumerate(rows, start=1):
                 if row:
                     redacted, _warnings = redact_secret_like(" | ".join(row))
@@ -95,20 +103,49 @@ def _office_text(xml_bytes: bytes) -> str:
 def _shared_strings(archive: ZipFile) -> list[str]:
     if "xl/sharedStrings.xml" not in archive.namelist():
         return []
-    root = ET.fromstring(archive.read("xl/sharedStrings.xml"))  # noqa: S314 - Office XML only.
-    return [" ".join(node.itertext()).strip() for node in root if list(node.itertext())]
+    _validate_office_part(archive.getinfo("xl/sharedStrings.xml"), 0)
+    root = ET.fromstring(_read_office_part(archive, "xl/sharedStrings.xml"))  # noqa: S314 - Office XML only.
+    return [" ".join(node.itertext()).strip() for node in root if list(node.itertext())][:MAX_OFFICE_CELLS]
 
 
 def _sheet_rows(xml_bytes: bytes, shared: list[str]) -> list[list[str]]:
     root = ET.fromstring(xml_bytes)  # noqa: S314 - Office XML only.
     rows: list[list[str]] = []
+    cell_count = 0
     for row in [node for node in root.iter() if _tag(node, "row")]:
+        if len(rows) >= MAX_OFFICE_ROWS:
+            raise ValidationFailure("Office document contains too many rows.")
         values: list[str] = []
         for cell in [node for node in row if _tag(node, "c")]:
+            cell_count += 1
+            if cell_count > MAX_OFFICE_CELLS:
+                raise ValidationFailure("Office document contains too many cells.")
             value = next((child.text for child in cell if _tag(child, "v")), "") or ""
             values.append(shared[int(value)] if cell.attrib.get("t") == "s" and value.isdigit() else value)
         rows.append([value for value in values if value])
     return rows
+
+
+def _office_parts(archive: ZipFile, pattern: str) -> list[Any]:
+    infos = [info for info in archive.infolist() if re.match(pattern, info.filename)]
+    if len(infos) > MAX_FILES:
+        raise ValidationFailure("Office document contains too many files.")
+    total = 0
+    for info in infos:
+        total += info.file_size
+        _validate_office_part(info, total)
+    return sorted(infos, key=lambda info: info.filename)
+
+
+def _validate_office_part(info: Any, total: int) -> None:
+    if info.file_size > MAX_OFFICE_XML_BYTES or total > MAX_EXPANDED_BYTES:
+        raise ValidationFailure("Office document expands beyond the configured safety limit.")
+
+
+def _read_office_part(archive: ZipFile, name: str) -> bytes:
+    info = archive.getinfo(name)
+    _validate_office_part(info, info.file_size)
+    return archive.read(info)
 
 
 def _tag(node: Any, name: str) -> bool:

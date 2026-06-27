@@ -18,8 +18,7 @@ class SqlRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def create_user(self, email: str, password_hash: str) -> models.User:
-        account_type = "owner" if not self.session.scalar(select(func.count()).select_from(models.User)) else "user"
+    def create_user(self, email: str, password_hash: str, account_type: str = "user") -> models.User:
         user = models.User(email=email.lower(), password_hash=password_hash, account_type=account_type)
         self.session.add(user)
         self.session.flush()
@@ -30,6 +29,10 @@ class SqlRepository:
 
     def get_user(self, user_id: str) -> models.User | None:
         return self.session.get(models.User, user_id)
+
+    def has_site_owner(self) -> bool:
+        statement = select(func.count()).select_from(models.User).where(models.User.account_type == "owner")
+        return bool(self.session.scalar(statement))
 
     def verify_user(self, user_id: str) -> None:
         user = self.session.get(models.User, user_id)
@@ -105,17 +108,19 @@ class SqlRepository:
         if record:
             self.session.delete(record)
 
+    def delete_user_sessions(self, user_id: str) -> None:
+        statement = select(models.SessionRecord).where(models.SessionRecord.user_id == user_id)
+        for session in self.session.scalars(statement):
+            self.session.delete(session)
+
     def create_personal_workspace(self, user_id: str, email: str) -> models.Workspace:
         workspace = models.Workspace(name=f"{email}'s workspace")
         self.session.add(workspace)
         self.session.flush()
-        self.session.add(
-            models.WorkspaceMembership(
-                workspace_id=workspace.id,
-                user_id=user_id,
-                role=WorkspaceRole.OWNER.value,
-            )
+        membership = models.WorkspaceMembership(
+            workspace_id=workspace.id, user_id=user_id, role=WorkspaceRole.OWNER.value
         )
+        self.session.add(membership)
         self.session.flush()
         return workspace
 
@@ -129,19 +134,15 @@ class SqlRepository:
         return membership.role if membership else None
 
     def list_workspaces(self, user_id: str) -> list[models.Workspace]:
-        return list(
-            self.session.scalars(
-                select(models.Workspace)
-                .join(models.WorkspaceMembership, models.WorkspaceMembership.workspace_id == models.Workspace.id)
-                .where(models.WorkspaceMembership.user_id == user_id)
-            )
+        statement = (
+            select(models.Workspace)
+            .join(models.WorkspaceMembership, models.WorkspaceMembership.workspace_id == models.Workspace.id)
+            .where(models.WorkspaceMembership.user_id == user_id)
         )
+        return list(self.session.scalars(statement))
+
     def create_project(
-        self,
-        workspace_id: str,
-        created_by_user_id: str,
-        title: str,
-        description: str,
+        self, workspace_id: str, created_by_user_id: str, title: str, description: str
     ) -> models.Project:
         project = models.Project(
             workspace_id=workspace_id,
@@ -371,11 +372,10 @@ class SqlRepository:
         return event
 
     def list_run_events(self, run_id: str) -> list[models.RunEvent]:
-        return list(
-            self.session.scalars(
-                select(models.RunEvent).where(models.RunEvent.run_id == run_id).order_by(models.RunEvent.sequence)
-            )
+        statement = (
+            select(models.RunEvent).where(models.RunEvent.run_id == run_id).order_by(models.RunEvent.sequence)
         )
+        return list(self.session.scalars(statement))
 
     def create_report(self, workspace_id: str, run_id: str, data: dict[str, Any]) -> models.Report:
         report = models.Report(workspace_id=workspace_id, run_id=run_id, data=data)

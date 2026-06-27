@@ -10,6 +10,7 @@ from app.interfaces.api.dependencies import (
     AuthContext,
     current_context,
     enterprise_operations_service,
+    rate_limit_public_webhook,
     require_csrf,
 )
 from app.interfaces.api.enterprise_schemas import (
@@ -91,7 +92,7 @@ def sign_webhook_test(
     return service.sign_webhook_test(context.user.id, webhook_id, payload.signing_secret, body)
 
 
-@router.post("/webhooks/{webhook_id}/verify")
+@router.post("/webhooks/{webhook_id}/verify", dependencies=[Depends(rate_limit_public_webhook)])
 def verify_webhook(
     webhook_id: str,
     payload: WebhookVerifyRequest,

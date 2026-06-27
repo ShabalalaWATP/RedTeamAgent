@@ -9,20 +9,26 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from app.domain.exceptions import ValidationFailure
 from app.domain.policies import BLOCKED_METADATA_HOSTS
 from app.infrastructure.ingestion.code_archives import MAX_FILES, TEXT_SUFFIXES, entries_result
 from app.infrastructure.ingestion.redaction import redact_secret_like
+from app.infrastructure.ingestion.safe_http import PinnedHttpsError, fetch_https_with_pinned_ip
 from app.infrastructure.ingestion.types import ExtractedChunk, ExtractionResult
 
 MAX_WEBSITE_BYTES = 1_000_000
 MAX_REDIRECTS = 5
 MAX_FETCH_TIMEOUT_SECONDS = 10
 MAX_REPOSITORY_BYTES = 2_000_000
+ALLOWED_REPOSITORY_HOSTS = {
+    "github.com",
+    "gitlab.com",
+    "bitbucket.org",
+    "dev.azure.com",
+    "ssh.dev.azure.com",
+}
 
 
 @dataclass(frozen=True)
@@ -65,7 +71,8 @@ def website_snapshot(url: str, allow_domains: list[str], block_domains: list[str
 
 
 def repository_snapshot(url: str) -> WebsiteSnapshot:
-    parsed = _validate_public_url(url, [], [])
+    parsed, _ = _validate_public_url(url, [], [])
+    _validate_repository_host(parsed.hostname or "")
     entries = _clone_repository_entries(url)
     host = parsed.hostname or "repository"
     accessed = datetime.now(UTC).isoformat()
@@ -92,8 +99,8 @@ def _fetch_public_url(url: str, allow_domains: list[str], block_domains: list[st
     current = url
     chain: list[str] = []
     for _ in range(MAX_REDIRECTS + 1):
-        _validate_public_url(current, allow_domains, block_domains)
-        response = _fetch_once(current)
+        parsed, pinned_addresses = _validate_public_url(current, allow_domains, block_domains)
+        response = _fetch_once(current, pinned_addresses)
         final_response_url = response.url or current
         _validate_public_url(final_response_url, allow_domains, block_domains)
         chain.append(current)
@@ -112,25 +119,23 @@ def _fetch_public_url(url: str, allow_domains: list[str], block_domains: list[st
     raise ValidationFailure("Website redirect limit exceeded.")
 
 
-def _fetch_once(url: str) -> FetchResponse:
-    request = Request(url, headers={"User-Agent": "RedTeamAgent/Stage2"})  # noqa: S310 - caller validates HTTPS URL.
-    opener = build_opener(_NoRedirectHandler)
+def _fetch_once(url: str, pinned_addresses: list[str]) -> FetchResponse:
+    parsed = urlparse(url)
     try:
-        with opener.open(request, timeout=MAX_FETCH_TIMEOUT_SECONDS) as response:
-            return FetchResponse(
-                url=response.geturl(),
-                status=response.status,
-                headers={key.lower(): value for key, value in response.headers.items()},
-                body=response.read(MAX_WEBSITE_BYTES + 1),
-            )
-    except HTTPError as exc:
-        return FetchResponse(
-            url=exc.geturl(),
-            status=exc.code,
-            headers={key.lower(): value for key, value in exc.headers.items()},
-            body=exc.read(MAX_WEBSITE_BYTES + 1),
+        response = fetch_https_with_pinned_ip(
+            parsed,
+            pinned_addresses,
+            MAX_FETCH_TIMEOUT_SECONDS,
+            MAX_WEBSITE_BYTES,
+            "RedTeamAgent/Stage2",
         )
-    except URLError as exc:
+        return FetchResponse(
+            url=url,
+            status=response.status,
+            headers=response.headers,
+            body=response.body,
+        )
+    except PinnedHttpsError as exc:
         raise ValidationFailure("Website fetch failed.") from exc
 
 
@@ -144,6 +149,8 @@ def _clone_repository_entries(url: str) -> list[tuple[str, bytes]]:
             "protocol.file.allow=never",
             "-c",
             "protocol.ext.allow=never",
+            "-c",
+            "http.followRedirects=false",
             "clone",
             "--depth",
             "1",
@@ -221,11 +228,12 @@ def _validate_public_url(url: str, allow_domains: list[str], block_domains: list
         raise ValidationFailure("URL host is blocked by policy.")
     if allow_domains and hostname not in {item.lower() for item in allow_domains}:
         raise ValidationFailure("URL host is not in the review allow-list.")
-    for address in _resolve_host(hostname):
+    addresses = _resolve_host(hostname)
+    for address in addresses:
         ip = ipaddress.ip_address(address)
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_unspecified:
             raise ValidationFailure("URL resolves to a private or local network address.")
-    return parsed
+    return parsed, addresses
 
 
 def _resolve_host(hostname: str) -> list[str]:
@@ -233,6 +241,11 @@ def _resolve_host(hostname: str) -> list[str]:
         return [str(info[4][0]) for info in socket.getaddrinfo(hostname, 443)]
     except socket.gaierror as exc:
         raise ValidationFailure("URL host cannot be resolved.") from exc
+
+
+def _validate_repository_host(hostname: str) -> None:
+    if hostname.lower() not in ALLOWED_REPOSITORY_HOSTS:
+        raise ValidationFailure("Repository host is not in the ingestion allow-list.")
 
 
 def _extract_visible_text(content: bytes, content_type: str) -> str:
@@ -265,9 +278,3 @@ class _VisibleTextParser(HTMLParser):
 
     def text(self) -> str:
         return " ".join(" ".join(self._parts).split())
-
-
-class _NoRedirectHandler(HTTPRedirectHandler):
-    def redirect_request(self, *args: object, **kwargs: object) -> None:
-        del args, kwargs
-        return None

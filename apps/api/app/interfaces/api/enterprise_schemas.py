@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+
+MAX_WEBHOOK_BODY_BYTES = 100_000
+MAX_WEBHOOK_BODY_DEPTH = 20
+MAX_WEBHOOK_BODY_NODES = 1_000
 
 
 class OrganisationCreate(BaseModel):
@@ -256,13 +261,24 @@ class WebhookView(BaseModel):
 
 
 class WebhookSignRequest(BaseModel):
-    signing_secret: str
+    signing_secret: str = Field(min_length=1, max_length=4096)
     body: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_body_limits(self) -> WebhookSignRequest:
+        if _json_depth(self.body) > MAX_WEBHOOK_BODY_DEPTH:
+            raise ValueError("Webhook body is too deeply nested.")
+        if _json_node_count(self.body) > MAX_WEBHOOK_BODY_NODES:
+            raise ValueError("Webhook body contains too many fields.")
+        encoded = json.dumps(self.body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > MAX_WEBHOOK_BODY_BYTES:
+            raise ValueError("Webhook body exceeds the configured size limit.")
+        return self
 
 
 class WebhookVerifyRequest(WebhookSignRequest):
     timestamp: int
-    signature: str
+    signature: str = Field(min_length=1, max_length=512)
 
 
 class ScheduledReviewCreate(BaseModel):
@@ -317,3 +333,19 @@ class AuditEventView(BaseModel):
     action: str
     metadata: dict[str, Any]
     created_at: datetime
+
+
+def _json_depth(value: Any, depth: int = 0) -> int:
+    if isinstance(value, dict):
+        return max([depth, *(_json_depth(item, depth + 1) for item in value.values())])
+    if isinstance(value, list):
+        return max([depth, *(_json_depth(item, depth + 1) for item in value)])
+    return depth
+
+
+def _json_node_count(value: Any) -> int:
+    if isinstance(value, dict):
+        return 1 + sum(_json_node_count(item) for item in value.values())
+    if isinstance(value, list):
+        return 1 + sum(_json_node_count(item) for item in value)
+    return 1

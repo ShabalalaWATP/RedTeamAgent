@@ -23,7 +23,7 @@ class SiteAdminService:
         return [
             self._visit_view(visit)
             for visit in self.repo.list_visits()
-            if actor.account_type == "owner" or visit.user_id is None or visit.user_id in visible_user_ids
+            if actor.account_type == "owner" or visit.user_id in visible_user_ids
         ]
 
     def update_user(self, actor_id: str, target_id: str, data: dict[str, Any]) -> dict[str, Any]:

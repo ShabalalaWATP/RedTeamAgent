@@ -80,9 +80,43 @@ def test_owner_controls_admin_scope_and_visits(client: TestClient) -> None:
     assert anonymous_visit.status_code == 204
     signed_visit = admin_client.post("/site-admin/visits", json={"path": "/settings"})
     assert signed_visit.status_code == 204
+    scoped_visits = admin_client.get("/site-admin/visits")
+    assert scoped_visits.status_code == 200
+    assert "/auth" not in {visit["path"] for visit in scoped_visits.json()}
     visits = client.get("/site-admin/visits")
     assert visits.status_code == 200
     assert {visit["path"] for visit in visits.json()} >= {"/auth", "/settings"}
+
+
+def test_all_scope_admin_visit_telemetry_excludes_privileged_and_anonymous_rows(client: TestClient) -> None:
+    owner = register_verified(client, "visit-owner@example.com")
+    admin_client = TestClient(client.app)
+    admin = register_verified(admin_client, "visit-admin@example.com")
+    peer_admin_client = TestClient(client.app)
+    peer_admin = register_verified(peer_admin_client, "visit-peer-admin@example.com")
+    user_client = TestClient(client.app)
+    register_verified(user_client, "visit-user@example.com")
+
+    for target in (admin, peer_admin):
+        promoted = client.put(
+            f"/site-admin/users/{target['user_id']}",
+            headers=csrf_headers(owner),
+            json={"account_type": "admin", "admin_scope": "all"},
+        )
+        assert promoted.status_code == 200, promoted.text
+
+    assert client.post("/site-admin/visits", json={"path": "/owner"}).status_code == 204
+    assert admin_client.post("/site-admin/visits", json={"path": "/admin"}).status_code == 204
+    assert peer_admin_client.post("/site-admin/visits", json={"path": "/peer-admin"}).status_code == 204
+    assert user_client.post("/site-admin/visits", json={"path": "/user"}).status_code == 204
+    assert TestClient(client.app).post("/site-admin/visits", json={"path": "/anonymous"}).status_code == 204
+
+    admin_visits = {visit["path"] for visit in admin_client.get("/site-admin/visits").json()}
+    assert "/user" in admin_visits
+    assert not {"/owner", "/admin", "/peer-admin", "/anonymous"} & admin_visits
+
+    owner_visits = {visit["path"] for visit in client.get("/site-admin/visits").json()}
+    assert {"/owner", "/admin", "/peer-admin", "/user", "/anonymous"} <= owner_visits
 
 
 def test_anonymous_visit_tracking_is_rate_limited(client: TestClient) -> None:

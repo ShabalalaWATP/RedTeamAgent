@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Request
 
 from app.application.site_admin_service import SiteAdminService
+from app.core.config import Settings, get_settings
 from app.infrastructure.db import models
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.db.site_admin_repository import SiteAdminRepository
@@ -77,6 +78,7 @@ def record_visit(
     payload: SiteVisitCreate,
     request: Request,
     service: Annotated[SiteAdminService, Depends(site_admin_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
     session_id: Annotated[str | None, Cookie(alias="rta_session")] = None,
 ) -> None:
     user_id = None
@@ -85,7 +87,7 @@ def record_visit(
         user_id = session.user_id if session else None
     service.record_visit(
         user_id,
-        client_identity(request),
+        client_identity(request, settings.trusted_proxy_network_list),
         request.method,
         payload.path,
         request.headers.get("user-agent", ""),

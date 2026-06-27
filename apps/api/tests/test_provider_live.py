@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.application.ports.providers import AdapterSchema
+from app.domain.exceptions import ProviderPolicyError
 from app.infrastructure.providers import live as live_module
 from app.infrastructure.providers.adapters import ProviderRegistry
 from tests.conftest import csrf_headers, register_verified
@@ -23,8 +24,23 @@ class FakeResponse:
     def __exit__(self, *args: object) -> None:
         return None
 
-    def read(self) -> bytes:
+    def read(self, size: int | None = None) -> bytes:
+        del size
         return json.dumps(self.payload).encode("utf-8")
+
+
+class LargeResponse:
+    headers: dict[str, str] = {}
+
+    def __enter__(self) -> LargeResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self, size: int | None = None) -> bytes:
+        del size
+        return b"x" * (live_module.MAX_PROVIDER_RESPONSE_BYTES + 1)
 
 
 def test_live_provider_adapters_shape_structured_requests(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -40,7 +56,7 @@ def test_live_provider_adapters_shape_structured_requests(monkeypatch: pytest.Mo
             return FakeResponse({"candidates": [{"content": {"parts": [{"text": '{"summary":"ok","claims":[]}'}]}}]})
         return FakeResponse({"choices": [{"message": {"content": '{"summary":"ok","claims":[]}'}}]})
 
-    monkeypatch.setattr(live_module, "urlopen", fake_urlopen)
+    monkeypatch.setattr(live_module, "_open_provider_request", fake_urlopen)
     registry = ProviderRegistry(False)
     credentials = {"api_key": "test-key"}
     for key in ["openai", "anthropic", "google_gemini"]:
@@ -66,7 +82,7 @@ def test_live_provider_catalogue_probe_and_error_branches(monkeypatch: pytest.Mo
             return FakeResponse({"models": [{"name": "models/gemini-test"}]})
         return FakeResponse({"data": [{"id": "gpt-test"}]})
 
-    monkeypatch.setattr(live_module, "urlopen", catalogue_urlopen)
+    monkeypatch.setattr(live_module, "_open_provider_request", catalogue_urlopen)
     registry = ProviderRegistry(False)
     credentials = {"api_key": "test-key"}
     openai = registry.get("openai")
@@ -93,19 +109,83 @@ def test_live_provider_catalogue_probe_and_error_branches(monkeypatch: pytest.Mo
     with pytest.raises(RuntimeError):
         live_module._request_json("GET", "file:///tmp/provider", {}, None, 1)
 
-    monkeypatch.setattr(live_module, "urlopen", lambda request, timeout: FakeResponse([]))
-    with pytest.raises(RuntimeError):
-        live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
-    monkeypatch.setattr(live_module, "urlopen", lambda request, timeout: (_ for _ in ()).throw(URLError("down")))
+    monkeypatch.setattr(live_module, "_open_provider_request", lambda request, timeout: FakeResponse([]))
     with pytest.raises(RuntimeError):
         live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
     monkeypatch.setattr(
         live_module,
-        "urlopen",
+        "_open_provider_request",
+        lambda request, timeout: (_ for _ in ()).throw(URLError("down")),
+    )
+    with pytest.raises(RuntimeError):
+        live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
+    monkeypatch.setattr(
+        live_module,
+        "_open_provider_request",
         lambda request, timeout: (_ for _ in ()).throw(HTTPError(str(request.full_url), 500, "bad", {}, None)),
     )
     with pytest.raises(RuntimeError):
         live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
+    monkeypatch.setattr(
+        live_module,
+        "_open_provider_request",
+        lambda request, timeout: (_ for _ in ()).throw(HTTPError(str(request.full_url), 302, "redirect", {}, None)),
+    )
+    with pytest.raises(RuntimeError, match="redirects are not allowed"):
+        live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
+    monkeypatch.setattr(live_module, "_open_provider_request", lambda request, timeout: LargeResponse())
+    with pytest.raises(RuntimeError, match="response exceeds"):
+        live_module._request_json("GET", "https://api.openai.com/v1/models", {}, None, 1)
+    assert live_module._NoRedirectHandler().redirect_request() is None
+
+
+def test_provider_catalogue_caps_model_count_and_identifier_size() -> None:
+    response = {
+        "data": [
+            {"id": "gpt-ok"},
+            {"id": "x" * (live_module.MAX_PROVIDER_MODEL_ID_LENGTH + 1)},
+            *[
+                {"id": f"gpt-{index}"}
+                for index in range(live_module.MAX_PROVIDER_MODELS + 10)
+            ],
+        ]
+    }
+
+    model_ids = live_module._model_ids_from_response(response)
+    catalogue = live_module._catalogue_items(model_ids, AdapterSchema("test", "Test", [], ["text"]))
+
+    assert all(len(item["model_identifier"]) <= live_module.MAX_PROVIDER_MODEL_ID_LENGTH for item in catalogue)
+    assert len(catalogue) == live_module.MAX_PROVIDER_MODELS
+
+
+def test_provider_request_revalidates_endpoint_before_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    def blocked_endpoint(url: str, self_hosted_mode: bool) -> None:
+        del url, self_hosted_mode
+        raise ProviderPolicyError("Provider endpoint targets a private or local address.")
+
+    def fail_if_opened(*args: object, **kwargs: object) -> FakeResponse:
+        del args, kwargs
+        raise AssertionError("provider request opened before endpoint revalidation")
+
+    monkeypatch.setattr(live_module, "validate_provider_endpoint", blocked_endpoint)
+    monkeypatch.setattr(live_module, "_open_provider_request", fail_if_opened)
+
+    with pytest.raises(ProviderPolicyError):
+        live_module._request_json("GET", "https://example.test/v1/models", {}, None, 1)
+
+
+def test_openai_compatible_endpoint_requires_hosted_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(live_module, "validate_provider_endpoint", lambda url, self_hosted_mode: None)
+    adapter = ProviderRegistry(
+        False,
+        hosted_provider_base_urls=("https://api.openai.com/v1",),
+    ).get("openai_compatible")
+
+    with pytest.raises(ProviderPolicyError):
+        adapter.catalogue_models(
+            {"endpoint_url": "https://evil.example/v1", "live_catalogue": True},
+            {"api_key": "test-key"},
+        )
 
 
 def test_all_provider_adapters_probe_claimed_capabilities() -> None:
@@ -130,7 +210,7 @@ def test_admin_previews_live_models_without_persisting_credentials(
         seen_urls.append(str(request.full_url))
         return FakeResponse({"data": [{"id": "gpt-live-a"}, {"id": "gpt-live-b"}]})
 
-    monkeypatch.setattr(live_module, "urlopen", catalogue_urlopen)
+    monkeypatch.setattr(live_module, "_open_provider_request", catalogue_urlopen)
     owner = register_verified(client, "preview-owner@example.com")
     missing = client.post(
         "/providers/models/preview",

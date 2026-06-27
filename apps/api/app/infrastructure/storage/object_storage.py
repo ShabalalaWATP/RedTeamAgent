@@ -5,21 +5,28 @@ from pathlib import Path
 import boto3
 
 from app.core.config import Settings
+from app.domain.exceptions import ValidationFailure
 
 
 class LocalObjectStorage:
     def __init__(self, root: Path) -> None:
-        self.root = root
+        self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
 
     def put(self, key: str, content: bytes, content_type: str) -> None:
         del content_type
-        target = self.root / key
+        target = self._target(key)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
 
     def get(self, key: str) -> bytes:
-        return (self.root / key).read_bytes()
+        return self._target(key).read_bytes()
+
+    def _target(self, key: str) -> Path:
+        target = (self.root / key).resolve()
+        if not target.is_relative_to(self.root):
+            raise ValidationFailure("Object storage key is not safe.")
+        return target
 
 
 class S3ObjectStorage:

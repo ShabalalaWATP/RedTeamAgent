@@ -35,6 +35,6 @@ def research_queries(title: str, focus_chips: list[str], private_mode: bool) -> 
     if private_mode:
         return ["decision risk validation", "comparable implementation evidence"]
     raw = " ".join([title, *focus_chips])
+    raw = sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", " ", raw)
     cleaned = sub(r"[^a-zA-Z0-9 _-]", " ", raw)
-    cleaned = sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", " ", cleaned)
     return [" ".join(cleaned.split())[:120] or "decision risk validation"]

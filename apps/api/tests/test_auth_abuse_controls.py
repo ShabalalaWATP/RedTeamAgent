@@ -95,7 +95,7 @@ def test_public_auth_endpoints_are_rate_limited_by_ip_and_email(client: TestClie
     payload = {"email": "limited@example.com", "password": "Correct-Horse-42!"}
 
     assert client.post("/auth/register", json=payload).status_code == 200
-    assert client.post("/auth/register", json=payload).status_code == 409
+    assert client.post("/auth/register", json=payload).status_code == 200
     blocked = client.post("/auth/register", json=payload)
     assert blocked.status_code == 429
     assert blocked.json()["message"] == "Too many requests. Try again later."
@@ -104,7 +104,12 @@ def test_public_auth_endpoints_are_rate_limited_by_ip_and_email(client: TestClie
 
 
 def test_login_rate_limit_blocks_password_spraying(client: TestClient) -> None:
-    settings = Settings(login_rate_limit_per_minute=3, auth_email_rate_limit_per_hour=10)
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        login_rate_limit_per_minute=3,
+        auth_email_rate_limit_per_hour=10,
+    )
     client.app.dependency_overrides[get_settings] = lambda: settings
     auth = register_verified(client, "spray@example.com")
 
@@ -119,22 +124,28 @@ def test_login_rate_limit_blocks_password_spraying(client: TestClient) -> None:
     client.app.dependency_overrides.clear()
 
 
-def test_client_identity_only_trusts_proxy_headers_from_private_peers() -> None:
+def test_client_identity_only_trusts_configured_proxy_headers() -> None:
     untrusted = SimpleNamespace(
         client=SimpleNamespace(host="203.0.113.10"),
         headers=Headers({"x-forwarded-for": "198.51.100.99", "x-real-ip": "198.51.100.100"}),
     )
     assert client_identity(untrusted) == "203.0.113.10"
 
-    trusted = SimpleNamespace(
+    private_peer = SimpleNamespace(
         client=SimpleNamespace(host="172.20.0.5"),
         headers=Headers({"x-real-ip": "198.51.100.100", "x-forwarded-for": "198.51.100.99"}),
     )
-    assert client_identity(trusted) == "198.51.100.100"
+    assert client_identity(private_peer) == "172.20.0.5"
+    assert client_identity(private_peer, ["172.20.0.5/32"]) == "198.51.100.100"
 
 
 def test_spoofed_forwarded_for_does_not_bypass_login_rate_limit(client: TestClient) -> None:
-    settings = Settings(login_rate_limit_per_minute=3, auth_email_rate_limit_per_hour=10)
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        login_rate_limit_per_minute=3,
+        auth_email_rate_limit_per_hour=10,
+    )
     client.app.dependency_overrides[get_settings] = lambda: settings
     auth = register_verified(client, "spoofed@example.com")
 
@@ -175,6 +186,9 @@ def test_optional_mfa_requires_totp_or_single_use_recovery_code(client: TestClie
     enabled = client.post("/auth/mfa/enable", headers=csrf_headers(auth), json={"code": current_totp(secret)})
     assert enabled.status_code == 204, enabled.text
 
+    reset_attempt = client.post("/auth/mfa/setup", headers=csrf_headers(auth))
+    assert reset_attempt.status_code == 403
+
     without_mfa = client.post("/auth/login", json={"email": auth["email"], "password": auth["password"]})
     assert without_mfa.status_code == 401
     assert without_mfa.json()["code"] == "mfa_required"
@@ -204,6 +218,32 @@ def test_optional_mfa_requires_totp_or_single_use_recovery_code(client: TestClie
 
     after_disable = client.post("/auth/login", json={"email": auth["email"], "password": auth["password"]})
     assert after_disable.status_code == 200, after_disable.text
+
+
+def test_mfa_disable_attempts_are_rate_limited(client: TestClient) -> None:
+    settings = Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        mfa_change_rate_limit_per_minute=2,
+    )
+    client.app.dependency_overrides[get_settings] = lambda: settings
+    auth = register_verified(client, "mfa-limit@example.com")
+    setup = client.post("/auth/mfa/setup", headers=csrf_headers(auth))
+    assert setup.status_code == 200, setup.text
+    enabled = client.post(
+        "/auth/mfa/enable",
+        headers=csrf_headers(auth),
+        json={"code": current_totp(setup.json()["secret"])},
+    )
+    assert enabled.status_code == 204, enabled.text
+
+    first = client.post("/auth/mfa/disable", headers=csrf_headers(auth), json={"code": "000000"})
+    assert first.status_code == 401
+    blocked = client.post("/auth/mfa/disable", headers=csrf_headers(auth), json={"code": "111111"})
+    assert blocked.status_code == 429
+    assert blocked.json()["message"] == "Too many requests. Try again later."
+
+    client.app.dependency_overrides.clear()
 
 
 def test_large_user_controlled_text_fields_are_rejected(client: TestClient) -> None:

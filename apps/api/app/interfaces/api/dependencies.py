@@ -22,7 +22,7 @@ from app.application.usage_policy import UsagePolicy
 from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.domain.exceptions import AuthenticationError
+from app.domain.exceptions import AuthenticationError, ValidationFailure
 from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.security import PasswordService, TokenService
 from app.infrastructure.db.enterprise_repository import SqlEnterpriseRepository
@@ -45,12 +45,7 @@ local_rate_limit_store = MemoryRateLimitStore()
 _redis_rate_limit_stores: dict[str, RedisRateLimitStore] = {}
 TRUSTED_PROXY_NETWORKS = (
     ip_network("127.0.0.0/8"),
-    ip_network("10.0.0.0/8"),
-    ip_network("172.16.0.0/12"),
-    ip_network("192.168.0.0/16"),
     ip_network("::1/128"),
-    ip_network("fc00::/7"),
-    ip_network("fe80::/10"),
 )
 
 
@@ -117,7 +112,17 @@ def auth_service(
     settings: Annotated[Settings, Depends(get_settings)],
     mfa: Annotated[MfaService, Depends(mfa_service)],
 ) -> AuthService:
-    return AuthService(repo, passwords, tokens, sender, settings.public_app_url, settings.is_local, mfa)
+    return AuthService(
+        repo,
+        passwords,
+        tokens,
+        sender,
+        settings.public_app_url,
+        settings.expose_auth_tokens,
+        mfa,
+        settings.site_owner_bootstrap_token,
+        settings.auto_bootstrap_site_owner,
+    )
 
 
 def project_service(
@@ -132,7 +137,11 @@ def evaluation_service(repo: Annotated[SqlRepository, Depends(get_repo)]) -> Eva
 
 
 def provider_registry(settings: Annotated[Settings, Depends(get_settings)]) -> ProviderRegistry:
-    return ProviderRegistry(settings.self_hosted_provider_mode, settings.allow_fake_provider)
+    return ProviderRegistry(
+        settings.self_hosted_provider_mode,
+        settings.allow_fake_provider,
+        settings.hosted_provider_base_urls,
+    )
 
 
 def provider_governance(
@@ -204,14 +213,18 @@ def require_csrf(
         raise AuthenticationError("CSRF token is missing or invalid.")
 
 
-def _is_trusted_proxy(peer_host: str | None) -> bool:
+def _trusted_proxy_networks(values: list[str]) -> tuple[Any, ...]:
+    return tuple(ip_network(value) for value in values) or TRUSTED_PROXY_NETWORKS
+
+
+def _is_trusted_proxy(peer_host: str | None, trusted_networks: tuple[Any, ...]) -> bool:
     if not peer_host:
         return False
     try:
         peer_ip = ip_address(peer_host)
     except ValueError:
         return False
-    return any(peer_ip in network for network in TRUSTED_PROXY_NETWORKS)
+    return any(peer_ip in network for network in trusted_networks)
 
 
 def _header_ip(value: str | None) -> str | None:
@@ -227,9 +240,10 @@ def _header_ip(value: str | None) -> str | None:
     return candidate
 
 
-def client_identity(request: Request) -> str:
+def client_identity(request: Request, trusted_proxy_networks: list[str] | None = None) -> str:
     peer = request.client.host if request.client else None
-    if _is_trusted_proxy(peer):
+    networks = _trusted_proxy_networks(trusted_proxy_networks or [])
+    if _is_trusted_proxy(peer, networks):
         real_ip = _header_ip(request.headers.get("x-real-ip")) or _header_ip(request.headers.get("x-forwarded-for"))
         if real_ip:
             return real_ip
@@ -243,7 +257,7 @@ def check_auth_rate_limit(
     action: str,
     email: str | None = None,
 ) -> None:
-    ip = client_identity(request)
+    ip = client_identity(request, settings.trusted_proxy_network_list)
     ip_limit = settings.login_rate_limit_per_minute if action == "login" else settings.auth_ip_rate_limit_per_minute
     limiter.check(LimitRule(f"auth:{action}:ip", ip_limit, 60), ip)
     if email:
@@ -263,4 +277,31 @@ def rate_limit_site_visit(
     limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    limiter.check(LimitRule("site_visit:ip", settings.site_visit_rate_limit_per_minute, 60), client_identity(request))
+    limiter.check(
+        LimitRule("site_visit:ip", settings.site_visit_rate_limit_per_minute, 60),
+        client_identity(request, settings.trusted_proxy_network_list),
+    )
+
+
+def rate_limit_public_webhook(
+    request: Request,
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> None:
+    _reject_large_content_length(request, 100_000)
+    limiter.check(
+        LimitRule("webhook_verify:ip", settings.auth_ip_rate_limit_per_minute, 60),
+        client_identity(request, settings.trusted_proxy_network_list),
+    )
+
+
+def _reject_large_content_length(request: Request, max_bytes: int) -> None:
+    value = request.headers.get("content-length")
+    if not value:
+        return
+    try:
+        size = int(value)
+    except ValueError:
+        raise ValidationFailure("Request content length is invalid.") from None
+    if size > max_bytes:
+        raise ValidationFailure("Request body exceeds the configured size limit.")

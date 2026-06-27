@@ -7,8 +7,9 @@ from typing import Any
 
 from app.application.enterprise_policy import require_workspace_admin, require_workspace_member
 from app.application.webhook_security import sign_webhook_payload, verify_webhook_signature
+from app.domain.enums import WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError, ProviderPolicyError, ValidationFailure
-from app.domain.policies import validate_provider_endpoint
+from app.domain.policies import require_write, validate_provider_endpoint
 
 
 class EnterpriseOperationsService:
@@ -31,9 +32,10 @@ class EnterpriseOperationsService:
 
     def revoke_api_token(self, user_id: str, workspace_id: str, token_id: str) -> dict[str, Any]:
         require_workspace_admin(self.repo.membership_role(workspace_id, user_id))
-        item = self.repo.revoke_api_token(token_id)
-        if item.workspace_id != workspace_id:
+        existing = self.repo.get_api_token(token_id)
+        if existing is None or existing.workspace_id != workspace_id:
             raise AuthorisationError("API token access denied.")
+        item = self.repo.revoke_api_token(token_id)
         self.repo.audit(workspace_id, user_id, "enterprise.api_token_revoked", {"token_id": token_id})
         self.repo.commit()
         return self._api_token_view(item)
@@ -128,7 +130,8 @@ class EnterpriseOperationsService:
         }
 
     def create_outcome(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
-        require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        role = require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        require_write(WorkspaceRole(role))
         report = self.repo.get_report(str(data["report_id"]))
         if report is None or report.workspace_id != workspace_id:
             raise AuthorisationError("Outcome report access denied.")

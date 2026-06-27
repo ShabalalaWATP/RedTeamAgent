@@ -45,6 +45,7 @@ class WorkflowService:
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         user = self._require_user(user_id)
         review = self._require_review(user_id, review_id)
+        self._require_write(user_id, review.workspace_id)
         self._enforce_workflow_quota(user)
         source_types = [source.content_type for source in self.repo.list_sources(review.id)]
         decision = route_agents(

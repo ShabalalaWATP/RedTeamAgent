@@ -7904,6 +7904,10 @@
             "type": "null",
             "title": "Captcha Token"
           },
+          "site_owner_bootstrap_token": {
+            "type": "null",
+            "title": "Site Owner Bootstrap Token"
+          },
           "mfa_code": {
             "anyOf": [
               {
@@ -8715,6 +8719,18 @@
               }
             ],
             "title": "Captcha Token"
+          },
+          "site_owner_bootstrap_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Owner Bootstrap Token"
           }
         },
         "type": "object",
@@ -10237,6 +10253,8 @@
         "properties": {
           "signing_secret": {
             "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
             "title": "Signing Secret"
           },
           "body": {
@@ -10255,6 +10273,8 @@
         "properties": {
           "signing_secret": {
             "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
             "title": "Signing Secret"
           },
           "body": {
@@ -10268,6 +10288,8 @@
           },
           "signature": {
             "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
             "title": "Signature"
           }
         },

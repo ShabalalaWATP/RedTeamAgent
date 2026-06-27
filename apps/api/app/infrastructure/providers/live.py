@@ -4,10 +4,15 @@ import json
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from app.application.ports.providers import AdapterSchema
+from app.domain.exceptions import ProviderPolicyError
 from app.domain.policies import validate_provider_endpoint
+
+MAX_PROVIDER_RESPONSE_BYTES = 1_000_000
+MAX_PROVIDER_MODELS = 500
+MAX_PROVIDER_MODEL_ID_LENGTH = 240
 
 
 class LiveJsonProviderAdapter:
@@ -16,10 +21,12 @@ class LiveJsonProviderAdapter:
         schema: AdapterSchema,
         catalogue: list[dict[str, Any]],
         self_hosted_mode: bool = False,
+        allowed_endpoint_base_urls: tuple[str, ...] = (),
     ) -> None:
         self.schema = schema
         self.catalogue = catalogue
         self.self_hosted_mode = self_hosted_mode
+        self.allowed_endpoint_base_urls = allowed_endpoint_base_urls
 
     def test_connection(self, config: dict[str, Any], credentials: dict[str, str]) -> dict[str, Any]:
         self._validate_config(config)
@@ -75,7 +82,10 @@ class LiveJsonProviderAdapter:
 
     def _validate_config(self, config: dict[str, Any]) -> None:
         if "endpoint_url" in config:
-            validate_provider_endpoint(str(config["endpoint_url"]), self.self_hosted_mode)
+            endpoint = str(config["endpoint_url"])
+            validate_provider_endpoint(endpoint, self.self_hosted_mode)
+            if not self.self_hosted_mode and self.allowed_endpoint_base_urls:
+                _require_allowed_endpoint_base(endpoint, self.allowed_endpoint_base_urls)
 
     def _model(self, config: dict[str, Any], model_identifier: str | None) -> str:
         configured = model_identifier or config.get("model_identifier") or config.get("default_model")
@@ -257,18 +267,41 @@ def _request_json(
     allow_http: bool = False,
 ) -> dict[str, Any]:
     _validate_request_url(url, allow_http)
+    validate_provider_endpoint(url, allow_http)
     data = json.dumps(body).encode("utf-8") if body is not None else None
     request = Request(url, data=data, method=method, headers={"Content-Type": "application/json", **headers})  # noqa: S310
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310  # nosec
-            payload = json.loads(response.read().decode("utf-8"))
+        with _open_provider_request(request, timeout) as response:
+            payload = json.loads(_read_provider_response(response).decode("utf-8"))
     except HTTPError as exc:
+        if 300 <= exc.code < 400:
+            raise RuntimeError("Provider redirects are not allowed.") from exc
         raise RuntimeError(f"Provider request failed with HTTP {exc.code}.") from exc
     except URLError as exc:
         raise RuntimeError("Provider request failed before a response was received.") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("Provider response was not a JSON object.")
     return payload
+
+
+def _open_provider_request(request: Request, timeout: int) -> Any:
+    opener = build_opener(_NoRedirectHandler)
+    return opener.open(request, timeout=timeout)  # noqa: S310  # nosec
+
+
+def _read_provider_response(response: Any) -> bytes:
+    headers = getattr(response, "headers", {}) or {}
+    content_length = headers.get("content-length") or headers.get("Content-Length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_PROVIDER_RESPONSE_BYTES:
+                raise RuntimeError("Provider response exceeds the configured size limit.")
+        except ValueError:
+            raise RuntimeError("Provider response declared an invalid size.") from None
+    body = response.read(MAX_PROVIDER_RESPONSE_BYTES + 1)
+    if len(body) > MAX_PROVIDER_RESPONSE_BYTES:
+        raise RuntimeError("Provider response exceeds the configured size limit.")
+    return body
 
 
 def _validate_request_url(url: str, allow_http: bool) -> None:
@@ -278,6 +311,19 @@ def _validate_request_url(url: str, allow_http: bool) -> None:
     if allow_http and parsed.scheme == "http":
         return
     raise RuntimeError("Provider URL must use HTTPS unless self-hosted mode is enabled.")
+
+
+def _require_allowed_endpoint_base(url: str, allowed_base_urls: tuple[str, ...]) -> None:
+    clean = url.rstrip("/")
+    allowed = tuple(base.rstrip("/") for base in allowed_base_urls if base.strip())
+    if not any(clean == base or clean.startswith(f"{base}/") for base in allowed):
+        raise ProviderPolicyError("Provider endpoint is not in the hosted provider allow-list.")
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, *args: object, **kwargs: object) -> None:
+        del args, kwargs
+        return None
 
 
 def _messages(prompt: str, schema_name: str) -> list[dict[str, str]]:
@@ -319,7 +365,7 @@ def _catalogue_items(model_ids: list[str], schema: AdapterSchema) -> list[dict[s
             "verified": False,
             "probe_result": {"ok": None, "source": "live_provider_catalogue"},
         }
-        for model_id in model_ids
+        for model_id in model_ids[:MAX_PROVIDER_MODELS]
     ]
 
 
@@ -333,5 +379,7 @@ def _model_ids_from_response(response: dict[str, Any]) -> list[str]:
             continue
         value = item.get("id", item.get("name"))
         if value:
-            model_ids.append(str(value).removeprefix("models/"))
+            model_id = str(value).removeprefix("models/")
+            if len(model_id) <= MAX_PROVIDER_MODEL_ID_LENGTH:
+                model_ids.append(model_id)
     return model_ids

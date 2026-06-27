@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.application.search_service import DeterministicSearchProvider, research_queries
 from app.application.workflow_retry import classify_failure
 from app.infrastructure.ingestion import web_sources
+from app.infrastructure.ingestion.redaction import redact_secret_like
 from tests.conftest import csrf_headers, register_verified
 from tests.test_stage1_api import create_project_review
 
@@ -209,10 +210,31 @@ def test_stage2_provider_adapters_and_capability_probes(client: TestClient) -> N
 def test_stage2_research_query_policy_redacts_sensitive_terms() -> None:
     queries = research_queries("Launch for alex@example.com!", ["medical"], private_mode=False)
     assert "@" not in queries[0]
+    assert "alex" not in queries[0].lower()
+    assert "example" not in queries[0].lower()
     private_queries = research_queries("Proprietary launch", ["finance"], private_mode=True)
     assert private_queries == ["decision risk validation", "comparable implementation evidence"]
     provider = DeterministicSearchProvider()
     assert provider.search("query", ["blocked.example"], ["blocked.example"]) == []
+
+
+def test_stage2_secret_redaction_covers_common_provider_tokens() -> None:
+    text = (
+        "AWS_ACCESS_KEY_ID=AKIA1234567890ABCD "
+        "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY "
+        "github_pat_1234567890abcdefghijklmnopqrstuvwxyz "
+        "AIza1234567890abcdefghijklmnop "
+        "Authorization: Bearer abcdefghijklmnop"
+    )
+
+    redacted, warnings = redact_secret_like(text)
+
+    assert warnings
+    assert "AKIA" not in redacted
+    assert "wJalrXU" not in redacted
+    assert "github_pat_" not in redacted
+    assert "AIza" not in redacted
+    assert "abcdefghijklmnop" not in redacted
 
 
 def test_stage2_retry_policy_distinguishes_failure_classes() -> None:
@@ -257,7 +279,7 @@ def _mock_public_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         web_sources,
         "_fetch_once",
-        lambda url: web_sources.FetchResponse(
+        lambda url, pinned_addresses: web_sources.FetchResponse(
             url,
             200,
             {"content-type": "text/html"},

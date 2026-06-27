@@ -256,6 +256,9 @@ class SqlEnterpriseRepository:
     def list_api_tokens(self, workspace_id: str) -> list[em.ApiToken]:
         return self._list_workspace(em.ApiToken, workspace_id)
 
+    def get_api_token(self, token_id: str) -> em.ApiToken | None:
+        return self.session.get(em.ApiToken, token_id)
+
     def revoke_api_token(self, token_id: str) -> em.ApiToken:
         token = self.session.get(em.ApiToken, token_id)
         if token is None:

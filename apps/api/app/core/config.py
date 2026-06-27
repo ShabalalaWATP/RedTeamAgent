@@ -36,11 +36,16 @@ class Settings(BaseSettings):
     captcha_challenge_ttl_seconds: int = Field(default=300, ge=60, le=900)
     turnstile_secret_key: str = ""
     mfa_issuer: str = "RedTeamAgent"
+    mfa_change_rate_limit_per_minute: int = Field(default=5, ge=1)
+    expose_auth_tokens: bool = False
+    auto_bootstrap_site_owner: bool = False
+    site_owner_bootstrap_token: str = ""
     login_rate_limit_per_minute: int = Field(default=10, ge=1)
     auth_email_rate_limit_per_hour: int = Field(default=6, ge=1)
     auth_ip_rate_limit_per_minute: int = Field(default=30, ge=1)
     expensive_rate_limit_per_minute: int = Field(default=20, ge=1)
     site_visit_rate_limit_per_minute: int = Field(default=120, ge=1)
+    trusted_proxy_networks: str = "127.0.0.0/8,::1/128"
     mail_delivery: str = "local"
     mail_from: str = "RedTeamAgent <noreply@localhost>"
     smtp_host: str = "localhost"
@@ -62,6 +67,10 @@ class Settings(BaseSettings):
     def is_local(self) -> bool:
         return self.app_env in {"local", "test"}
 
+    @property
+    def trusted_proxy_network_list(self) -> list[str]:
+        return [network.strip() for network in self.trusted_proxy_networks.split(",") if network.strip()]
+
 
 def validate_production_settings(settings: Settings) -> None:
     if settings.is_local:
@@ -81,10 +90,20 @@ def validate_production_settings(settings: Settings) -> None:
         failures.append("DATABASE_URL must not use SQLite in production.")
     if settings.allow_fake_provider:
         failures.append("ALLOW_FAKE_PROVIDER must be false in production.")
+    if settings.expose_auth_tokens:
+        failures.append("EXPOSE_AUTH_TOKENS must be false in production.")
+    if settings.auto_bootstrap_site_owner:
+        failures.append("AUTO_BOOTSTRAP_SITE_OWNER must be false in production.")
     if not settings.captcha_required:
         failures.append("CAPTCHA_REQUIRED must be true in production.")
+    if settings.captcha_provider != "turnstile" or _is_placeholder(settings.turnstile_secret_key):
+        failures.append("CAPTCHA_PROVIDER must be turnstile with TURNSTILE_SECRET_KEY in production.")
+    if _is_placeholder(settings.site_owner_bootstrap_token) or len(settings.site_owner_bootstrap_token) < 32:
+        failures.append("SITE_OWNER_BOOTSTRAP_TOKEN must be configured in production.")
     if settings.mail_delivery != "smtp":
         failures.append("MAIL_DELIVERY must be smtp in production.")
+    if not settings.smtp_starttls:
+        failures.append("SMTP_STARTTLS must be true in production.")
     if (
         _is_placeholder(settings.smtp_host)
         or _is_placeholder(settings.smtp_username)

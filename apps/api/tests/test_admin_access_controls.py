@@ -9,7 +9,7 @@ def test_auth_response_includes_workspace_owner_role(client: TestClient) -> None
     password = "Correct-Horse-42!"  # noqa: S105 - deterministic test password
     registered = client.post("/auth/register", json={"email": "role-owner@example.com", "password": password})
     assert registered.status_code == 200, registered.text
-    assert registered.json()["workspace_role"] == "owner"
+    assert registered.json()["workspace_role"] is None
     verified = client.post("/auth/verify-email", json={"token": registered.json()["verification_token"]})
     assert verified.status_code == 204, verified.text
 

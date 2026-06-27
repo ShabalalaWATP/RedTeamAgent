@@ -53,13 +53,6 @@ def upgrade_site_account_schema() -> None:
     with engine.begin() as connection:
         for name, definition in missing:
             connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {definition}"))
-        connection.execute(
-            text(
-                "UPDATE users SET account_type = 'owner' "
-                "WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1) "
-                "AND NOT EXISTS (SELECT 1 FROM users WHERE account_type = 'owner')"
-            )
-        )
 
 
 def upgrade_workflow_quota_schema() -> None:

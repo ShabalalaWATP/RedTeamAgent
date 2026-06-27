@@ -70,11 +70,16 @@ def _zip_entries(content: bytes) -> list[tuple[str, bytes]]:
         if len(archive.infolist()) > MAX_FILES:
             raise ValidationFailure("Archive contains too many files.")
         entries = []
+        total = 0
         for info in archive.infolist():
             if info.is_dir():
                 continue
             if (info.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValidationFailure("Archive symlinks are not allowed.")
+            _validate_path(info.filename)
+            total += info.file_size
+            if total > MAX_EXPANDED_BYTES:
+                raise ValidationFailure("Archive expands beyond the configured safety limit.")
             entries.append((info.filename, archive.read(info)))
         return entries
 
@@ -82,13 +87,21 @@ def _zip_entries(content: bytes) -> list[tuple[str, bytes]]:
 def _tar_entries(content: bytes) -> list[tuple[str, bytes]]:
     mode: Literal["r:gz", "r:"] = "r:gz" if content[:2] == b"\x1f\x8b" else "r:"
     with tarfile.open(fileobj=BytesIO(content), mode=mode) as archive:
-        members = [member for member in archive.getmembers() if member.isfile()]
-        if len(members) > MAX_FILES:
-            raise ValidationFailure("Archive contains too many files.")
         entries = []
-        for member in members:
+        total = 0
+        file_count = 0
+        for member in archive:
             if member.issym() or member.islnk():
                 raise ValidationFailure("Archive links are not allowed.")
+            if not member.isfile():
+                continue
+            file_count += 1
+            if file_count > MAX_FILES:
+                raise ValidationFailure("Archive contains too many files.")
+            _validate_path(member.name)
+            total += member.size
+            if total > MAX_EXPANDED_BYTES:
+                raise ValidationFailure("Archive expands beyond the configured safety limit.")
             extracted = archive.extractfile(member)
             entries.append((member.name, extracted.read() if extracted else b""))
         return entries

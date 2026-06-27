@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.application.review_service import ReviewService
+from app.domain.exceptions import ValidationFailure
 from app.interfaces.api.dependencies import (
     AuthContext,
     current_context,
@@ -26,6 +27,7 @@ from app.interfaces.api.schemas import (
 )
 
 router = APIRouter(tags=["reviews"])
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 
 
 @router.post("/projects/{project_id}/reviews", response_model=ReviewView, dependencies=[Depends(require_csrf)])
@@ -112,7 +114,7 @@ async def upload_source(
     service: Annotated[ReviewService, Depends(review_service)],
     file: Annotated[UploadFile, File()],
 ) -> SourceView:
-    content = await file.read()
+    content = await _read_bounded_upload(file, service.max_upload_bytes)
     source = service.add_upload(
         context.user.id,
         review_id,
@@ -121,6 +123,20 @@ async def upload_source(
         content,
     )
     return source_view(source)
+
+
+async def _read_bounded_upload(file: UploadFile, max_bytes: int) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(UPLOAD_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise ValidationFailure("Upload exceeds the configured size limit.")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.post("/context-packs", response_model=ContextPackView, dependencies=[Depends(require_csrf)])

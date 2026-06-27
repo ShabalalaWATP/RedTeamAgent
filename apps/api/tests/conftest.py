@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings, get_settings
 from app.core.database import engine
 from app.infrastructure.db.models import Base
 from app.interfaces.api.dependencies import local_rate_limit_store
@@ -26,7 +27,10 @@ def clean_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator
 @pytest.fixture
 def client() -> Generator[TestClient]:
     with TestClient(create_app()) as test_client:
+        test_settings = Settings(expose_auth_tokens=True, auto_bootstrap_site_owner=True)
+        test_client.app.dependency_overrides[get_settings] = lambda: test_settings
         yield test_client
+        test_client.app.dependency_overrides.clear()
 
 
 def register_verified(client: TestClient, email: str = "owner@example.com") -> dict[str, Any]:

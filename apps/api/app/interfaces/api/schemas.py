@@ -15,10 +15,12 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=12, max_length=128)
     captcha_token: str | None = Field(default=None, max_length=4096)
+    site_owner_bootstrap_token: str | None = Field(default=None, max_length=4096)
 
 
 class LoginRequest(RegisterRequest):
     captcha_token: None = None
+    site_owner_bootstrap_token: None = None
     mfa_code: str | None = Field(default=None, max_length=64)
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ssl
 from email.message import EmailMessage
 
 from fastapi.testclient import TestClient
@@ -68,8 +69,8 @@ def test_smtp_email_sender_uses_configured_transport(monkeypatch) -> None:
         def __exit__(self, *args: object) -> None:
             calls.append(("close", None))
 
-        def starttls(self) -> None:
-            calls.append(("starttls", None))
+        def starttls(self, context: ssl.SSLContext) -> None:
+            calls.append(("starttls", (context.verify_mode, context.check_hostname)))
 
         def login(self, username: str, password: str) -> None:
             calls.append(("login", (username, password)))
@@ -90,7 +91,7 @@ def test_smtp_email_sender_uses_configured_transport(monkeypatch) -> None:
     NullEmailSender().send("ignored@example.test", "Ignored", "Ignored")
 
     assert ("connect", ("smtp.example.test", 2525, 10)) in calls
-    assert ("starttls", None) in calls
+    assert ("starttls", (ssl.CERT_REQUIRED, True)) in calls
     assert ("login", ("smtp-user", "smtp-pass")) in calls
     assert ("send", ("user@example.test", "RedTeamAgent <noreply@example.test>", "Subject")) in calls
 

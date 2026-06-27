@@ -97,6 +97,8 @@ def validate_provider_endpoint(url: str, self_hosted_mode: bool) -> None:
             raise ProviderPolicyError("Provider endpoint must use HTTPS unless self-hosted mode is enabled.")
     if not parsed.hostname:
         raise ProviderPolicyError("Provider endpoint host is required.")
+    if parsed.username or parsed.password:
+        raise ProviderPolicyError("Provider endpoint credentials are not allowed in the URL.")
     if parsed.hostname in BLOCKED_METADATA_HOSTS:
         raise ProviderPolicyError("Provider endpoint cannot target a metadata service.")
     for address in _resolve_host(parsed.hostname):
