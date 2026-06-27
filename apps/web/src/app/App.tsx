@@ -29,7 +29,7 @@ function Layout() {
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
         <div className="brand">
-          <img src={logo} alt="" width="32" height="32" />
+          <img src={logo} alt="" width="40" height="40" />
           <span className="brand-name">
             RedTeamAgent
             <small>Decision intelligence</small>
