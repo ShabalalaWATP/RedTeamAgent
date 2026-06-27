@@ -118,6 +118,9 @@ class EnterpriseService:
 
     def update_action(self, user_id: str, report_id: str, action_id: str, status: str) -> Any:
         report = self._report_with_write(user_id, report_id)
+        existing = self.repo.get_action(action_id)
+        if existing is None or existing.report_id != report.id or existing.workspace_id != report.workspace_id:
+            raise NotFoundError("Report action not found.")
         action = self.repo.update_action_status(action_id, status)
         self.repo.audit(report.workspace_id, user_id, "enterprise.report_action_updated", {"action_id": action.id})
         self.repo.commit()
@@ -135,6 +138,9 @@ class EnterpriseService:
             self.repo.get_project_permission(review.project_id, user_id),
         )
         report = self._report(str(data["report_id"]))
+        run = self.repo.get_run(report.run_id)
+        if report.workspace_id != review.workspace_id or run is None or run.review_id != review.id:
+            raise AuthorisationError("Decision journal report access denied.")
         journal = self.repo.create_journal(
             {
                 "review_id": review_id,

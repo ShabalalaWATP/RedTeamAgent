@@ -50,7 +50,7 @@ def test_stage2_rich_sources_research_report_pdf_and_evaluation(
         ("diagram.webp", b"RIFFstage2WEBP", "image/webp"),
         ("note.webm", b"audio" * 1000, "audio/webm"),
         ("clip.mp4", b"video" * 1000, "video/mp4"),
-        ("code.zip", _zip_bytes({"app.py": b"password='abcdef1234567890'\nprint('safe')"}), "application/zip"),
+        ("code.zip", _zip_bytes({"app.py": b"password='abcdef1234567890'\nprint('safe')"}), "application/zip"),  # noqa: S105
     ]
     upload_responses = {}
     for filename, content, content_type in uploads:

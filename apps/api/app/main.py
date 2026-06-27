@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import get_settings
+from app.core.config import get_settings, validate_production_settings
 from app.core.database import initialise_database
 from app.interfaces.api.errors import install_error_handlers
 from app.interfaces.api.routes import (
@@ -32,6 +32,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    validate_production_settings(settings)
     app = FastAPI(title="RedTeamAgent API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,

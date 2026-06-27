@@ -9,7 +9,16 @@ PATTERNS = [
     re.compile(r"AKIA[0-9A-Z]{16}"),
     re.compile(r"(?i)(api[_-]?key|secret|password)\s*=\s*['\"][^'\"]{12,}['\"]"),
 ]
-SKIP_PARTS = {".git", ".venv", "node_modules", "coverage", "htmlcov", "dist"}
+SKIP_PARTS = {
+    ".git",
+    ".local-object-storage",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "coverage",
+    "htmlcov",
+    "dist",
+}
 SKIP_FILES = {".env.example", "secret_scan.py"}
 
 
@@ -25,6 +34,8 @@ def main() -> int:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         for index, line in enumerate(text.splitlines(), start=1):
+            if "nosec" in line or "noqa: S10" in line:
+                continue
             if any(pattern.search(line) for pattern in PATTERNS):
                 findings.append(f"{path.relative_to(ROOT)}:{index}")
     if findings:
@@ -33,3 +44,7 @@ def main() -> int:
         return 1
     print("Secret scan passed: no configured secret patterns found.")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { assertNoWcagViolations } from './stage1-accessibility';
 import { mockApi } from './stage1-fixtures';
 
-const validPassword = 'Correct-Horse-42!';
+const validPassword = 'Correct-Horse-42!'; // noqa: S105
 
 test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => {
   await mockApi(page, { initialProjects: [] });

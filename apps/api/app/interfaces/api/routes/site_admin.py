@@ -8,7 +8,14 @@ from app.application.site_admin_service import SiteAdminService
 from app.infrastructure.db import models
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.db.site_admin_repository import SiteAdminRepository
-from app.interfaces.api.dependencies import AuthContext, client_identity, current_context, get_repo, require_csrf
+from app.interfaces.api.dependencies import (
+    AuthContext,
+    client_identity,
+    current_context,
+    get_repo,
+    rate_limit_site_visit,
+    require_csrf,
+)
 from app.interfaces.api.site_admin_schemas import SiteUserUpdate, SiteUserView, SiteVisitCreate, SiteVisitView
 
 router = APIRouter(prefix="/site-admin", tags=["site-admin"])
@@ -65,7 +72,7 @@ def list_visits(
     return [SiteVisitView.model_validate(item) for item in service.list_visits(context.user.id)]
 
 
-@router.post("/visits", status_code=204)
+@router.post("/visits", status_code=204, dependencies=[Depends(rate_limit_site_visit)])
 def record_visit(
     payload: SiteVisitCreate,
     request: Request,

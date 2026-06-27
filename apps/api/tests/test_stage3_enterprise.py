@@ -9,7 +9,11 @@ from tests.conftest import csrf_headers, register_verified
 from tests.stage3_test_helpers import backdate_first_notification, governance_payload
 
 
-def test_stage3_enterprise_governance_collaboration_and_operations(client: TestClient) -> None:
+def test_stage3_enterprise_governance_collaboration_and_operations(client: TestClient, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.application.enterprise_operations_service.validate_provider_endpoint",
+        lambda url, self_hosted_mode: None,
+    )
     owner = register_verified(client, "stage3-owner@example.com")
     organisation = client.post(
         "/enterprise/workspaces",
@@ -133,7 +137,8 @@ def test_stage3_enterprise_governance_collaboration_and_operations(client: TestC
     assert client.get(f"/enterprise/reports/{ids['report_id']}/shares").json()[0]["access_mode"] == "view"
     assert client.get(f"/enterprise/workspaces/{workspace_id}/notifications").json()
 
-    export = client.get(f"/enterprise/workspaces/{workspace_id}/data-export")
+    assert client.get(f"/enterprise/workspaces/{workspace_id}/data-export").status_code == 405
+    export = client.post(f"/enterprise/workspaces/{workspace_id}/data-export", headers=csrf_headers(owner))
     assert export.status_code == 200
     assert export.json()["request_type"] == "export"
     deletion = client.post(
@@ -207,6 +212,13 @@ def test_stage3_security_abuse_cases_fail_closed(client: TestClient) -> None:
         },
     )
     assert custom_agent.status_code == 422
+
+    blocked_webhook = client.post(
+        f"/enterprise/workspaces/{workspace_id}/webhooks",
+        headers=csrf_headers(owner),
+        json={"name": "Private", "url": "https://127.0.0.1/hook", "events": ["run.completed"]},
+    )
+    assert blocked_webhook.status_code == 422
 
     token = client.post(
         f"/enterprise/workspaces/{workspace_id}/api-tokens",

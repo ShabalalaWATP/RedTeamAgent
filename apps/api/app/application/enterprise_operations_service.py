@@ -7,7 +7,8 @@ from typing import Any
 
 from app.application.enterprise_policy import require_workspace_admin, require_workspace_member
 from app.application.webhook_security import sign_webhook_payload, verify_webhook_signature
-from app.domain.exceptions import AuthorisationError, NotFoundError
+from app.domain.exceptions import AuthorisationError, NotFoundError, ProviderPolicyError, ValidationFailure
+from app.domain.policies import validate_provider_endpoint
 
 
 class EnterpriseOperationsService:
@@ -39,6 +40,7 @@ class EnterpriseOperationsService:
 
     def create_webhook(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> dict[str, Any]:
         require_workspace_admin(self.repo.membership_role(workspace_id, user_id))
+        self._validate_webhook_url(str(data["url"]))
         secret = secrets.token_urlsafe(32)
         webhook = self.repo.create_webhook({"workspace_id": workspace_id, "secret_hash": self._hash(secret), **data})
         self.repo.audit(workspace_id, user_id, "webhook.created", {"webhook_id": webhook.id})
@@ -127,6 +129,9 @@ class EnterpriseOperationsService:
 
     def create_outcome(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
         require_workspace_member(self.repo.membership_role(workspace_id, user_id))
+        report = self.repo.get_report(str(data["report_id"]))
+        if report is None or report.workspace_id != workspace_id:
+            raise AuthorisationError("Outcome report access denied.")
         item = self.repo.create_outcome({"workspace_id": workspace_id, **data})
         self.repo.audit(workspace_id, user_id, "enterprise.outcome_recorded", {"outcome_id": item.id})
         self.repo.commit()
@@ -199,6 +204,13 @@ class EnterpriseOperationsService:
             "failure_rate": 0.01 if model.verified else 0.08,
             "capability_coverage": len(model.capabilities),
         }
+
+    @staticmethod
+    def _validate_webhook_url(url: str) -> None:
+        try:
+            validate_provider_endpoint(url, self_hosted_mode=False)
+        except ProviderPolicyError as exc:
+            raise ValidationFailure("Webhook URL must be a public HTTPS endpoint.") from exc
 
     @staticmethod
     def _api_token_view(token: Any) -> dict[str, Any]:

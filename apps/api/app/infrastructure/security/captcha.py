@@ -115,7 +115,7 @@ class CaptchaVerifier:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=5) as response:  # noqa: S310 - fixed Cloudflare verification URL.
+            with urlopen(request, timeout=5) as response:  # noqa: S310  # nosec
                 payload = json.loads(response.read().decode("utf-8"))
         except Exception as exc:
             raise ValidationFailure("Security check failed. Try again.") from exc

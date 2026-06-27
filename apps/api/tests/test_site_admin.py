@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings, get_settings
 from tests.conftest import csrf_headers, register_verified
 
 
@@ -82,3 +83,16 @@ def test_owner_controls_admin_scope_and_visits(client: TestClient) -> None:
     visits = client.get("/site-admin/visits")
     assert visits.status_code == 200
     assert {visit["path"] for visit in visits.json()} >= {"/auth", "/settings"}
+
+
+def test_anonymous_visit_tracking_is_rate_limited(client: TestClient) -> None:
+    settings = Settings(site_visit_rate_limit_per_minute=2)
+    client.app.dependency_overrides[get_settings] = lambda: settings
+
+    assert client.post("/site-admin/visits", json={"path": "/auth"}).status_code == 204
+    assert client.post("/site-admin/visits", json={"path": "/workflows"}).status_code == 204
+    blocked = client.post("/site-admin/visits", json={"path": "/settings"})
+
+    assert blocked.status_code == 429
+    assert blocked.json()["message"] == "Too many requests. Try again later."
+    client.app.dependency_overrides.clear()

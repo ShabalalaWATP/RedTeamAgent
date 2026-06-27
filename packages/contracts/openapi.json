@@ -6817,12 +6817,12 @@
       }
     },
     "/enterprise/workspaces/{workspace_id}/data-export": {
-      "get": {
+      "post": {
         "tags": [
           "enterprise-operations"
         ],
         "summary": "Data Export",
-        "operationId": "data_export_enterprise_workspaces__workspace_id__data_export_get",
+        "operationId": "data_export_enterprise_workspaces__workspace_id__data_export_post",
         "parameters": [
           {
             "name": "workspace_id",
@@ -6831,6 +6831,22 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
             }
           },
           {

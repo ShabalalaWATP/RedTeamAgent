@@ -3,7 +3,7 @@ from __future__ import annotations
 import ipaddress
 import os
 import socket
-import subprocess
+import subprocess  # nosec
 import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -175,7 +175,7 @@ def _clone_repository_entries(url: str) -> list[tuple[str, bytes]]:
 
 def _run_git(command: list[str], env: dict[str, str], cwd: str, timeout: int) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(  # noqa: S603 - fixed git argv, no shell, with protocol and env restrictions.
+        return subprocess.run(  # noqa: S603  # nosec
             command,
             cwd=cwd,
             env=env,

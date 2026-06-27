@@ -31,7 +31,7 @@ const apiHeaders = {
   'access-control-allow-origin': 'http://127.0.0.1:5173',
   'content-type': 'application/json'
 };
-const validPassword = 'Correct-Horse-42!';
+const validPassword = 'Correct-Horse-42!'; // noqa: S105
 
 type MockApiOptions = {
   initialProjects?: ReturnType<typeof projectResponse>[];

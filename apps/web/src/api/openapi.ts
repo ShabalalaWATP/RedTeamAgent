@@ -1313,10 +1313,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Data Export */
-        get: operations["data_export_enterprise_workspaces__workspace_id__data_export_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Data Export */
+        post: operations["data_export_enterprise_workspaces__workspace_id__data_export_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6348,10 +6348,12 @@ export interface operations {
             };
         };
     };
-    data_export_enterprise_workspaces__workspace_id__data_export_get: {
+    data_export_enterprise_workspaces__workspace_id__data_export_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
             path: {
                 workspace_id: string;
             };

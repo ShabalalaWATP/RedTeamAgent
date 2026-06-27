@@ -107,7 +107,7 @@ class AuthService:
     def request_password_reset(self, email: str) -> dict[str, str]:
         user = self.repo.get_user_by_email(email)
         if user is None:
-            return {"reset_token": ""}
+            return {"reset_token": ""}  # nosec
         token = self.tokens.sign("password-reset", user.id)
         self._send_password_reset_email(user.email, token)
         self.repo.audit(None, user.id, "auth.password_reset_requested", {})

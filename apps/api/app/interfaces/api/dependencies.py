@@ -256,3 +256,11 @@ def rate_limit_expensive(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     limiter.check(LimitRule("expensive:user", settings.expensive_rate_limit_per_minute, 60), context.user.id)
+
+
+def rate_limit_site_visit(
+    request: Request,
+    limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> None:
+    limiter.check(LimitRule("site_visit:ip", settings.site_visit_rate_limit_per_minute, 60), client_identity(request))

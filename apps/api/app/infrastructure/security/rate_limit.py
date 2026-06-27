@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass
 from typing import Protocol
@@ -57,7 +58,8 @@ class AbuseLimiter:
         self.prefix = prefix
 
     def check(self, rule: LimitRule, identity: str) -> None:
-        key = f"{self.prefix}:rate:{rule.name}:{identity}"
+        safe_identity = hashlib.sha256(identity.encode("utf-8", errors="ignore")).hexdigest()
+        key = f"{self.prefix}:rate:{rule.name}:{safe_identity}"
         if self.store.increment(key, rule.window_seconds) > rule.limit:
             raise RateLimitExceeded("Too many requests. Try again later.")
 

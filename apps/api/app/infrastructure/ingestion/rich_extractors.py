@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import csv
 import re
-import xml.etree.ElementTree as ET
 from io import BytesIO, StringIO
+from typing import Any
 from zipfile import ZipFile
+
+from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
 
 from app.infrastructure.ingestion.redaction import redact_secret_like
 from app.infrastructure.ingestion.types import ExtractedChunk, ExtractionResult
@@ -109,7 +111,7 @@ def _sheet_rows(xml_bytes: bytes, shared: list[str]) -> list[list[str]]:
     return rows
 
 
-def _tag(node: ET.Element, name: str) -> bool:
+def _tag(node: Any, name: str) -> bool:
     return node.tag == name or node.tag.endswith(f"}}{name}")
 
 

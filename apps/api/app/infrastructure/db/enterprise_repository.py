@@ -173,6 +173,9 @@ class SqlEnterpriseRepository:
     def create_action(self, data: dict[str, Any]) -> em.ReportAction:
         return self._create(em.ReportAction, data)
 
+    def get_action(self, action_id: str) -> em.ReportAction | None:
+        return self.session.get(em.ReportAction, action_id)
+
     def update_action_status(self, action_id: str, status: str) -> em.ReportAction:
         action = self.session.get(em.ReportAction, action_id)
         if action is None:

@@ -76,7 +76,11 @@ def list_data_requests(
     return [DataRequestView.model_validate(item) for item in service.list_data_requests(context.user.id, workspace_id)]
 
 
-@router.get("/workspaces/{workspace_id}/data-export", response_model=DataRequestView)
+@router.post(
+    "/workspaces/{workspace_id}/data-export",
+    response_model=DataRequestView,
+    dependencies=[Depends(require_csrf)],
+)
 def data_export(
     workspace_id: str,
     context: Annotated[AuthContext, Depends(current_context)],

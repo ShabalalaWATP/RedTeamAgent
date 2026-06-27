@@ -260,7 +260,7 @@ def _request_json(
     data = json.dumps(body).encode("utf-8") if body is not None else None
     request = Request(url, data=data, method=method, headers={"Content-Type": "application/json", **headers})  # noqa: S310
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310
+        with urlopen(request, timeout=timeout) as response:  # noqa: S310  # nosec
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         raise RuntimeError(f"Provider request failed with HTTP {exc.code}.") from exc

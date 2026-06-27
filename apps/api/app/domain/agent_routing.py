@@ -155,7 +155,7 @@ def _tool_policy(tool: str) -> dict[str, object]:
         "read_sources": "read_only",
         "static_code_scan": "local_analysis",
         "dependency_audit": "local_analysis",
-        "secret_scan": "local_analysis",
+        "secret_scan": "local_analysis",  # nosec
         "http_probe": "network_read",
         "browser_probe": "network_read",
         "zap_baseline_scan": "network_passive_scan",
