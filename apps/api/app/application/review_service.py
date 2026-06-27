@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
+from app.application.agent_plan import assurance_agent_views, selected_agent_views
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
 from app.domain.agents import AGENT_LABELS
@@ -129,22 +130,27 @@ class ReviewService:
 
     def preflight(self, user_id: str, review_id: str) -> dict[str, Any]:
         review = self._require_review_member(user_id, review_id)
-        decision = route_agents(ReviewMode(review.mode), review.focus_chips)
         sources = self.repo.list_sources(review.id)
+        source_types = [source.content_type for source in sources]
+        decision = route_agents(
+            ReviewMode(review.mode),
+            review.focus_chips,
+            review.title,
+            review.proposal_text,
+            source_types,
+        )
         selected_agent_keys = {agent.value for agent in decision.selected_agents}
         selected_agents = [agent.value for agent in decision.selected_agents]
         return {
             "review_id": review.id,
             "sources": [self._source_view(source) for source in sources],
             "selected_mode": review.mode,
-            "selected_agents": [
-                {"key": agent.value, "label": AGENT_LABELS[agent], "reason": "Relevant to review mode or focus."}
-                for agent in decision.selected_agents
-            ],
+            "selected_agents": selected_agent_views(decision),
             "excluded_agents": [
                 {"key": agent.value, "label": AGENT_LABELS[agent], "reason": reason}
                 for agent, reason in decision.excluded_agents.items()
             ],
+            "assurance_agents": assurance_agent_views(decision),
             "external_research": review.external_research,
             "research_policy": {
                 "enabled": review.external_research,
@@ -155,6 +161,10 @@ class ReviewService:
             "mode_budget": decision.mode_budget,
             "challenge_passes": decision.challenge_passes,
             "report_depth": decision.report_depth,
+            "agent_cards": decision.agent_cards,
+            "assurance_cards": decision.assurance_cards,
+            "tool_manifest": decision.tool_manifest,
+            "context_strategy": decision.context_strategy,
             "capability_warnings": self._capability_warnings(review.workspace_id),
             **self._routing_metadata(review, selected_agents),
             "context_packs": context_pack_snapshot(

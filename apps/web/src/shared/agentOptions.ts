@@ -3,9 +3,13 @@ export const AGENT_OPTIONS = [
   ['alternative_perspectives', 'Alternative Perspectives'],
   ['software_architecture', 'Software Architecture and Quality'],
   ['cybersecurity_privacy', 'Cybersecurity and Privacy'],
+  ['secure_by_design', 'Secure by Design'],
+  ['vulnerability_research_static', 'Vulnerability Research (Static)'],
+  ['vulnerability_research_dynamic', 'Vulnerability Research (Dynamic)'],
+  ['uk_data_protection', 'UK Data Protection'],
   ['legal_regulatory', 'Legal and Regulatory'],
   ['policy_governance', 'Policy and Governance'],
-  ['product_user_experience', 'Product and User Experience'],
+  ['product_ux', 'Product and User Experience'],
   ['operations_delivery', 'Operations and Delivery'],
   ['comparable_products_research', 'Comparable Products Research'],
   ['physical_systems', 'Physical Systems'],
@@ -18,5 +22,8 @@ export const AGENT_OPTIONS = [
   ['data_ai', 'Data and AI'],
   ['future_second_order', 'Future and Second-Order Effects'],
   ['environmental_sustainability', 'Environmental Sustainability'],
-  ['reputation_stakeholder', 'Reputation and Stakeholder Impact']
+  ['reputation_stakeholder', 'Reputation and Stakeholder Impact'],
+  ['food_consumer_safety', 'Food and Consumer Safety'],
+  ['source_provenance', 'Source Provenance'],
+  ['quality_fact_checker', 'Quality and Fact Checker']
 ] as const;

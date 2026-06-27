@@ -34,7 +34,11 @@ describe('Stage 2 source intake', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /add pasted text/i }));
-    await user.upload(screen.getByLabelText(/upload rich evidence/i), new File(['data'], 'table.csv', { type: 'text/csv' }));
+    await user.upload(screen.getByLabelText(/upload rich evidence/i), [
+      new File(['data'], 'table.csv', { type: 'text/csv' }),
+      new File(['photo'], 'site-photo.jpg', { type: 'image/jpeg' }),
+      new File(['voice'], 'field-note.m4a', { type: 'audio/mp4' })
+    ]);
     await user.clear(screen.getByLabelText(/website url/i));
     await user.type(screen.getByLabelText(/website url/i), 'https://example.com/audit');
     await user.click(screen.getByRole('button', { name: /snapshot website/i }));
@@ -45,7 +49,9 @@ describe('Stage 2 source intake', () => {
 
     expect(onAddText).toHaveBeenCalledTimes(1);
     expect(onUpload.mock.calls[0][0]).toMatchObject({ name: 'table.csv' });
-    expect(onUpload.mock.calls[1][0]).toMatchObject({ name: 'voice-note.txt' });
+    expect(onUpload.mock.calls[1][0]).toMatchObject({ name: 'site-photo.jpg' });
+    expect(onUpload.mock.calls[2][0]).toMatchObject({ name: 'field-note.m4a' });
+    expect(onUpload.mock.calls[3][0]).toMatchObject({ name: 'voice-note.txt' });
     expect(onWebsite).toHaveBeenCalledWith('https://example.com/audit');
     expect(onRepository).toHaveBeenCalledWith('https://github.com/example/repo');
     expect(await screen.findByText(/fallback note submitted/i)).toBeInTheDocument();
@@ -53,6 +59,7 @@ describe('Stage 2 source intake', () => {
     expect(screen.getByText('OCR confidence warning')).toBeInTheDocument();
     expect(screen.getByText('notes.txt')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Source failed');
+    expect(await screen.findByText('Submitted 3 files for analysis.')).toBeInTheDocument();
   });
 
   it('records audio with MediaRecorder and stops captured tracks', async () => {

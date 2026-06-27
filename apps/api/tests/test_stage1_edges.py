@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.application.workflow_service import WorkflowService
+from app.application.report_assurance import enforce_quality_gate
 from app.domain.exceptions import QualityGateError, RateLimitExceeded
 from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule, MemoryRateLimitStore
 from tests.conftest import csrf_headers, register_verified
@@ -119,9 +119,9 @@ def test_no_source_report_and_quality_gate_branches(client: TestClient) -> None:
     assert report.json()["data"]["blockers"]
 
     with pytest.raises(QualityGateError):
-        WorkflowService._quality_gate({"findings": [{"evidence_type": "unsupported"}]})
+        enforce_quality_gate({"findings": [{"evidence_type": "unsupported"}]})
     with pytest.raises(QualityGateError):
-        WorkflowService._quality_gate({"findings": [{"evidence_type": "source", "evidence_label": ""}]})
+        enforce_quality_gate({"findings": [{"evidence_type": "source", "evidence_label": ""}]})
 
 
 def test_rate_limiter_branch() -> None:

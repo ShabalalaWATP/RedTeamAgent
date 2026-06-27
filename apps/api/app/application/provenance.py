@@ -13,6 +13,8 @@ def context_pack_snapshot(packs: list[Any], selected_agents: set[str]) -> list[d
             "agent_key": pack.agent_key,
             "version": pack.version,
             "markdown_sha256": sha256(pack.markdown.encode("utf-8")).hexdigest(),
+            "load_strategy": "lazy_selected_agent_only",
+            "materialised_for_orchestrator": False,
         }
         for pack in sorted(selected, key=lambda item: (item.agent_key, item.name, item.id))
     ]

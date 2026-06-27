@@ -178,6 +178,8 @@ export type ContextPackProvenance = {
   agent_key: string;
   version: number;
   markdown_sha256: string;
+  load_strategy?: string;
+  materialised_for_orchestrator?: boolean;
 };
 
 export type RiskMatrixItem = {
@@ -224,6 +226,11 @@ export type ReportData = {
   assumptions: string[];
   evidence_gaps: string[];
   context_packs: ContextPackProvenance[];
+  agent_cards?: Array<Record<string, unknown>>;
+  assurance_agents?: Array<Record<string, unknown>>;
+  tool_manifest?: Record<string, unknown>;
+  context_strategy?: Record<string, unknown>;
+  quality_assurance?: Record<string, unknown>;
   findings: ReportFinding[];
   retrieved_evidence: RetrievedEvidence[];
   external_sources: ExternalSource[];

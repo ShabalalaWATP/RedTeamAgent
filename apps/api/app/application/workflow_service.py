@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.application.agent_plan import routing_plan_payload
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
 from app.application.provider_governance import ProviderGovernanceService
+from app.application.report_assurance import enforce_quality_gate, quality_assurance_record
 from app.application.search_service import DeterministicSearchProvider, research_queries
 from app.application.workflow_retry import retry_policy_snapshot
 from app.domain.agents import AGENT_LABELS
@@ -43,7 +45,14 @@ class WorkflowService:
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         review = self._require_review(user_id, review_id)
         self._enforce_daily_run_quota(user_id)
-        decision = route_agents(ReviewMode(review.mode), review.focus_chips)
+        source_types = [source.content_type for source in self.repo.list_sources(review.id)]
+        decision = route_agents(
+            ReviewMode(review.mode),
+            review.focus_chips,
+            review.title,
+            review.proposal_text,
+            source_types,
+        )
         selected_agents = [agent.value for agent in decision.selected_agents]
         context_packs = context_pack_snapshot(
             self.repo.list_context_packs(review.workspace_id),
@@ -51,15 +60,8 @@ class WorkflowService:
         )
         routing_metadata = self._routing_metadata(review, selected_agents)
         self._validate_governance(review.workspace_id, user_id)
-        routing_plan = {
-            "selected_agents": selected_agents,
-            "excluded_agents": {agent.value: reason for agent, reason in decision.excluded_agents.items()},
-            "context_packs": context_packs,
-            "model_profile": "fake-local",
-            "permitted_fallbacks": ["fake-local"],
-            "retry_policy": retry_policy_snapshot(),
-            **routing_metadata,
-        }
+        routing_plan = routing_plan_payload(decision, context_packs, routing_metadata)
+        routing_plan["retry_policy"] = retry_policy_snapshot()
         run = self.repo.create_run(review.workspace_id, review.id, routing_plan, user_id)
         self.repo.add_run_event(run.id, RunState.INTAKE.value, "Run queued for background execution.")
         self.repo.audit(review.workspace_id, user_id, "run.started", {"run_id": run.id})
@@ -110,8 +112,9 @@ class WorkflowService:
             return self.repo.get_run(run.id)
         routing_plan = run.routing_plan if isinstance(run.routing_plan, dict) else {}
         report_data = self._compose_report(review, run.id, routing_plan)
+        report_data["quality_assurance"] = quality_assurance_record(report_data)
         try:
-            self._quality_gate(report_data)
+            enforce_quality_gate(report_data)
         except QualityGateError:
             self.repo.update_run(run.id, RunState.FAILED.value)
             self.repo.add_run_event(run.id, RunState.FAILED.value, "Report failed evidence quality gate.")
@@ -222,6 +225,10 @@ class WorkflowService:
                 if key in {agent.value for agent in AgentKey}
             ],
             "context_packs": context_packs,
+            "agent_cards": self._safe_list(routing_plan.get("agent_cards", [])),
+            "assurance_agents": self._safe_list(routing_plan.get("assurance_cards", [])),
+            "tool_manifest": routing_plan.get("tool_manifest", {}),
+            "context_strategy": routing_plan.get("context_strategy", {}),
             "findings": findings,
             "retrieved_evidence": retrieved_evidence,
             "external_sources": external_sources,
@@ -351,14 +358,6 @@ class WorkflowService:
         left_values = {str(item) for item in left_raw} if isinstance(left_raw, list) else set()
         right_values = {str(item) for item in right_raw} if isinstance(right_raw, list) else set()
         return sorted(left_values.symmetric_difference(right_values))
-
-    @staticmethod
-    def _quality_gate(report_data: dict[str, Any]) -> None:
-        for finding in report_data.get("findings", []):
-            if finding.get("evidence_type") not in {"source", "inference", "assumption", "unknown"}:
-                raise QualityGateError("Finding evidence type is not supported.")
-            if finding.get("evidence_type") == "source" and not finding.get("evidence_label"):
-                raise QualityGateError("Source-backed finding is missing a locator.")
 
     def _require_run(self, user_id: str, run_id: str) -> Any:
         run = self.repo.get_run(run_id)

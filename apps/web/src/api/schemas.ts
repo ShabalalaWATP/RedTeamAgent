@@ -176,7 +176,9 @@ const contextPackProvenanceSchema = z.object({
   name: z.string(),
   agent_key: z.string(),
   version: z.number(),
-  markdown_sha256: z.string()
+  markdown_sha256: z.string(),
+  load_strategy: z.string().default('lazy_selected_agent_only'),
+  materialised_for_orchestrator: z.boolean().default(false)
 });
 
 const retrievedEvidenceSchema = z.object({
@@ -228,6 +230,11 @@ export const reportSchema = z.object({
     assumptions: z.array(z.string()),
     evidence_gaps: z.array(z.string()),
     context_packs: z.array(contextPackProvenanceSchema).default([]),
+    agent_cards: z.array(z.record(z.string(), z.unknown())).default([]),
+    assurance_agents: z.array(z.record(z.string(), z.unknown())).default([]),
+    tool_manifest: z.record(z.string(), z.unknown()).default({}),
+    context_strategy: z.record(z.string(), z.unknown()).default({}),
+    quality_assurance: z.record(z.string(), z.unknown()).default({}),
     findings: z.array(z.record(z.string(), z.unknown())),
     retrieved_evidence: z.array(retrievedEvidenceSchema).default([]),
     external_sources: z.array(externalSourceSchema).default([]),

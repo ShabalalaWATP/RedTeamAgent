@@ -26,6 +26,7 @@ export function SourceIntakePanel({
   const [repositoryUrl, setRepositoryUrl] = useState('https://github.com/example/decision-review');
   const [recording, setRecording] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('No voice note recorded.');
+  const [uploadStatus, setUploadStatus] = useState('No files selected.');
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -89,8 +90,21 @@ export function SourceIntakePanel({
           label="Upload rich evidence"
           hint="TXT, Markdown, PDF, DOCX, PPTX, CSV, XLSX, PNG, JPEG, WebP, audio, video, ZIP or TAR."
         >
-          <input type="file" onChange={(event) => void uploadSelected(event.target.files?.[0], onUpload)} disabled={disabled} />
+          <input
+            type="file"
+            multiple
+            accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.csv,.xlsx,.png,.jpg,.jpeg,.webp,.mp3,.wav,.webm,.m4a,.mp4,.mov,.zip,.tar,.gz,.tgz,text/plain,text/markdown,text/csv,application/pdf,image/*,audio/*,video/*"
+            onChange={(event) => {
+              const input = event.currentTarget;
+              void uploadSelected(Array.from(input.files ?? []), onUpload, setUploadStatus)
+                .finally(() => {
+                  input.value = '';
+                });
+            }}
+            disabled={disabled}
+          />
         </Field>
+        <span className="muted" role="status">{uploadStatus}</span>
       </div>
       <div className="row">
         <Field label="Website URL">
@@ -150,6 +164,15 @@ function supportsRecording() {
     && typeof MediaRecorder !== 'undefined';
 }
 
-async function uploadSelected(file: File | undefined, onUpload: (file: File) => Promise<void>) {
-  if (file) await onUpload(file);
+async function uploadSelected(
+  files: File[],
+  onUpload: (file: File) => Promise<void>,
+  setUploadStatus: (message: string) => void
+) {
+  if (files.length === 0) return;
+  setUploadStatus(`Uploading ${files.length} ${files.length === 1 ? 'file' : 'files'}.`);
+  for (const file of files) {
+    await onUpload(file);
+  }
+  setUploadStatus(`Submitted ${files.length} ${files.length === 1 ? 'file' : 'files'} for analysis.`);
 }

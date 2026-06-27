@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import ipaddress
 import socket
-from dataclasses import dataclass
+from collections.abc import Iterable
 from urllib.parse import urlparse
 
-from app.domain.agents import SPECIALIST_REGISTRY
-from app.domain.enums import AgentKey, ReviewMode, WorkspaceRole
+from app.domain.agent_routing import AgentRouteDecision, plan_agent_route
+from app.domain.enums import ReviewMode, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, ProviderPolicyError, ValidationFailure
 
 WRITE_ROLES = {WorkspaceRole.OWNER, WorkspaceRole.ADMINISTRATOR, WorkspaceRole.MEMBER}
@@ -36,13 +36,7 @@ ALLOWED_UPLOADS = {
 BLOCKED_METADATA_HOSTS = {"169.254.169.254", "metadata.google.internal"}
 
 
-@dataclass(frozen=True)
-class RouteDecision:
-    selected_agents: list[AgentKey]
-    excluded_agents: dict[AgentKey, str]
-    mode_budget: int
-    challenge_passes: int
-    report_depth: str
+RouteDecision = AgentRouteDecision
 
 
 def require_write(role: WorkspaceRole) -> None:
@@ -71,33 +65,14 @@ def validate_upload(content_type: str, filename: str, size: int, max_size: int) 
     return safe_name
 
 
-def route_agents(mode: ReviewMode, focus_chips: list[str]) -> RouteDecision:
-    lower_focus = " ".join(focus_chips).lower()
-    selected: list[AgentKey] = []
-    for agent in SPECIALIST_REGISTRY:
-        if _mode_allows(mode, agent.minimum_mode) or any(term in lower_focus for term in agent.focus_terms):
-            selected.append(agent.key)
-    if mode is ReviewMode.IN_DEPTH:
-        selected = [agent.key for agent in SPECIALIST_REGISTRY]
-    ordered = list(dict.fromkeys(selected or [AgentKey.EVIDENCE_CONTEXT]))
-    excluded = {
-        agent: "Not required for selected mode or focus."
-        for agent in AgentKey
-        if agent not in ordered
-    }
-    budgets = {
-        ReviewMode.BASIC: (2_000, 1, "concise"),
-        ReviewMode.STANDARD: (4_000, 2, "standard"),
-        ReviewMode.IN_DEPTH: (8_000, 3, "deep"),
-    }
-    budget, challenge_passes, report_depth = budgets[mode]
-    return RouteDecision(ordered, excluded, budget, challenge_passes, report_depth)
-
-
-def _mode_allows(mode: ReviewMode, minimum_mode: str) -> bool:
-    order = {ReviewMode.BASIC: 0, ReviewMode.STANDARD: 1, ReviewMode.IN_DEPTH: 2}
-    required = {"basic": 0, "standard": 1, "in_depth": 2}
-    return order[mode] >= required[minimum_mode]
+def route_agents(
+    mode: ReviewMode,
+    focus_chips: list[str],
+    title: str = "",
+    proposal_text: str = "",
+    source_content_types: Iterable[str] = (),
+) -> RouteDecision:
+    return plan_agent_route(mode, focus_chips, title, proposal_text, source_content_types)
 
 
 def assert_capability_route(
@@ -138,11 +113,4 @@ def _resolve_host(hostname: str) -> list[str]:
 
 
 def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    return (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_reserved
-        or ip.is_multicast
-        or ip.is_unspecified
-    )
+    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified

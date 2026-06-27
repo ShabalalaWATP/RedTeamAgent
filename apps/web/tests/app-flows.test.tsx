@@ -295,7 +295,7 @@ describe('RedTeamAgent app flows', () => {
             mode: 'standard',
             state: 'completed',
             created_at: '2026-06-24T00:00:00Z',
-            selected_agents: ['alternative_perspectives', 'product_user_experience'],
+            selected_agents: ['alternative_perspectives', 'product_ux'],
             top_risks: ['Unclear evidence chain'],
             finding_count: 3,
             has_report: true

@@ -86,10 +86,15 @@ def test_stage2_rich_sources_research_report_pdf_and_evaluation(
     assert preflight.status_code == 200
     body = preflight.json()
     assert body["external_research"] is True
-    assert len(body["selected_agents"]) >= 20
+    selected_keys = {agent["key"] for agent in body["selected_agents"]}
+    assert {"evidence_context", "comparable_products_research", "commercial_financial"} <= selected_keys
+    assert {"medical_clinical", "inclusivity_accessibility", "operations_delivery"} <= selected_keys
+    assert "cybersecurity_privacy" not in selected_keys
+    assert body["assurance_agents"]
+    assert body["context_strategy"]["unselected_agents"] == "Do not load prompts, tools or specialist knowledge packs."
     assert body["research_policy"]["private_mode"] is True
     assert body["model_diversity"]["enabled"] is True
-    assert len(body["model_diversity"]["routes"]) >= 20
+    assert len(body["model_diversity"]["routes"]) == len(selected_keys)
     assert body["fallback_routes"][0]["to"] == "fake-local"
 
     first_run = client.post(f"/reviews/{review_id}/runs", headers=csrf_headers(auth)).json()

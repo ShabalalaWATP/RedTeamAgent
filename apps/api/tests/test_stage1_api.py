@@ -52,8 +52,8 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
         headers=csrf_headers(auth),
         json={
             "workspace_id": auth["workspace_id"],
-            "name": "Architecture policy",
-            "agent_key": "software_architecture",
+            "name": "Governance policy",
+            "agent_key": "policy_governance",
             "markdown": policy_markdown,
         },
     )
@@ -108,9 +108,11 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert body["selected_mode"] == "in_depth"
     assert any(agent["key"] == "cybersecurity_privacy" for agent in body["selected_agents"])
     assert body["external_research"] is False
-    assert body["context_packs"][0]["name"] == "Architecture policy"
+    assert body["context_packs"][0]["name"] == "Governance policy"
     assert body["context_packs"][0]["version"] == 1
     assert body["context_packs"][0]["markdown_sha256"] == policy_hash
+    assert body["context_packs"][0]["load_strategy"] == "lazy_selected_agent_only"
+    assert body["context_packs"][0]["materialised_for_orchestrator"] is False
 
     run = client.post(
         f"/reviews/{ids['review_id']}/runs",
@@ -122,8 +124,10 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert completed_run.status_code == 200, completed_run.text
     assert completed_run.json()["state"] == "completed"
     run_context = completed_run.json()["routing_plan"]["context_packs"][0]
-    assert run_context["agent_key"] == "software_architecture"
+    assert run_context["agent_key"] == "policy_governance"
     assert run_context["markdown_sha256"] == policy_hash
+    assert run_context["materialised_for_orchestrator"] is False
+    assert completed_run.json()["routing_plan"]["assurance_agents"] == ["source_provenance", "quality_fact_checker"]
 
     events = client.get(f"/runs/{run.json()['id']}/events")
     assert events.status_code == 200, events.text
@@ -143,6 +147,7 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report_data["coverage_map"]["retrieved_evidence"] == 1
     assert "professional sign-off" in report_data["assumptions"][0]
     assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
+    assert report_data["quality_assurance"]["status"] == "passed"
     assert "hybrid evidence retrieval" in report_data["methodology"]
 
     workflows = client.get(f"/workspaces/{auth['workspace_id']}/workflows")

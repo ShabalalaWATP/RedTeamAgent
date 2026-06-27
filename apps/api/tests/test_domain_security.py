@@ -58,6 +58,41 @@ def test_route_and_capability_policy() -> None:
         assert_capability_route({"text", "private_data"}, {"text"}, explicit_pin=False, fallback_available=True)
 
 
+def test_agent_routing_avoids_irrelevant_specialists_for_recipe() -> None:
+    decision = route_agents(
+        ReviewMode.STANDARD,
+        ["recipe", "family dinner"],
+        "Improve a cooking recipe",
+        "Make this recipe clearer and safer for a basic home cook.",
+    )
+    selected = {agent.value for agent in decision.selected_agents}
+    assurance = {agent.value for agent in decision.assurance_agents}
+
+    assert "food_consumer_safety" in selected
+    assert "language_clarity" in selected
+    assert "cybersecurity_privacy" not in selected
+    assert "vulnerability_research_dynamic" not in selected
+    assert "legal_regulatory" not in selected
+    assert {"source_provenance", "quality_fact_checker"} <= assurance
+    assert "zap_active_scan" not in decision.tool_manifest
+
+
+def test_dynamic_vulnerability_agent_has_controlled_zap_tools() -> None:
+    decision = route_agents(
+        ReviewMode.IN_DEPTH,
+        ["zap", "dast", "staging"],
+        "Authorised staging web-app assessment",
+        "Run passive dynamic checks against the authorised staging site.",
+    )
+    selected = {agent.value for agent in decision.selected_agents}
+
+    assert "vulnerability_research_dynamic" in selected
+    assert decision.tool_manifest["zap_baseline_scan"]["enabled"] is True
+    assert decision.tool_manifest["zap_passive_scan"]["sensitivity"] == "network_passive_scan"
+    assert decision.tool_manifest["zap_active_scan"]["enabled"] is False
+    assert decision.tool_manifest["zap_active_scan"]["requires_explicit_authorisation"] is True
+
+
 def test_provider_registry_and_fake_scenarios() -> None:
     registry = ProviderRegistry()
     assert {schema.key for schema in registry.schemas()} >= {"fake", "openai", "openai_compatible"}
