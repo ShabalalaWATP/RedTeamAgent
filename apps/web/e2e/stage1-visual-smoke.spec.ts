@@ -79,7 +79,7 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await expect(page.getByRole('heading', { name: 'AI setup' })).toBeVisible();
   await expect(page.getByLabel('AI provider')).toBeVisible();
   await expect(page.getByLabel('Display name')).toBeVisible();
-  await expect(page.getByText('Available models reported by the selected provider.')).toBeVisible();
+  await expect(page.getByText("Load the provider's live model list, then choose the model RedTeamAgent should use.")).toBeVisible();
   await expect(page.getByText(/not a URL/i)).toBeVisible();
   await expect(page.getByText('Advanced AI controls')).toBeVisible();
   await expect(page.getByText('Workspace administration')).toHaveCount(0);

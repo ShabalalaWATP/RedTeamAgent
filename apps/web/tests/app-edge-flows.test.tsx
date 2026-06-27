@@ -188,7 +188,7 @@ describe('edge UI flows', () => {
     await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     await user.type(await screen.findByLabelText(/security check/i), '5');
-    await user.click(screen.getByRole('button', { name: /send reset code/i }));
+    await user.click(screen.getByRole('button', { name: /send reset link/i }));
     expect(await screen.findByText(/if the account exists/i)).toBeInTheDocument();
   });
 

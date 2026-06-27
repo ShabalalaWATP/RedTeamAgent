@@ -46,7 +46,7 @@ describe('account and usage controls', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     await user.type(await screen.findByLabelText(/security check/i), '5');
-    await user.click(screen.getByRole('button', { name: /send reset code/i }));
+    await user.click(screen.getByRole('button', { name: /send reset link/i }));
     expect(await screen.findByText(/reset token issued/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/new password/i), 'Another-Safe-43!');
     await user.click(screen.getByRole('button', { name: /confirm reset/i }));

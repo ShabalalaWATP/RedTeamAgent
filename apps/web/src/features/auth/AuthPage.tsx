@@ -81,7 +81,8 @@ export function AuthPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const verificationAttempted = useRef(false);
-  const captchaActive = mode === 'register' || mode === 'reset';
+  const hasResetToken = Boolean(resetToken);
+  const captchaActive = mode === 'register' || (mode === 'reset' && !hasResetToken);
   const captchaReady = !captchaActive || Boolean(captchaToken);
   const canRegister = Boolean(email) && passwordMeetsPolicy(password) && captchaReady;
   const canConfirmReset = Boolean(resetToken) && passwordMeetsPolicy(newPassword);
@@ -107,6 +108,10 @@ export function AuthPage() {
     setRequiresMfa(false);
     setMfaCode('');
     setCaptchaToken('');
+    if (nextMode !== 'reset') {
+      setResetToken('');
+      setNewPassword('');
+    }
     setMode(nextMode);
     setMessage(initialMessage(nextMode));
   };
@@ -165,7 +170,7 @@ export function AuthPage() {
       const response = await api.resetPassword(email, captchaToken || undefined);
       setResetToken(response.reset_token ?? '');
       setMessage(
-        response.reset_token ? 'Local password reset token issued.' : 'If the account exists, reset was requested.'
+        response.reset_token ? 'Local password reset token issued.' : 'If the account exists, a reset link was sent.'
       );
     } catch (err) {
       setError((err as Error).message);
@@ -177,8 +182,11 @@ export function AuthPage() {
     try {
       await api.confirmResetPassword(resetToken, newPassword);
       setPassword(newPassword);
+      setResetToken('');
+      setNewPassword('');
       setMode('login');
       setMessage('Password updated. Sign in with your new password.');
+      navigate('/auth', { replace: true });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -216,22 +224,25 @@ export function AuthPage() {
                 ? 'Use your account.'
                 : mode === 'register'
                   ? 'Create your account.'
-                  : 'Request a reset code for your account.'}
+                  : hasResetToken
+                    ? 'Choose a new password.'
+                    : 'Request a reset link for your account.'}
             </p>
           </div>
 
-          <Field label="Email">
-            <input
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              maxLength={320}
-              spellCheck={false}
-            />
-          </Field>
-
+          {mode === 'reset' && hasResetToken ? null : (
+            <Field label="Email">
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                maxLength={320}
+                spellCheck={false}
+              />
+            </Field>
+          )}
           {mode === 'reset' ? null : (
             <Field label="Password" hint={mode === 'register' ? PASSWORD_HINT : undefined}>
               <input
@@ -243,7 +254,6 @@ export function AuthPage() {
               />
             </Field>
           )}
-
           {mode === 'login' && requiresMfa ? (
             <Field label="Authenticator or recovery code">
               <input
@@ -254,7 +264,6 @@ export function AuthPage() {
               />
             </Field>
           ) : null}
-
           {mode === 'register' || mode === 'reset' ? (
             <CaptchaChallenge
               active={captchaActive}
@@ -322,7 +331,9 @@ export function AuthPage() {
 
             {mode === 'reset' ? (
               <>
-                <Button type="button" variant="primary" onClick={reset} disabled={!email || !captchaReady}>Send reset code</Button>
+                {!hasResetToken ? (
+                  <Button type="button" variant="primary" onClick={reset} disabled={!email || !captchaReady}>Send reset link</Button>
+                ) : null}
                 <button className="auth-text-button" type="button" onClick={() => switchMode('login')}>
                   Back to sign in
                 </button>

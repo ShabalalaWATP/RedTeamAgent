@@ -3,6 +3,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { assertNoWcagViolations } from './stage1-accessibility';
 import { mockApi } from './stage1-fixtures';
 
+const validPassword = 'Correct-Horse-42!';
+
 test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => {
   await mockApi(page, { initialProjects: [] });
   await page.goto('/auth');
@@ -10,7 +12,7 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
 
   await assertNoWcagViolations(page);
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
-  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+  await page.getByLabel('Password', { exact: true }).fill(validPassword);
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
@@ -67,7 +69,7 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
 
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
-  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+  await page.getByLabel('Password', { exact: true }).fill(validPassword);
   await tabTo(page, page.getByRole('button', { name: 'Create an account' }));
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: 'Create account' }));

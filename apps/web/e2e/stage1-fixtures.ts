@@ -31,6 +31,7 @@ const apiHeaders = {
   'access-control-allow-origin': 'http://127.0.0.1:5173',
   'content-type': 'application/json'
 };
+const validPassword = 'Correct-Horse-42!';
 
 type MockApiOptions = {
   initialProjects?: ReturnType<typeof projectResponse>[];
@@ -58,6 +59,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       await route.fulfill({ status: 204, headers: apiHeaders });
       return;
     }
+    if (url.pathname === '/auth/captcha/challenge') {
+      await fulfilJson(route, { required: false, provider: 'disabled', token: '', prompt: '', expires_in_seconds: 0 });
+      return;
+    }
     if (url.pathname === '/auth/register') {
       await fulfilJson(route, authResponse({ verification_token: 'verify-local' }));
       return;
@@ -68,6 +73,10 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (url.pathname === '/auth/login') {
       await fulfilJson(route, authResponse({ csrf_token: 'csrf-local' }));
+      return;
+    }
+    if (url.pathname === '/auth/mfa/status') {
+      await fulfilJson(route, { enabled: false });
       return;
     }
     if (url.pathname === '/auth/password-reset/request') {
@@ -279,7 +288,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
 export async function signIn(page: Page) {
   await page.goto('/auth');
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
-  await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+  await page.getByLabel('Password', { exact: true }).fill(validPassword);
   await page.getByRole('button', { name: 'Create an account' }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByLabel('Verification token')).toHaveValue('verify-local');
