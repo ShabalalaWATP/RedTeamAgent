@@ -77,9 +77,6 @@ textarea {
 
 .button.primary:hover::after { transform: translateX(120%); }
 
-/* Subtle card lift */
-.workflow-item:hover { transform: translateY(-2px); }
-
 /* Aligned, technical figures */
 .status,
 .metric-tile span,

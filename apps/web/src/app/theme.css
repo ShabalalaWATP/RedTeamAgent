@@ -22,6 +22,9 @@
   --accent-soft: rgb(78 163 255 / 0.14);
   --accent-teal: #2dd4bf;
   --accent-red: #f0606d;
+  --orbit-a: rgb(78 163 255 / 0.6);
+  --orbit-b: rgb(45 212 191 / 0.55);
+  --orbit-c: rgb(240 96 109 / 0.5);
   --primary-text: #04111f;
   --ok: #34d399;
   --warn: #f6bd57;
@@ -71,6 +74,9 @@
     --accent-soft: rgb(11 99 206 / 0.1);
     --accent-teal: #0d9488;
     --accent-red: #c4313d;
+    --orbit-a: rgb(11 99 206 / 0.5);
+    --orbit-b: rgb(13 148 136 / 0.5);
+    --orbit-c: rgb(196 49 61 / 0.45);
     --primary-text: #ffffff;
     --ok: #066b4a;
     --warn: #8a4b00;

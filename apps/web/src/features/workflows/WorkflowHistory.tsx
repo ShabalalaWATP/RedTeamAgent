@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import type { WorkflowSummary } from '../../shared/types';
+import { TiltCard } from '../../shared/TiltCard';
 import { Button, EmptyState, ErrorState, Status } from '../../shared/ui';
 
 function formatDate(value: string) {
@@ -66,7 +67,7 @@ export function WorkflowHistory() {
         ) : (
           <div className="workflow-list">
             {workflows.map((workflow) => (
-              <article className="workflow-item" key={workflow.id}>
+              <TiltCard className="workflow-item" key={workflow.id}>
                 <div className="stack">
                   <div className="workflow-heading">
                     <div>
@@ -103,7 +104,7 @@ export function WorkflowHistory() {
                     <Trash2 size={16} /> {deletingId === workflow.id ? 'Deleting' : 'Delete'}
                   </Button>
                 </div>
-              </article>
+              </TiltCard>
             ))}
           </div>
         )}

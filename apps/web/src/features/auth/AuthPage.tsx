@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { ThemeToggle } from '../../app/ThemeToggle';
-import logo from '../../assets/redteamagent-logo.png';
+import { OrbitalCore } from '../../shared/OrbitalCore';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
 import { PasswordField, passwordMeetsPolicy } from './PasswordField';
@@ -171,7 +171,7 @@ export function AuthPage() {
         <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-brand-panel">
           <div className="auth-brand-top">
-            <img className="auth-logo" src={logo} alt="" width="192" height="192" />
+            <OrbitalCore />
             <div>
               <h1 id="auth-title">RedTeamAgent</h1>
               <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
@@ -198,6 +198,9 @@ export function AuthPage() {
         </div>
         <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
           <div className="auth-form-header">
+            <p className="auth-kicker">
+              {mode === 'login' ? 'Secure access' : mode === 'register' ? 'Get started' : 'Account recovery'}
+            </p>
             <h2>{mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Reset password'}</h2>
             <p className="muted">
               {mode === 'login'

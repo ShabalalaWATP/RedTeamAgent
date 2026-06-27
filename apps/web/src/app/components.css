@@ -116,6 +116,13 @@
 
 .workflow-list { display: grid; gap: 12px; }
 
+.tilt {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform 0.18s ease-out;
+}
+
 .workflow-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
