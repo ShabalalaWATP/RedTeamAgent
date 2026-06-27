@@ -4,6 +4,17 @@ RedTeamAgent is a secure, provider-neutral decision-support platform for evidenc
 
 The current implementation follows Stage 3 from `docs/codex-three-stage-goals.md`. See `docs/delivery/stage-3-completion-report.md` for passed checks, residual risks and the current readiness decision.
 
+## Documentation Map
+
+- Local setup: `docs/setup/local-development.md`.
+- VPS and domain deployment: `docs/deployment/vps-domain-production.md`.
+- Cheap hosting rationale: `docs/deployment/cheap-hosting-plan.md`.
+- Account types and usage: `docs/user/account-types-and-usage.md`.
+- Engineering principles: `docs/architecture/engineering-principles.md`.
+- Provider-neutral AI and model governance: `docs/architecture/provider-neutral-ai.md`.
+- Security guide and threat model: `docs/security/stage-3-security-guide.md` and `docs/threat-model/threat-model.md`.
+- Operations guide: `docs/operations/stage-3-operations-guide.md`.
+
 ## Local Setup
 
 ```powershell
@@ -14,6 +25,8 @@ docker compose up -d postgres redis minio
 ```
 
 Create `.env` from `.env.example` for local overrides. The backend starts without live provider credentials when `ALLOW_FAKE_PROVIDER=true`.
+
+For the full local setup, environment-file rules and troubleshooting notes, see `docs/setup/local-development.md`.
 
 The dependency-only compose services use non-default host ports to avoid clashing with local database installs: PostgreSQL `55432`, Redis `56379`, MinIO API `59000` and MinIO console `59001`. Override `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`, `API_HOST_PORT` or `WEB_HOST_PORT` before running `docker compose` if needed. When running the API outside Docker, point local `.env` values at those host ports.
 
@@ -73,7 +86,7 @@ If Playwright browser installation is unavailable locally but Chromium already e
 
 ## Provider Configuration
 
-Provider connections are created from adapter schemas exposed by the API. Stage 2 includes:
+Provider connections are created from adapter schemas exposed by the API. The current adapter registry includes:
 
 - deterministic fake provider for local demos and tests;
 - OpenAI text-generation adapter schema;
@@ -85,7 +98,7 @@ Provider connections are created from adapter schemas exposed by the API. Stage 
 - Ollama, vLLM and approved multi-provider gateway adapter schemas.
 
 Credentials are encrypted server-side and write-only from the browser perspective. The API never returns stored provider credentials to the browser.
-Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Stage 2 capability records cover text generation, structured output, streaming, tool use, image input, embeddings, transcription and reranking where an adapter claims support.
+Saved provider connections can sync an adapter-backed model catalogue and probe saved model capabilities. Capability records cover text generation, structured output, streaming, tool use, image input, embeddings, transcription and reranking where an adapter claims support.
 
 Workspace governance can centrally restrict provider adapters, model identifiers, data classifications, regions, purposes and approved external research domains. Non-empty allow-lists fail closed before provider setup, model registration or review execution.
 
@@ -112,6 +125,8 @@ Advanced reports include a risk matrix that does not rely on colour alone, depen
 ## Cheap Hosting Plan
 
 Use `docs/deployment/cheap-hosting-plan.md` for a low-cost domain-backed deployment plan. The repository includes a production-oriented Docker Compose and Caddy setup under `deploy/cheap-vps/`.
+
+For the command-level VPS deployment and verification runbook, see `docs/deployment/vps-domain-production.md`.
 
 For `redteamagent.co.uk`, keep the GoDaddy domain registration if preferred and point DNS to the VPS:
 

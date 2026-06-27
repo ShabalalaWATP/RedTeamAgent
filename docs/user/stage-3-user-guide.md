@@ -7,3 +7,5 @@ Administrators manage AI provider setup, provider governance, retention, approve
 First signup starts at `/auth`: enter an email and a 12-character-or-longer password with uppercase, lowercase, a number and a symbol, register, verify the email link, then log in. Local development may show a verification token directly; production sends verification and reset links by SMTP. Administrators can enable optional two-factor authentication from `Settings`.
 
 Standard accounts can keep 5 projects, keep 20 workflows and start 10 workflows per week. Admin accounts receive triple those quotas and owner accounts are unlimited. Deleting a project or workflow frees stored quota, but weekly workflow starts are counted from audit history until the weekly reset. Public auth, upload, source-ingestion and review-run endpoints also use rate limits to reduce automated abuse. Account creation and password reset can require either Cloudflare Turnstile or the built-in one-question challenge.
+
+For the detailed account-type, quota, first-signup, admin-settings and workflow guide, see `docs/user/account-types-and-usage.md`.

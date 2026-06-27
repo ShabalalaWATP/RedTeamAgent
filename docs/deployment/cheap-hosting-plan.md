@@ -4,6 +4,8 @@ Date checked: 24 June 2026.
 
 This app is designed to red-team decision-making artefacts of any kind: projects, proposals, essays, policies, code changes, investment memos, operating plans and other choices. The cheapest credible hosting plan is a single VPS running Docker Compose, with Caddy handling HTTPS for a custom domain.
 
+For the command-level deployment runbook, use `docs/deployment/vps-domain-production.md`. This document explains the cost and architecture choice.
+
 ## Recommended Starting Architecture
 
 - One 2 vCPU / 4 GiB RAM VPS.
