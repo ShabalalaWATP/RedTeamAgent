@@ -47,6 +47,9 @@ describe('ProviderSettings', () => {
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
         return jsonResponse([modelRecord({ model_identifier: 'fake-fast' })]);
       }
+      if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
+        return jsonResponse(modelRecord({ model_identifier: 'fake-fast', verified: true }));
+      }
       if (url.includes('/providers/connections') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
           adapter: 'openai',
@@ -70,7 +73,8 @@ describe('ProviderSettings', () => {
     expect(await within(providerForm).findByText('gpt-fast')).toBeInTheDocument();
     await user.selectOptions(within(providerForm).getAllByRole('combobox')[1], 'gpt-fast');
     await user.click(screen.getByRole('button', { name: /test and save/i }));
-    expect(await screen.findByText('Provider connection saved. 1 model available.')).toBeInTheDocument();
+    expect(await screen.findByText('Provider connection saved. 1 model. fake-fast verified for review runs.'))
+      .toBeInTheDocument();
   });
 
   it('tests stored connections and renders model catalogue state', async () => {
@@ -122,13 +126,36 @@ describe('ProviderSettings', () => {
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByText('Stored connection test passed.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /refresh models/i }));
-    expect(await screen.findByText('Model list refreshed with 1 model.')).toBeInTheDocument();
+    expect(await screen.findByText('Model list refreshed with 1 model. fake-reviewer verified for review runs.'))
+      .toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /run stage 2 evaluation/i }));
     expect(await screen.findByText('10 fixtures')).toBeInTheDocument();
     expect(screen.getByText('Routing Precision')).toBeInTheDocument();
     expect(screen.getByText('malicious website instruction override')).toBeInTheDocument();
+  });
+
+  it('handles saved connection refreshes that return no models', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    const fetchMock = mockFetch((url, init) => {
+      if (url.includes('/providers/adapters')) return jsonResponse([adapterSchema()]);
+      if (url.includes('/providers/connections?')) return jsonResponse([providerConnection()]);
+      if (url.includes('/providers/models?')) return jsonResponse([]);
+      if (url.includes('/providers/profiles?')) return jsonResponse([]);
+      if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
+        return jsonResponse([]);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderProviderSettings();
+
+    await user.click(await screen.findByRole('button', { name: /refresh models/i }));
+    expect(await screen.findByText('Model list refreshed with 0 models. No review-capable model was found.'))
+      .toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/probe'))).toBe(false);
   });
 
   it('surfaces model, profile and stored-connection failures', async () => {

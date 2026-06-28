@@ -57,6 +57,11 @@ describe('provider catalogue helpers', () => {
     expect(modelOptionKey(schema.catalogue_models ?? [])).toBe('gpt-5.5');
     expect(preferredModelIdentifier(schema.catalogue_models ?? [], 'gpt-5.5')).toBe('gpt-5.5');
     expect(preferredModelIdentifier(schema.catalogue_models ?? [], 'missing')).toBe('gpt-5.5');
+    expect(preferredModelIdentifier([
+      { model_identifier: 'text-embedding-3-small' },
+      { model_identifier: 'babbage-002' },
+      { model_identifier: 'gpt-4.1-mini' }
+    ], '')).toBe('gpt-4.1-mini');
     expect(preferredModelIdentifier([], 'missing')).toBe('');
     expect(capabilitiesForModel(schema.catalogue_models ?? [], 'gpt-5.5', ['fallback'])).toEqual(['text', 'streaming']);
     expect(capabilitiesForModel(schema.catalogue_models ?? [], 'missing', ['text'])).toEqual(['text']);

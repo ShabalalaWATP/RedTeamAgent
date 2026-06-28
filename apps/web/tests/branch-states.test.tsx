@@ -96,7 +96,8 @@ describe('unauthenticated and alternate branch states', () => {
     await user.click(screen.getByText(/advanced ai controls/i));
     expect(screen.getByText('No probe recorded')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /refresh models/i }));
-    expect(await screen.findByText('Model list refreshed with 2 models.')).toBeInTheDocument();
+    expect(await screen.findByText('Model list refreshed with 2 models. fake-reviewer needs review for review runs.'))
+      .toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe needs review/i)).toBeInTheDocument();
   });

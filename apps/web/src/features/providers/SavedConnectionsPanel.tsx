@@ -35,14 +35,14 @@ export function SavedConnectionsPanel({
                   <RefreshCcw size={16} /> Test
                 </Button>
                 <Button type="button" onClick={() => onRefresh(connection.id)}>
-                  Refresh models
+                  Refresh models + verify
                 </Button>
               </div>
             </article>
           ))}
         </div>
       )}
-      <p className="muted">{result || 'Saved providers can be tested or refreshed here.'}</p>
+      <p className="muted">{result || 'Refresh a saved provider to verify its review model.'}</p>
     </aside>
   );
 }

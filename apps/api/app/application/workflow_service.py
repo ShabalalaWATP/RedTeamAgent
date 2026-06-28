@@ -138,12 +138,10 @@ class WorkflowService:
 
     def _require_review_ready(self, review: Any, routing_plan: dict[str, Any]) -> None:
         sources = self.repo.list_sources(review.id)
-        if not sources:
-            raise ValidationFailure("Add at least one evidence source before running the review.")
         if any(source.state == SourceState.FAILED.value for source in sources):
-            raise ValidationFailure("Fix failed evidence ingestion before running the review.")
+            raise ValidationFailure("Fix or remove failed evidence sources before running the review.")
         if any(source.state != SourceState.INGESTED.value for source in sources):
-            raise ValidationFailure("Wait for evidence ingestion to finish before running the review.")
+            raise ValidationFailure("Wait for attached evidence sources to finish ingesting before running the review.")
         route = select_model_route(self.repo, review.workspace_id, _selected_agent_keys(routing_plan))
         if route is None and not self.allow_fake_provider:
             raise ValidationFailure(

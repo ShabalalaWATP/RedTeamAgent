@@ -29,6 +29,24 @@ function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+function modelCountLabel(count: number) {
+  return `${count} model${count === 1 ? '' : 's'}`;
+}
+
+function selectSyncedModel(models: ModelRecord[], preferredIdentifier: string) {
+  const identifier = preferredModelIdentifier(
+    models.map((model) => ({ model_identifier: model.model_identifier, capabilities: model.capabilities })),
+    preferredIdentifier
+  );
+  return models.find((model) => model.model_identifier === identifier) ?? models[0];
+}
+
+function syncResult(prefix: string, synced: ModelRecord[], probed: ModelRecord | null) {
+  const base = `${prefix} ${modelCountLabel(synced.length)}.`;
+  if (!probed) return `${base} No review-capable model was found.`;
+  return `${base} ${probed.model_identifier} ${probed.verified ? 'verified' : 'needs review'} for review runs.`;
+}
+
 type ProviderSettingsProps = {
   embedded?: boolean;
 };
@@ -126,10 +144,12 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
         credentials
       });
       const synced = await api.syncModels(auth.csrfToken, connection.id);
-      setResult(`Provider connection saved. ${synced.length} model${synced.length === 1 ? '' : 's'} available.`);
+      const model = selectSyncedModel(synced, defaultModelIdentifier);
+      const probed = model ? await api.probeModel(auth.csrfToken, model.id) : null;
+      setResult(syncResult('Provider connection saved.', synced, probed));
       await loadWorkspaceData();
       setModelConnectionId(connection.id);
-      setProfileModelId(synced[0]?.id ?? '');
+      setProfileModelId(probed?.id ?? synced[0]?.id ?? '');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -148,7 +168,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
       });
       setLiveModelOptions(models);
       setDefaultModelIdentifier(preferredModelIdentifier(models, defaultModelIdentifier));
-      setResult(`Loaded ${models.length} model${models.length === 1 ? '' : 's'} from ${schema.label}.`);
+      setResult(`Loaded ${modelCountLabel(models.length)} from ${schema.label}.`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -214,7 +234,9 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     setError(null);
     try {
       const synced = await api.syncModels(auth.csrfToken, connectionId);
-      setResult(`Model list refreshed with ${synced.length} model${synced.length === 1 ? '' : 's'}.`);
+      const model = selectSyncedModel(synced, modelIdentifier);
+      const probed = model ? await api.probeModel(auth.csrfToken, model.id) : null;
+      setResult(syncResult('Model list refreshed with', synced, probed));
       await loadWorkspaceData();
     } catch (err) {
       setError((err as Error).message);

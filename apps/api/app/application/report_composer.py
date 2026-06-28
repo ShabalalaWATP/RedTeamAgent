@@ -16,9 +16,11 @@ def compose_report(
     provider_output: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     sources = repo.list_sources(review.id)
-    source_labels = [f"{source.filename}:{source.id}" for source in sources]
+    source_labels = [f"{source.filename}:{source.id}" for source in sources] or [f"Review setup:{review.id}"]
     evidence_query = " ".join([review.title, review.proposal_text, *review.focus_chips])
     retrieved_evidence = repo.search_evidence_chunks(review.workspace_id, review.id, evidence_query, 5)
+    if not retrieved_evidence and not sources:
+        retrieved_evidence = [_review_setup_evidence_record(review)]
     primary_evidence = retrieved_evidence[0] if retrieved_evidence else None
     evidence_label = str(primary_evidence["locator"]) if primary_evidence else "assumption"
     evidence_type = "source" if primary_evidence else "assumption"
@@ -64,7 +66,7 @@ def compose_report(
         "provisional_recommendation": "Proceed with controls and validation before irreversible rollout.",
         "executive_summary": "The review found manageable risk with evidence gaps that need active closure.",
         "coverage_map": {
-            "sources": len(sources),
+            "sources": len(sources) or 1,
             "agents": routing_plan["selected_agents"],
             "retrieved_evidence": len(retrieved_evidence),
             "external_sources": len(external_sources),
@@ -144,6 +146,25 @@ def _external_sources(review: Any) -> list[dict[str, Any]]:
     for query in research_queries(review.title, review.focus_chips, review.private_research):
         results.extend(provider.search(query, review.domain_allowlist, review.domain_blocklist))
     return results
+
+
+def _review_setup_evidence_record(review: Any) -> dict[str, Any]:
+    focus = ", ".join(review.focus_chips) or "none"
+    excerpt = " ".join(
+        [
+            f"Title: {review.title}",
+            f"Proposal: {review.proposal_text}",
+            f"Mode: {review.mode}",
+            f"Focus chips: {focus}",
+        ]
+    )
+    return {
+        "source_id": review.id,
+        "source_filename": "Review setup",
+        "locator": "review_setup:proposal",
+        "excerpt": excerpt,
+        "score": 1.0,
+    }
 
 
 def _safe_list(value: object) -> list[dict[str, Any]]:

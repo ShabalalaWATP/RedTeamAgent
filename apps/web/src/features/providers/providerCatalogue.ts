@@ -45,7 +45,43 @@ export function modelOptionKey(options: CatalogueModel[]) {
 
 export function preferredModelIdentifier(options: CatalogueModel[], current: string) {
   if (options.some((model) => model.model_identifier === current)) return current;
-  return options[0]?.model_identifier ?? '';
+  const priority = [
+    'gpt-5.5',
+    'gpt-5.4-mini',
+    'gpt-4.1-mini',
+    'gpt-4o-mini',
+    'gpt-4.1',
+    'gpt-4o',
+    'gpt-5',
+    'gpt-4'
+  ];
+  for (const identifier of priority) {
+    if (options.some((model) => model.model_identifier === identifier)) return identifier;
+  }
+  return options.find((model) => isLikelyReviewModel(model.model_identifier))?.model_identifier
+    ?? options[0]?.model_identifier
+    ?? '';
+}
+
+function isLikelyReviewModel(identifier: string) {
+  const value = identifier.toLowerCase();
+  const excluded = [
+    'audio',
+    'babbage',
+    'davinci',
+    'dall-e',
+    'embedding',
+    'image',
+    'moderation',
+    'realtime',
+    'sora',
+    'speech',
+    'tts',
+    'transcribe',
+    'whisper'
+  ];
+  if (excluded.some((item) => value.includes(item))) return false;
+  return value.startsWith('gpt-') || value.startsWith('o') || value.includes('claude') || value.includes('gemini');
 }
 
 export function schemaForConnection(schemas: AdapterSchema[], connection: ProviderConnection | undefined) {
