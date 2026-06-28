@@ -5,6 +5,7 @@ import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { ThemeToggle } from '../../app/ThemeToggle';
 import logo from '../../assets/redteamagent-logo.png';
+import EvilEye from '../../shared/EvilEye/EvilEye';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
 import { PasswordField, passwordMeetsPolicy } from './PasswordField';
@@ -317,6 +318,9 @@ export function AuthPage() {
             ) : null}
           </div>
         </form>
+        <div className="auth-eye" aria-hidden="true">
+          <EvilEye eyeColor="#ff465c" intensity={1.5} glowIntensity={0.4} scale={0.95} flameSpeed={0.8} />
+        </div>
       </section>
     </div>
   );

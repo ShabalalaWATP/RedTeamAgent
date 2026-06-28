@@ -71,8 +71,36 @@
   100% { top: 100%; opacity: 0; }
 }
 
+/* Evil-eye WebGL band at the bottom of the login card (spans both columns). */
+.auth-eye {
+  grid-column: 1 / -1;
+  position: relative;
+  height: clamp(150px, 19vh, 210px);
+  overflow: hidden;
+  pointer-events: none;
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(120% 150% at 50% 130%, rgb(240 96 109 / 0.1), transparent 62%),
+    var(--shell);
+}
+
+.auth-eye .evil-eye-container {
+  position: absolute;
+  inset: 0;
+}
+
+/* Soften the top edge so the eye fades up into the card. */
+.auth-eye::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--panel), transparent 30%);
+}
+
 @media (max-width: 860px) {
   .auth-logo { width: 120px; }
+  .auth-eye { height: clamp(140px, 22vh, 190px); }
 }
 
 @media (max-width: 420px) {

@@ -121,7 +121,11 @@ test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, 
 async function verifyScreen(page: Page, name: string) {
   await assertNoWcagViolations(page);
   await expectNoHorizontalOverflow(page);
-  await expect(page).toHaveScreenshot(`${name}.png`, screenshotOptions);
+  // The login eye is a live WebGL canvas; mask it so baselines stay deterministic.
+  await expect(page).toHaveScreenshot(`${name}.png`, {
+    ...screenshotOptions,
+    mask: [page.locator('.evil-eye-container')]
+  });
 }
 
 async function auditCurrentScreen(page: Page) {

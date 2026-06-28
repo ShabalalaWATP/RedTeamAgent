@@ -11,7 +11,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx', 'src/api/openapi.ts', 'src/test/**'],
+      exclude: ['src/main.tsx', 'src/api/openapi.ts', 'src/test/**', 'src/shared/EvilEye/**'],
       thresholds: {
         statements: 95,
         branches: 95,

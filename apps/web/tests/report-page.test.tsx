@@ -305,6 +305,31 @@ describe('ReportPage run controls', () => {
     });
   });
 
+  it('tones findings across critical and unrecognised severities', async () => {
+    storeAuth();
+    const base = reportResponse().findings[0];
+    const report = {
+      ...reportResponse(),
+      findings: [
+        { ...base, id: 'finding-critical', title: 'Critical finding', severity: 'critical' },
+        { ...base, id: 'finding-unknown', title: 'Unscored finding', severity: 'experimental' }
+      ]
+    };
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([]);
+      if (url.includes('/runs/run-1/report')) return jsonResponse({ data: report });
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/runs/run-1');
+
+    expect(await screen.findByText('Critical finding')).toBeInTheDocument();
+    expect(screen.getByText('Unscored finding')).toBeInTheDocument();
+    // The unrecognised severity still renders as a (neutral) status pill.
+    expect(screen.getAllByText('experimental').length).toBeGreaterThan(0);
+  });
+
   it('renders and filters a 50 finding report within the Stage 1 budget', async () => {
     storeAuth();
     const user = userEvent.setup();
