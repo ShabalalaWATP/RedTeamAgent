@@ -161,9 +161,13 @@ class PasskeyService:
     def verify_authentication(self, user_id: str, session_id: str, credential: dict[str, Any]) -> None:
         challenge = self.repo.get_session_passkey_challenge(session_id, "authentication")
         if not challenge:
+            self.repo.audit(None, user_id, "auth.passkey_verification_failed", {"reason": "missing_challenge"})
+            self.repo.commit()
             raise AuthenticationError("Passkey verification expired. Try again.")
         passkey = self.repo.get_passkey_by_credential_id(_credential_id(credential))
         if passkey is None or passkey.user_id != user_id:
+            self.repo.audit(None, user_id, "auth.passkey_verification_failed", {"reason": "credential_not_found"})
+            self.repo.commit()
             raise AuthenticationError("Passkey verification failed.")
         try:
             verification = verify_authentication_response(
@@ -176,8 +180,17 @@ class PasskeyService:
                 require_user_verification=True,
             )
         except WebAuthnException as exc:
+            self.repo.audit(
+                None,
+                user_id,
+                "auth.passkey_verification_failed",
+                {"reason": type(exc).__name__, "detail": str(exc)[:240], "passkey_id": passkey.id},
+            )
+            self.repo.commit()
             raise AuthenticationError("Passkey verification failed. Try again from this site and device.") from exc
         if bytes_to_base64url(verification.credential_id) != passkey.credential_id:
+            self.repo.audit(None, user_id, "auth.passkey_verification_failed", {"reason": "credential_mismatch"})
+            self.repo.commit()
             raise AuthenticationError("Passkey verification failed.")
         self.repo.update_passkey_usage(passkey.id, verification.new_sign_count)
         self.repo.mark_session_passkey_verified(session_id)
