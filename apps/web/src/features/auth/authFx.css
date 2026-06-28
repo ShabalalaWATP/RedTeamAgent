@@ -1,35 +1,26 @@
-/* Decorative login effects: glowing logo, subtle bounce, red laser scan.
+/* Decorative login effects: the all-seeing eye brand mark and a red laser scan.
    All motion is frozen by reduced-motion and by snapshot tooling. */
 
-.auth-logo-wrap {
+.auth-brand-eye {
   position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.auth-logo-wrap::before {
-  content: "";
-  position: absolute;
-  inset: -16%;
-  z-index: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 45%, rgb(240 96 109 / 0.24), transparent 60%),
-    radial-gradient(circle, rgb(78 163 255 / 0.16), transparent 70%);
-  filter: blur(10px);
-}
-
-.auth-logo {
-  position: relative;
-  z-index: 1;
-  width: clamp(128px, 13vw, 176px);
-  height: auto;
+  width: clamp(132px, 14vw, 176px);
   aspect-ratio: 1;
-  object-fit: contain;
-  filter: drop-shadow(0 10px 24px rgb(0 0 0 / 0.5));
-  animation: auth-logo-bounce 4.5s ease-in-out infinite;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  /* Dark-red orb shown if WebGL is unavailable (the eye canvas covers it otherwise). */
+  background: radial-gradient(circle at 50% 45%, #3a0c0c, #070405 70%);
+  border: 1px solid rgb(240 96 109 / 0.5);
+  box-shadow:
+    inset 0 0 24px rgb(0 0 0 / 0.6),
+    0 0 0 1px rgb(240 96 109 / 0.22),
+    0 0 38px rgb(240 96 109 / 0.42);
+  animation: auth-logo-bounce 4.6s ease-in-out infinite;
+}
+
+.auth-brand-eye .evil-eye-container {
+  position: absolute;
+  inset: 0;
 }
 
 @keyframes auth-logo-bounce {
@@ -71,38 +62,10 @@
   100% { top: 100%; opacity: 0; }
 }
 
-/* Evil-eye WebGL band at the bottom of the login card (spans both columns). */
-.auth-eye {
-  grid-column: 1 / -1;
-  position: relative;
-  height: clamp(150px, 19vh, 210px);
-  overflow: hidden;
-  pointer-events: none;
-  border-top: 1px solid var(--line);
-  background:
-    radial-gradient(120% 150% at 50% 130%, rgb(240 96 109 / 0.1), transparent 62%),
-    var(--shell);
-}
-
-.auth-eye .evil-eye-container {
-  position: absolute;
-  inset: 0;
-}
-
-/* Soften the top edge so the eye fades up into the card. */
-.auth-eye::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, var(--panel), transparent 30%);
-}
-
 @media (max-width: 860px) {
-  .auth-logo { width: 120px; }
-  .auth-eye { height: clamp(140px, 22vh, 190px); }
+  .auth-brand-eye { width: 124px; }
 }
 
 @media (max-width: 420px) {
-  .auth-logo { width: 104px; }
+  .auth-brand-eye { width: 108px; }
 }

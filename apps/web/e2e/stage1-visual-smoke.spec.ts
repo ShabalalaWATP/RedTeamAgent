@@ -58,7 +58,7 @@ test('stage 1 screens have accessibility coverage and visual baselines', async (
 
 async function verifyVisualJourney(page: Page, suffix: string) {
   await page.goto('/auth');
-  await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TheAllSeeingEye' })).toBeVisible();
   await verifyScreen(page, `auth${suffix}`);
 
   await signIn(page);
@@ -135,7 +135,7 @@ async function auditCurrentScreen(page: Page) {
 
 async function auditAuth(page: Page) {
   await page.goto('/auth');
-  await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TheAllSeeingEye' })).toBeVisible();
   await auditCurrentScreen(page);
 }
 

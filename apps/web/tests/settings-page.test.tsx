@@ -214,13 +214,13 @@ describe('admin settings route', () => {
 
   it('sends unauthenticated settings access to login', async () => {
     renderApp('/settings');
-    expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'TheAllSeeingEye' })).toBeInTheDocument();
   });
 
   it('treats incomplete stored auth as signed out', async () => {
     sessionStorage.setItem('rta.auth', JSON.stringify({ email: 'partial@example.com' }));
     renderApp('/settings');
-    expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'TheAllSeeingEye' })).toBeInTheDocument();
   });
 });
 

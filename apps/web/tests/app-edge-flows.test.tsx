@@ -61,7 +61,7 @@ describe('edge UI flows', () => {
     mockFetch(() => jsonResponse([]));
     renderApp('/auth');
     fireEvent.submit(screen.getByLabelText(/^email$/i).closest('form') as HTMLFormElement);
-    expect(screen.getByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'TheAllSeeingEye' })).toBeInTheDocument();
     cleanup();
 
     storeAuth();
@@ -86,7 +86,7 @@ describe('edge UI flows', () => {
   it('recovers from malformed stored auth and logs out cleanly', async () => {
     sessionStorage.setItem('rta.auth', 'not-json');
     renderApp('/dashboard');
-    expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'TheAllSeeingEye' })).toBeInTheDocument();
     expect(sessionStorage.getItem('rta.auth')).toBeNull();
     cleanup();
 
@@ -98,7 +98,7 @@ describe('edge UI flows', () => {
     });
     renderApp('/workflows');
     await userEvent.click(await screen.findByRole('button', { name: /log out/i }));
-    expect(await screen.findByRole('heading', { name: 'RedTeamAgent' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'TheAllSeeingEye' })).toBeInTheDocument();
   });
 
   it('hides admin settings from members and redirects deep links', async () => {

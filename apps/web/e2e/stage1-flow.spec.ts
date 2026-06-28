@@ -8,7 +8,7 @@ const validPassword = 'Correct-Horse-42!'; // noqa: S105
 test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => {
   await mockApi(page, { initialProjects: [] });
   await page.goto('/auth');
-  await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TheAllSeeingEye' })).toBeVisible();
 
   await assertNoWcagViolations(page);
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
@@ -67,7 +67,7 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
 test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await mockApi(page, { initialProjects: [] });
   await page.goto('/auth');
-  await expect(page.getByRole('heading', { name: 'RedTeamAgent' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TheAllSeeingEye' })).toBeVisible();
 
   await page.getByLabel('Email', { exact: true }).fill('alex@example.com');
   await page.getByLabel('Password', { exact: true }).fill(validPassword);

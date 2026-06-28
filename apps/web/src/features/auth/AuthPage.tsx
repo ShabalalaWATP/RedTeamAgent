@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { ThemeToggle } from '../../app/ThemeToggle';
-import logo from '../../assets/redteamagent-logo.png';
 import EvilEye from '../../shared/EvilEye/EvilEye';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
@@ -186,12 +185,19 @@ export function AuthPage() {
         <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-brand-panel">
           <div className="auth-brand-top">
-            <span className="auth-logo-wrap">
-              <img className="auth-logo" src={logo} alt="" width="176" height="176" />
+            <span className="auth-brand-eye" aria-hidden="true">
+              <EvilEye
+                eyeColor="#ff3a26"
+                intensity={1.3}
+                glowIntensity={0.4}
+                scale={0.95}
+                pupilSize={0.62}
+                flameSpeed={0.9}
+              />
             </span>
             <div>
-              <h1 id="auth-title">RedTeamAgent</h1>
-              <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
+              <h1 id="auth-title">TheAllSeeingEye</h1>
+              <p className="auth-tagline">A RedTeamAgent for adversarial review for the decisions that matter.</p>
             </div>
           </div>
           <ul className="auth-features">
@@ -318,9 +324,6 @@ export function AuthPage() {
             ) : null}
           </div>
         </form>
-        <div className="auth-eye" aria-hidden="true">
-          <EvilEye eyeColor="#ff465c" intensity={1.5} glowIntensity={0.4} scale={0.95} flameSpeed={0.8} />
-        </div>
       </section>
     </div>
   );
