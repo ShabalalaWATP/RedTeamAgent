@@ -79,7 +79,7 @@ See `trust-boundaries.mmd`.
 - Random object keys for source originals.
 - Adapter endpoint validation with explicit self-hosted exception.
 - Server-side provider credential encryption and write-only browser responses.
-- Strict specialist output schemas and bounded fake-provider repair/failure paths.
+- Strict specialist output schemas and bounded deterministic test-adapter repair/failure paths.
 - Structured report quality gate.
 - Tests for tenant isolation, upload handling, prompt injection, endpoint validation, archive safety, website SSRF, external research policy, PDF export sanitisation and schema failure.
 - Invitation and report-share tokens are random, hashed at rest and expire.

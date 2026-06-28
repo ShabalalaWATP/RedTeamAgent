@@ -88,7 +88,7 @@ If Playwright browser installation is unavailable locally but Chromium already e
 
 Provider connections are created from adapter schemas exposed by the API. The current adapter registry includes:
 
-- deterministic fake provider for local demos and tests;
+- deterministic test adapter for automated tests;
 - OpenAI text-generation adapter schema;
 - Anthropic text-generation adapter schema;
 - Google Gemini text-generation adapter schema;
@@ -140,7 +140,7 @@ For `redteamagent.co.uk`, keep the GoDaddy domain registration if preferred and 
 ## Known Limitations
 
 - Local mode returns development verification and reset tokens; production mode should be configured with SMTP.
-- Live provider credentials are optional. Real provider adapters support structured text-generation calls, but the local workflow defaults to the deterministic fake provider for repeatable tests and demos.
+- Live provider credentials are required for production reviews. Automated tests use deterministic provider adapters so CI remains repeatable without real secrets.
 - OCR, transcription, website search and Git ingestion use deterministic local implementations for Stage 2 CI. Production-grade live connectors need provider credentials, monitoring and operational policy before real confidential workloads.
 - Workflow execution uses FastAPI background tasks for the local slice. A Redis-backed external worker queue remains recommended before high-volume production use.
 - Local SQLite development uses ordinary database audit storage. Production should forward structured audit events to append-only storage or immutable log retention as documented in the Stage 3 security guide.

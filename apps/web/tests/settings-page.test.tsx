@@ -266,11 +266,11 @@ function mockSettingsEndpoints(
     if (path === '/providers/adapters') {
       return jsonResponse([
         {
-          key: 'fake',
-          label: 'Fake',
+          key: 'openai',
+          label: 'OpenAI',
           fields: [],
           default_capabilities: ['text'],
-          catalogue_models: [{ model_identifier: 'fake-reviewer', capabilities: ['text'] }]
+          catalogue_models: [{ model_identifier: 'gpt-4.1-mini', capabilities: ['text'] }]
         }
       ]);
     }

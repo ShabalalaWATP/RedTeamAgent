@@ -20,7 +20,7 @@ Webhook endpoints must be public HTTPS URLs. Private, loopback, link-local, rese
 
 ## Public Readiness Gates
 
-Production startup fails closed if critical public settings are unsafe: production must use HTTPS public URLs and CORS origins, secure cookies, PostgreSQL, SMTP mail delivery, CAPTCHA, a non-placeholder signing secret and no deterministic fake provider.
+Production startup fails closed if critical public settings are unsafe: production must use HTTPS public URLs and CORS origins, secure cookies, PostgreSQL, SMTP mail delivery, CAPTCHA, a non-placeholder signing secret and no deterministic test adapter.
 
 Public anonymous visit tracking is rate-limited by client identity. Side-effecting enterprise data-export requests use POST plus CSRF, not GET.
 

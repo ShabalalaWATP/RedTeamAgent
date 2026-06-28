@@ -133,7 +133,7 @@ Use:
 - Redis
 - S3-compatible object storage via MinIO for local development
 - Docker Compose
-- a deterministic fake AI provider for tests and local demo
+- a deterministic test adapter for automated tests and local demo data
 - canonical provider contracts with native OpenAI, Anthropic, Google Gemini and generic OpenAI-compatible text-generation adapters
 
 Start by producing:
@@ -149,7 +149,7 @@ Then implement the Stage 1 vertical slice.
 
 Do not build a novelty multi-agent chat room. Build an auditable decision-support system with source-linked findings, structured outputs, visible uncertainty and deterministic policy enforcement.
 
-Do not create placeholder buttons, fake authentication, hard-coded report data or frontend-only flows. The deterministic fake provider is allowed only for tests and local demonstration.
+Do not create placeholder buttons, fake authentication, hard-coded report data or frontend-only flows. The deterministic test adapter is allowed only for automated tests and local demonstration.
 ```
 
 ## Stage 1 scope
@@ -200,7 +200,7 @@ Deliver the foundation that proves the architecture works end to end.
 - Deterministic model router.
 - Native text-generation adapters for OpenAI, Anthropic and Google Gemini.
 - Generic OpenAI-compatible text-generation adapter.
-- Deterministic fake provider.
+- Deterministic test adapter.
 - Provider connection settings UI rendered from adapter configuration schemas.
 - Provider test connection flow.
 - Model catalogue sync or manual model registration.
@@ -248,7 +248,7 @@ Stage 1 is done only when all of the following are true.
 - Failed extraction is visible to the user and never silently omitted from coverage.
 - A user can create a Markdown-based context pack and assign it to an agent.
 - Context packs are versioned and cited like other evidence.
-- Provider connections can be created and tested for OpenAI, Anthropic, Google Gemini, generic OpenAI-compatible and fake provider adapters.
+- Provider connections can be created and tested for OpenAI, Anthropic, Google Gemini, generic OpenAI-compatible and deterministic test adapters.
 - Provider credentials are never returned to the browser after submission.
 - Provider configuration forms are generated from adapter schemas.
 - Models can be synchronised or manually registered.
@@ -275,7 +275,7 @@ Stage 1 is done only when all of the following are true.
 
 - Docker Compose starts web, API, worker, PostgreSQL, Redis, MinIO and optional scanner services from documented commands.
 - Frontend production build succeeds.
-- Backend starts without external provider credentials when fake provider is enabled.
+- Backend starts without external provider credentials when the deterministic test adapter is enabled.
 - OpenAPI documentation is generated.
 - Frontend API client is generated or derived from OpenAPI.
 - No hand-written source file exceeds 400 physical lines, Markdown excluded.
@@ -291,11 +291,11 @@ Stage 1 is done only when all of the following are true.
 - Provider, storage, search, ingestion, workflow and export ports are small and capability-specific.
 - Domain and application modules have no direct dependency on FastAPI, SQLAlchemy ORM classes, Celery, React internals or vendor model SDKs.
 - Provider, storage, search and ingestion implementations have shared contract tests.
-- The fake provider can simulate valid output, invalid schema output, missing capability, timeout, rate limit and partial stream.
+- The deterministic test adapter can simulate valid output, invalid schema output, missing capability, timeout, rate limit and partial stream.
 - Unit tests cover domain policies, routing, ingestion decisions, report quality gates and authorisation checks.
 - Frontend and backend unit coverage are each 95% or higher, enforced by CI as separate release-blocking gates.
 - Integration tests cover source upload, context packs, provider setup, workflow run and report retrieval.
-- End-to-end tests cover registration, login, project creation, source upload, context pack creation, fake-provider review run and report viewing.
+- End-to-end tests cover registration, login, project creation, source upload, context pack creation, test-adapter review run and report viewing.
 
 ### Security DoD
 
@@ -329,7 +329,7 @@ Stage 1 is done only when all of the following are true.
 
 ### Documentation DoD
 
-- README documents setup, local development, environment variables, provider configuration, fake provider usage, testing and known limitations.
+- README documents setup, local development, environment variables, provider configuration, deterministic test adapter usage, testing and known limitations.
 - Architecture docs explain module boundaries and dependency direction.
 - ADRs exist for modular monolith, provider-neutral model layer, workflow abstraction, source ingestion model, authentication approach and structured-report approach.
 - Threat model includes a Mermaid trust-boundary diagram.

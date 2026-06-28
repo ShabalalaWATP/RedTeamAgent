@@ -102,7 +102,7 @@ Open:
 3. Local development can expose verification/reset tokens when the local test settings opt into it. Production must not expose those tokens.
 4. Verify the account, log in, create a project and create a review.
 
-The deterministic fake provider is available only when `ALLOW_FAKE_PROVIDER=true`. Production must set `ALLOW_FAKE_PROVIDER=false`.
+The deterministic test adapter is available only when `ALLOW_FAKE_PROVIDER=true` for automated or local testing. Production must set `ALLOW_FAKE_PROVIDER=false`.
 
 ## Local Production-Env Mirror
 

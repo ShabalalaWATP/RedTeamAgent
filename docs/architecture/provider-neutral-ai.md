@@ -13,7 +13,7 @@ Adapters are registered by name and expose configuration schemas that the fronte
 
 ## Available Adapters
 
-- `fake`: deterministic local adapter for tests and demos. Production disables it.
+- Internal test adapter: deterministic local route for automated tests. It is hidden from the app UI and production disables it.
 - `openai`: OpenAI-compatible managed API with structured text-generation support.
 - `anthropic`: Anthropic managed API with structured text-generation support.
 - `google_gemini`: Google Gemini managed API with structured text-generation support.
@@ -26,7 +26,7 @@ Adapters are registered by name and expose configuration schemas that the fronte
 - `vllm`: self-hosted vLLM endpoint schema.
 - `approved_gateway`: approved multi-provider gateway schema.
 
-Live credentials are optional for local development. The fake provider is the default local route when `ALLOW_FAKE_PROVIDER=true`. Production must set `ALLOW_FAKE_PROVIDER=false`.
+Live credentials are optional for local development tests. A deterministic test adapter can be enabled only when `ALLOW_FAKE_PROVIDER=true`. Production must set `ALLOW_FAKE_PROVIDER=false`.
 
 OpenAI, Anthropic, Google Gemini and OpenAI-compatible adapters can issue live structured text-generation calls when server-side encrypted credentials and a model identifier are supplied. The other provider schemas establish the governance, catalogue and capability shape used by the UI and policy layer, even where the current implementation still uses deterministic catalogue records.
 

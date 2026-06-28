@@ -30,7 +30,7 @@ Stage 2 and Stage 3 remain out of scope until Alex explicitly starts the next st
 - Manual model registration plus adapter-backed model catalogue sync with visible capability provenance, verification status and durable probe results.
 - Live provider catalogue sync is opt-in through adapter configuration.
 - Agent model profiles can be assigned from saved model records in the provider settings UI.
-- Deterministic fake provider and provider endpoint validation for hosted mode.
+- Deterministic test adapter and provider endpoint validation for hosted mode.
 - Local workflow progression through intake, ingestion, framing, agent planning, specialist review, reconciliation, report composition and quality gate.
 - JSON Server-Sent Events replay is consumed by the report timeline, with run snapshot refresh after page reload.
 - Report timeline controls can cancel non-terminal runs and retry a run from the same review.

@@ -128,8 +128,8 @@ describe('ApiClient', () => {
           {
             id: 'conn-1',
             workspace_id: 'workspace-1',
-            adapter: 'fake',
-            name: 'Fake',
+            adapter: 'openai',
+            name: 'OpenAI',
             config: {},
             has_credentials: false
           }
@@ -139,29 +139,12 @@ describe('ApiClient', () => {
       if (url.includes('/providers/connections/conn-1/models/sync')) return jsonResponse([modelResponse()]);
       if (url.includes('/providers/models?')) return jsonResponse([modelResponse()]);
       if (url.includes('/providers/models/model-1/probe')) return jsonResponse(modelResponse());
+      if (url.includes('/providers/models/model-1/select')) return jsonResponse(modelProfileResponse());
       if (url.includes('/providers/profiles?')) {
-        return jsonResponse([
-          {
-            id: 'profile-1',
-            workspace_id: 'workspace-1',
-            name: 'Profile',
-            agent_key: 'evidence_context',
-            model_record_id: 'model-1',
-            explicit_pin: false
-          }
-        ]);
+        return jsonResponse([modelProfileResponse()]);
       }
       if (url.includes('/providers/models') && init?.method === 'POST') return jsonResponse(modelResponse());
-      if (url.includes('/providers/profiles') && init?.method === 'POST') {
-        return jsonResponse({
-          id: 'profile-1',
-          workspace_id: 'workspace-1',
-          name: 'Profile',
-          agent_key: 'evidence_context',
-          model_record_id: 'model-1',
-          explicit_pin: false
-        });
-      }
+      if (url.includes('/providers/profiles') && init?.method === 'POST') return jsonResponse(modelProfileResponse());
       if (url.includes('/report')) {
         return jsonResponse({
           data: {
@@ -236,6 +219,7 @@ describe('ApiClient', () => {
     await expect(client.createModel('csrf', {})).resolves.toMatchObject({ id: 'model-1' });
     await expect(client.listModels('workspace-1')).resolves.toHaveLength(1);
     await expect(client.probeModel('csrf', 'model-1')).resolves.toMatchObject({ verified: true });
+    await expect(client.selectModel('csrf', 'model-1')).resolves.toMatchObject({ name: 'Profile' });
     await expect(client.createProfile('csrf', {})).resolves.toMatchObject({ name: 'Profile' });
     await expect(client.listProfiles('workspace-1')).resolves.toHaveLength(1);
     await expect(client.listWorkflows('workspace-1')).resolves.toHaveLength(1);
@@ -294,11 +278,22 @@ function modelResponse() {
     id: 'model-1',
     workspace_id: 'workspace-1',
     provider_connection_id: 'conn-1',
-    model_identifier: 'fake-reviewer',
+    model_identifier: 'gpt-4.1-mini',
     capabilities: ['text'],
     provenance: 'manual',
     verified: true,
     probe_result: { ok: true, source: 'test' }
+  };
+}
+
+function modelProfileResponse() {
+  return {
+    id: 'profile-1',
+    workspace_id: 'workspace-1',
+    name: 'Profile',
+    agent_key: 'default',
+    model_record_id: 'model-1',
+    explicit_pin: false
   };
 }
 

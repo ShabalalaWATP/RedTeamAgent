@@ -22,7 +22,7 @@ describe('unauthenticated and alternate branch states', () => {
     const fetchMock = mockFetch((url) => {
       if (url.includes('/providers/adapters')) {
         return jsonResponse([
-          { key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] }
+          { key: 'openai', label: 'OpenAI', fields: [], default_capabilities: ['text'] }
         ]);
       }
       return jsonResponse({ message: 'unexpected' }, 500);
@@ -76,7 +76,7 @@ describe('unauthenticated and alternate branch states', () => {
     const user = userEvent.setup();
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) {
-        return jsonResponse([{ key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] }]);
+        return jsonResponse([{ key: 'openai', label: 'OpenAI', fields: [], default_capabilities: ['text'] }]);
       }
       if (url.includes('/providers/connections?')) return jsonResponse([connection(true)]);
       if (url.includes('/providers/models?')) return jsonResponse([model({ probe_result: {} })]);
@@ -95,8 +95,8 @@ describe('unauthenticated and alternate branch states', () => {
     expect(await screen.findByText(/credentials stored/i)).toBeInTheDocument();
     await user.click(screen.getByText(/advanced ai controls/i));
     expect(screen.getByText('No probe recorded')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /refresh models/i }));
-    expect(await screen.findByText('Model list refreshed with 2 models. fake-reviewer needs review for review runs.'))
+    await user.click(screen.getByRole('button', { name: /select and test/i }));
+    expect(await screen.findByText('OpenAI / gpt-4.1-mini could not be verified, so it was not selected.'))
       .toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe needs review/i)).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('unauthenticated and alternate branch states', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch((url) => {
       if (url.includes('/providers/adapters')) {
-        return jsonResponse([{ key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] }]);
+        return jsonResponse([{ key: 'openai', label: 'OpenAI', fields: [], default_capabilities: ['text'] }]);
       }
       if (url.includes('/providers/connections?')) return jsonResponse([]);
       if (url.includes('/providers/models?')) return jsonResponse([]);
@@ -243,7 +243,6 @@ describe('unauthenticated and alternate branch states', () => {
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) {
         return jsonResponse([
-          { key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] },
           {
             key: 'custom',
             label: 'Custom',
@@ -270,7 +269,7 @@ describe('unauthenticated and alternate branch states', () => {
           config: { endpoint_url: '', live_catalogue: true, model_identifier: 'custom-live' },
           credentials: { api_key: '' }
         });
-        return jsonResponse(connection());
+        return jsonResponse(connection(false, { adapter: 'custom', name: 'Custom' }));
       }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
@@ -279,7 +278,7 @@ describe('unauthenticated and alternate branch states', () => {
     await user.selectOptions(await screen.findByLabelText(/ai provider/i), 'custom');
     await user.click(screen.getByRole('button', { name: /load models/i }));
     await user.click(screen.getByRole('button', { name: /test and save/i }));
-    expect(await screen.findByText(/provider connection saved/i)).toBeInTheDocument();
+    expect(await screen.findByText('Custom returned no models, so nothing was selected.')).toBeInTheDocument();
   });
 
   it('ignores late context-pack loads after unmount', async () => {
@@ -348,14 +347,15 @@ function auth() {
   };
 }
 
-function connection(hasCredentials = false) {
+function connection(hasCredentials = false, overrides: Record<string, unknown> = {}) {
   return {
     id: 'conn-1',
     workspace_id: 'workspace-1',
-    adapter: 'fake',
-    name: 'Fake',
+    adapter: 'openai',
+    name: 'OpenAI',
     config: {},
-    has_credentials: hasCredentials
+    has_credentials: hasCredentials,
+    ...overrides
   };
 }
 
@@ -364,7 +364,7 @@ function model(overrides: Record<string, unknown> = {}) {
     id: 'model-1',
     workspace_id: 'workspace-1',
     provider_connection_id: 'conn-1',
-    model_identifier: 'fake-reviewer',
+    model_identifier: 'gpt-4.1-mini',
     capabilities: ['text'],
     provenance: 'manual',
     verified: true,

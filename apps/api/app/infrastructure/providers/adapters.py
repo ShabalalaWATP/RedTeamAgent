@@ -20,7 +20,7 @@ DEFAULT_HOSTED_PROVIDER_BASE_URLS = (
 class FakeProviderAdapter:
     schema = AdapterSchema(
         key="fake",
-        label="Deterministic fake provider",
+        label="Deterministic test adapter",
         fields=[AdapterField("scenario", "Scenario", secret=False, required=False)],
         default_capabilities=[
             "text",

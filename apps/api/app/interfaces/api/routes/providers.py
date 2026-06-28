@@ -105,6 +105,15 @@ def probe_model(
     return ModelView.model_validate(service.probe_model(context.user.id, model_id))
 
 
+@router.post("/models/{model_id}/select", response_model=ProfileView, dependencies=[Depends(require_csrf)])
+def select_model(
+    model_id: str,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ProviderService, Depends(provider_service)],
+) -> ProfileView:
+    return ProfileView.model_validate(service.select_model(context.user.id, model_id))
+
+
 @router.post("/profiles", response_model=ProfileView, dependencies=[Depends(require_csrf)])
 def create_profile(
     payload: ProfileCreate,

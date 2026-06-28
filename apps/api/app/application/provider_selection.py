@@ -1,0 +1,2 @@
+ACTIVE_REVIEW_AGENT_KEY = "default"
+ACTIVE_REVIEW_PROFILE_NAME = "Active review model"

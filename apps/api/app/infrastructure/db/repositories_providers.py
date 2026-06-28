@@ -75,6 +75,25 @@ class ProviderRepositoryMixin:
         self.session.flush()
         return profile
 
+    def upsert_profile(self, workspace_id: str, data: dict[str, Any]) -> models.ModelProfile:
+        statement = select(models.ModelProfile).where(
+            models.ModelProfile.workspace_id == workspace_id,
+            models.ModelProfile.agent_key == data["agent_key"],
+        )
+        profiles = list(self.session.scalars(statement))
+        profile = profiles[0] if profiles else None
+        for duplicate in profiles[1:]:
+            self.session.delete(duplicate)
+        if profile is None:
+            profile = models.ModelProfile(workspace_id=workspace_id, **data)
+            self.session.add(profile)
+        else:
+            profile.name = data["name"]
+            profile.model_record_id = data["model_record_id"]
+            profile.explicit_pin = bool(data.get("explicit_pin", False))
+        self.session.flush()
+        return profile
+
     def list_profiles(self, workspace_id: str) -> list[models.ModelProfile]:
         statement = select(models.ModelProfile).where(models.ModelProfile.workspace_id == workspace_id)
         return list(self.session.scalars(statement))

@@ -21,30 +21,19 @@ import {
   type AdapterSchema,
   type CatalogueModel
 } from './providerCatalogue';
+import {
+  activeReviewModelId,
+  modelCountLabel,
+  selectionResult,
+  selectSyncedModel,
+  visibleProviderConnections,
+  visibleProviderModels,
+  visibleProviderSchemas
+} from './providerSelection';
 import './providers.css';
-
-const SHOW_LOCAL_PROVIDERS = import.meta.env.MODE !== 'production';
 
 function splitCapabilities(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
-}
-
-function modelCountLabel(count: number) {
-  return `${count} model${count === 1 ? '' : 's'}`;
-}
-
-function selectSyncedModel(models: ModelRecord[], preferredIdentifier: string) {
-  const identifier = preferredModelIdentifier(
-    models.map((model) => ({ model_identifier: model.model_identifier, capabilities: model.capabilities })),
-    preferredIdentifier
-  );
-  return models.find((model) => model.model_identifier === identifier) ?? models[0];
-}
-
-function syncResult(prefix: string, synced: ModelRecord[], probed: ModelRecord | null) {
-  const base = `${prefix} ${modelCountLabel(synced.length)}.`;
-  if (!probed) return `${base} No review-capable model was found.`;
-  return `${base} ${probed.model_identifier} ${probed.verified ? 'verified' : 'needs review'} for review runs.`;
 }
 
 type ProviderSettingsProps = {
@@ -81,11 +70,19 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     const nextConnections = await api.listProviderConnections(auth.workspaceId);
     const nextModels = await api.listModels(auth.workspaceId);
     const nextProfiles = await api.listProfiles(auth.workspaceId);
+    const selectableConnections = visibleProviderConnections(nextConnections);
+    const selectableModels = visibleProviderModels(nextModels, selectableConnections);
     setConnections(nextConnections);
     setModels(nextModels);
     setProfiles(nextProfiles);
-    setModelConnectionId((current) => current || nextConnections[0]?.id || '');
-    setProfileModelId((current) => current || nextModels[0]?.id || '');
+    setModelConnectionId((current) => (
+      selectableConnections.some((connection) => connection.id === current)
+        ? current
+        : selectableConnections[0]?.id || ''
+    ));
+    setProfileModelId((current) => (
+      selectableModels.some((model) => model.id === current) ? current : selectableModels[0]?.id || ''
+    ));
     setWorkspaceError(null);
   };
 
@@ -99,12 +96,15 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
   useEffect(() => {
     loadWorkspaceData().catch((err) => setWorkspaceError((err as Error).message));
   }, [auth?.workspaceId]);
-  const visibleSchemas = schemas.filter((item) => SHOW_LOCAL_PROVIDERS || item.key !== 'fake');
+  const visibleSchemas = visibleProviderSchemas(schemas);
+  const visibleConnections = visibleProviderConnections(connections);
+  const visibleModels = visibleProviderModels(models, visibleConnections);
+  const activeModelId = activeReviewModelId(profiles);
   const schema = visibleSchemas.find((item) => item.key === selected);
   const defaultModelOptions = modelOptionsForSetup(schema, liveModelOptions);
-  const modelConnection = connections.find((connection) => connection.id === modelConnectionId);
+  const modelConnection = visibleConnections.find((connection) => connection.id === modelConnectionId);
   const manualModelSchema = schemaForConnection(schemas, modelConnection);
-  const manualModelOptions = modelOptionsForConnection(schemas, models, modelConnection);
+  const manualModelOptions = modelOptionsForConnection(schemas, visibleModels, modelConnection);
   const defaultModelOptionKey = modelOptionKey(defaultModelOptions);
   const manualModelOptionKey = modelOptionKey(manualModelOptions);
 
@@ -146,7 +146,8 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
       const synced = await api.syncModels(auth.csrfToken, connection.id);
       const model = selectSyncedModel(synced, defaultModelIdentifier);
       const probed = model ? await api.probeModel(auth.csrfToken, model.id) : null;
-      setResult(syncResult('Provider connection saved.', synced, probed));
+      if (probed?.verified) await api.selectModel(auth.csrfToken, probed.id);
+      setResult(selectionResult(connection.name, synced, probed));
       await loadWorkspaceData();
       setModelConnectionId(connection.id);
       setProfileModelId(probed?.id ?? synced[0]?.id ?? '');
@@ -234,9 +235,11 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
     setError(null);
     try {
       const synced = await api.syncModels(auth.csrfToken, connectionId);
+      const connection = connections.find((item) => item.id === connectionId);
       const model = selectSyncedModel(synced, modelIdentifier);
       const probed = model ? await api.probeModel(auth.csrfToken, model.id) : null;
-      setResult(syncResult('Model list refreshed with', synced, probed));
+      if (probed?.verified) await api.selectModel(auth.csrfToken, probed.id);
+      setResult(selectionResult(connection?.name ?? 'Provider', synced, probed));
       await loadWorkspaceData();
     } catch (err) {
       setError((err as Error).message);
@@ -293,7 +296,9 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
           onCreateConnection={() => void createConnection()}
         />
         <SavedConnectionsPanel
-          connections={connections}
+          connections={visibleConnections}
+          models={visibleModels}
+          activeModelId={activeModelId}
           result={result}
           onTest={(connectionId) => void testConnection(connectionId)}
           onRefresh={(connectionId) => void refreshModels(connectionId)}
@@ -306,7 +311,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
         </summary>
         <div className="grid">
           <ManualModelRecordForm
-            connections={connections}
+            connections={visibleConnections}
             modelConnectionId={modelConnectionId}
             modelIdentifier={modelIdentifier}
             manualModelOptions={manualModelOptions}
@@ -321,7 +326,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
             onCreateModel={() => void createModel()}
           />
           <AgentProfileForm
-            models={models}
+            models={visibleModels}
             profileName={profileName}
             profileAgent={profileAgent}
             profileModelId={profileModelId}
@@ -334,7 +339,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
           />
         </div>
         <div className="grid">
-          <ModelCataloguePanel models={models} onProbeModel={(modelId) => void probeModel(modelId)} />
+          <ModelCataloguePanel models={visibleModels} onProbeModel={(modelId) => void probeModel(modelId)} />
           <AgentAssignmentsPanel profiles={profiles} />
         </div>
         <EvaluationPanel />

@@ -10,3 +10,21 @@
 .provider-primary-grid {
   margin-top: 4px;
 }
+
+.status-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 9px;
+}
+
+.status-chip.success {
+  border-color: rgba(58, 196, 125, 0.55);
+  color: var(--success);
+}
+
+.status-chip.warning {
+  border-color: rgba(247, 187, 84, 0.55);
+  color: var(--warn);
+}

@@ -89,7 +89,7 @@ Application services depend on ports and domain policies. Infrastructure impleme
 The default posture is fail closed:
 
 - production startup rejects unsafe configuration;
-- fake providers are disabled in production;
+- deterministic test adapters are disabled in production;
 - verification and password-reset tokens are not returned in production;
 - cookies are HttpOnly and secure in production;
 - CORS must be HTTPS and explicit in production;

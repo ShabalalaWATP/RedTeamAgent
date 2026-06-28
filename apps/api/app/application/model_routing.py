@@ -37,14 +37,10 @@ def select_model_route(repo: Any, workspace_id: str, agent_keys: list[str]) -> M
                 route = _route_for_model(repo, workspace_id, models[profile.model_record_id], profile)
                 if route is not None:
                     return route
-    for model in models.values():
-        route = _route_for_model(repo, workspace_id, model, None)
-        if route is not None:
-            return route
     return None
 
 
-def _route_for_model(repo: Any, workspace_id: str, model: Any, profile: Any | None) -> ModelRoute | None:
+def _route_for_model(repo: Any, workspace_id: str, model: Any, profile: Any) -> ModelRoute | None:
     connection = repo.get_provider_connection(model.provider_connection_id)
     if connection is None or connection.workspace_id != workspace_id:
         return None
@@ -53,7 +49,7 @@ def _route_for_model(repo: Any, workspace_id: str, model: Any, profile: Any | No
         model_identifier=model.model_identifier,
         model_record_id=model.id,
         provider_connection_id=connection.id,
-        model_profile=getattr(profile, "name", "Verified workspace model"),
+        model_profile=profile.name,
         explicit_pin=bool(getattr(profile, "explicit_pin", False)),
         config=dict(connection.config or {}),
         encrypted_credentials=dict(connection.encrypted_credentials or {}),

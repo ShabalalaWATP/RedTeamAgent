@@ -18,7 +18,6 @@ describe('ProviderSettings', () => {
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) {
         return jsonResponse([
-          adapterSchema(),
           {
             key: 'openai',
             label: 'OpenAI',
@@ -45,10 +44,13 @@ describe('ProviderSettings', () => {
         ]);
       }
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
-        return jsonResponse([modelRecord({ model_identifier: 'fake-fast' })]);
+        return jsonResponse([modelRecord({ model_identifier: 'gpt-fast' })]);
       }
       if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
-        return jsonResponse(modelRecord({ model_identifier: 'fake-fast', verified: true }));
+        return jsonResponse(modelRecord({ model_identifier: 'gpt-fast', verified: true }));
+      }
+      if (url.includes('/providers/models/model-1/select') && init?.method === 'POST') {
+        return jsonResponse(modelProfile({ name: 'Active review model', agent_key: 'default' }));
       }
       if (url.includes('/providers/connections') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
@@ -73,8 +75,7 @@ describe('ProviderSettings', () => {
     expect(await within(providerForm).findByText('gpt-fast')).toBeInTheDocument();
     await user.selectOptions(within(providerForm).getAllByRole('combobox')[1], 'gpt-fast');
     await user.click(screen.getByRole('button', { name: /test and save/i }));
-    expect(await screen.findByText('Provider connection saved. 1 model. fake-fast verified for review runs.'))
-      .toBeInTheDocument();
+    expect(await screen.findByText('Selected and tested: Production AI provider / gpt-fast.')).toBeInTheDocument();
   });
 
   it('tests stored connections and renders model catalogue state', async () => {
@@ -90,10 +91,13 @@ describe('ProviderSettings', () => {
         return jsonResponse({ ok: true });
       }
       if (url.includes('/providers/connections/conn-1/models/sync') && init?.method === 'POST') {
-        return jsonResponse([modelRecord({ provenance: 'adapter_catalogue:fake' })]);
+        return jsonResponse([modelRecord({ provenance: 'adapter_catalogue:openai' })]);
       }
       if (url.includes('/providers/models/model-1/probe') && init?.method === 'POST') {
-        return jsonResponse(modelRecord({ probe_result: { ok: true, source: 'deterministic_fake_probe' } }));
+        return jsonResponse(modelRecord({ probe_result: { ok: true, source: 'provider_probe' } }));
+      }
+      if (url.includes('/providers/models/model-1/select') && init?.method === 'POST') {
+        return jsonResponse(modelProfile({ name: 'Active review model', agent_key: 'default' }));
       }
       if (url.includes('/providers/models') && init?.method === 'POST') return jsonResponse(modelRecord());
       if (url.includes('/providers/profiles') && init?.method === 'POST') return jsonResponse(modelProfile());
@@ -112,7 +116,7 @@ describe('ProviderSettings', () => {
     renderProviderSettings();
 
     expect(await screen.findByLabelText(/ai provider/i)).toBeInTheDocument();
-    expect(screen.getAllByText('fake-reviewer').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('gpt-4.1-mini').length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
     expect(screen.getByText(/not a url/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/connection name/i)).not.toBeInTheDocument();
@@ -125,8 +129,8 @@ describe('ProviderSettings', () => {
     expect(await screen.findByText('Model profile assigned to agent.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByText('Stored connection test passed.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /refresh models/i }));
-    expect(await screen.findByText('Model list refreshed with 1 model. fake-reviewer verified for review runs.'))
+    await user.click(screen.getByRole('button', { name: /select and test/i }));
+    expect(await screen.findByText('Selected and tested: Production AI provider / gpt-4.1-mini.'))
       .toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /probe/i }));
     expect(await screen.findByText(/capability probe passed/i)).toBeInTheDocument();
@@ -152,8 +156,8 @@ describe('ProviderSettings', () => {
 
     renderProviderSettings();
 
-    await user.click(await screen.findByRole('button', { name: /refresh models/i }));
-    expect(await screen.findByText('Model list refreshed with 0 models. No review-capable model was found.'))
+    await user.click(await screen.findByRole('button', { name: /select and test/i }));
+    expect(await screen.findByText('Production AI provider returned no models, so nothing was selected.'))
       .toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/probe'))).toBe(false);
   });
@@ -202,7 +206,7 @@ describe('ProviderSettings', () => {
     await user.click(await screen.findByRole('button', { name: /load models/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('preview denied');
     await openDisclosure(user, /advanced ai controls/i);
-    expect((await screen.findAllByText('fake-reviewer')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('gpt-4.1-mini')).length).toBeGreaterThan(0);
     const manualForm = screen.getByRole('heading', { name: /manual model record/i }).closest('form') as HTMLElement;
     await user.selectOptions(within(manualForm).getAllByRole('combobox')[1], 'backup-reviewer');
     await user.clear(screen.getByLabelText(/capabilities/i));
@@ -222,7 +226,7 @@ describe('ProviderSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('profile denied');
     await user.click(screen.getByRole('button', { name: /^test$/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('probe failed');
-    await user.click(screen.getByRole('button', { name: /refresh models/i }));
+    await user.click(screen.getByRole('button', { name: /select and test/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('sync denied');
     await user.click(screen.getAllByRole('button', { name: /probe/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('model probe denied');
@@ -333,11 +337,11 @@ async function openDisclosure(user: ReturnType<typeof userEvent.setup>, name: Re
 
 function adapterSchema(overrides: Record<string, unknown> = {}) {
   return {
-    key: 'fake',
-    label: 'Deterministic fake provider',
-    fields: [{ name: 'scenario', label: 'Scenario', secret: false, required: false, input_type: 'text' }],
+    key: 'openai',
+    label: 'OpenAI',
+    fields: [],
     default_capabilities: ['text'],
-    catalogue_models: [{ model_identifier: 'fake-reviewer', capabilities: ['text'] }],
+    catalogue_models: [{ model_identifier: 'gpt-4.1-mini', capabilities: ['text'] }],
     ...overrides
   };
 }
@@ -346,10 +350,10 @@ function providerConnection(overrides: Record<string, unknown> = {}) {
   return {
     id: 'conn-1',
     workspace_id: authState.workspaceId,
-    adapter: 'fake',
-    name: 'Fake local provider',
+    adapter: 'openai',
+    name: 'Production AI provider',
     config: {},
-    has_credentials: false,
+    has_credentials: true,
     ...overrides
   };
 }
@@ -359,7 +363,7 @@ function modelRecord(overrides: Record<string, unknown> = {}) {
     id: 'model-1',
     workspace_id: authState.workspaceId,
     provider_connection_id: 'conn-1',
-    model_identifier: 'fake-reviewer',
+    model_identifier: 'gpt-4.1-mini',
     capabilities: ['text', 'structured_output'],
     provenance: 'manual',
     verified: true,

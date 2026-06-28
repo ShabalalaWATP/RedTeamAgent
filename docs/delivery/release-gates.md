@@ -27,7 +27,7 @@
 - External research tests cover explicit enablement, private research, query sanitisation, domain allow/block lists and separate external citations.
 - Provider conformance tests cover expanded adapters, capability probes, fallback policy and policy-constrained diversity.
 - Report tests cover the risk matrix, dependency relationships, time horizons, evidence quality, disagreements, strongest-case sections, pre-mortem, scenarios, validation experiments, action tracking, comparison and PDF export.
-- Deterministic evaluation tests cover at least ten representative scenarios, adversarial fixtures and fake provider failure modes without live credentials.
+- Deterministic evaluation tests cover at least ten representative scenarios, adversarial fixtures and test-adapter failure modes without live credentials.
 - Visual and accessibility checks cover rich source states, research settings, report comparison, risk matrix and action tracking on desktop and mobile.
 - Performance budgets exist for OCR, transcription, website ingestion, repository indexing, large reports and PDF export.
 - README, threat model, ADRs and completion report document Stage 2 scope, limits, research modes, provider adapters and user-facing limitations.

@@ -15,5 +15,5 @@ Expose provider capabilities through small contracts, adapter schemas and a regi
 ## Consequences
 
 - Real providers can be added without changing workflow code.
-- Tests use a deterministic fake provider.
+- Tests use a deterministic test adapter.
 - Credentials stay server-side.

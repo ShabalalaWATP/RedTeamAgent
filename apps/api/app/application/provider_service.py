@@ -6,6 +6,7 @@ from app.application.ports.credentials import CredentialVault
 from app.application.ports.providers import ProviderAdapter
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provider_governance import ProviderGovernanceService
+from app.application.provider_selection import ACTIVE_REVIEW_AGENT_KEY, ACTIVE_REVIEW_PROFILE_NAME
 from app.domain.enums import WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError, ValidationFailure
 from app.domain.policies import require_admin
@@ -177,6 +178,34 @@ class ProviderService:
         self.repo.audit(model.workspace_id, user_id, "provider.model_probed", {"model_id": model.id})
         self.repo.commit()
         return next_model
+
+    def select_model(self, user_id: str, model_id: str) -> Any:
+        model = self.repo.get_model(model_id)
+        if model is None:
+            raise NotFoundError("Model not found.")
+        self._require_provider_admin(user_id, model.workspace_id)
+        connection = self.repo.get_provider_connection(model.provider_connection_id)
+        if connection is None or connection.workspace_id != model.workspace_id:
+            raise NotFoundError("Provider connection not found.")
+        if not model.verified:
+            raise ValidationFailure("Verify this model before selecting it for reviews.")
+        profile = self.repo.upsert_profile(
+            model.workspace_id,
+            {
+                "name": ACTIVE_REVIEW_PROFILE_NAME,
+                "agent_key": ACTIVE_REVIEW_AGENT_KEY,
+                "model_record_id": model.id,
+                "explicit_pin": True,
+            },
+        )
+        self.repo.audit(
+            model.workspace_id,
+            user_id,
+            "provider.model_selected",
+            {"model_id": model.id, "connection_id": connection.id},
+        )
+        self.repo.commit()
+        return profile
 
     def create_profile(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
         self._require_provider_admin(user_id, workspace_id)

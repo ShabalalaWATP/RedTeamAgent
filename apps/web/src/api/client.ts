@@ -228,15 +228,15 @@ export class ApiClient {
     return modelRecordSchema.parse(await this.request(`/providers/models/${modelId}/probe`, 'POST', { csrf }));
   }
 
+  async selectModel(csrf: string, modelId: string) {
+    return modelProfileSchema.parse(await this.request(`/providers/models/${modelId}/select`, 'POST', { csrf }));
+  }
+
   async createProfile(csrf: string, body: Record<string, unknown>) {
     return modelProfileSchema.parse(await this.request('/providers/profiles', 'POST', { csrf, body }));
   }
 
-  async listProfiles(workspaceId: string) {
-    return z.array(modelProfileSchema).parse(
-      await this.request(`/providers/profiles?workspace_id=${workspaceId}`, 'GET')
-    );
-  }
+  async listProfiles(workspaceId: string) { return z.array(modelProfileSchema).parse(await this.request(`/providers/profiles?workspace_id=${workspaceId}`, 'GET')); }
 
   async startRun(csrf: string, reviewId: string) {
     return runSchema.parse(await this.request(`/reviews/${reviewId}/runs`, 'POST', { csrf }));

@@ -128,7 +128,6 @@ describe('edge UI flows', () => {
     mockFetch((url, init) => {
       if (url.includes('/providers/adapters')) {
         return jsonResponse([
-          { key: 'fake', label: 'Fake', fields: [], default_capabilities: ['text'] },
           {
             key: 'openai',
             label: 'OpenAI',
