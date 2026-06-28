@@ -23,6 +23,7 @@ function Layout() {
   const { auth, setAuth } = useAuth();
   if (!auth) return <Navigate to="/auth" replace />;
   const isAdmin = isWorkspaceAdmin(auth.workspaceRole);
+  const isPrivileged = isAdmin || isSiteAdmin(auth.accountType);
   const canAccessSettings = isAdmin || isSiteAdmin(auth.accountType);
   const logout = async () => {
     await api.logout(auth.csrfToken);
@@ -54,7 +55,7 @@ function Layout() {
             <span className="avatar" aria-hidden="true">{initials(auth.email)}</span>
             <div className="topbar-meta">
               <strong>{auth.email}</strong>
-              <span className={`role-badge ${isAdmin ? 'is-admin' : ''}`}>{roleLabel(auth.workspaceRole)}</span>
+              <span className={`role-badge ${isPrivileged ? 'is-admin' : ''}`}>{accountLabel(auth)}</span>
             </div>
           </div>
           <div className="topbar-actions">
@@ -91,7 +92,7 @@ function PrivilegedMfaGate({ auth, logout }: { auth: AuthState; logout: () => vo
             <ShieldCheck aria-hidden="true" size={20} />
             <div className="topbar-meta">
               <strong>{auth.email}</strong>
-              <span className="role-badge is-admin">{auth.accountType}</span>
+              <span className="role-badge is-admin">{accountTypeLabel(auth.accountType)}</span>
             </div>
           </div>
           <div className="topbar-actions">
@@ -147,8 +148,16 @@ function isPrivilegedMfaPending(auth: { accountType: string; mfaSetupRequired: b
   return isSiteAdmin(auth.accountType) && (auth.mfaSetupRequired || auth.passkeyVerificationRequired);
 }
 
-function roleLabel(role: string) {
-  return isWorkspaceAdmin(role) ? 'Admin' : 'User';
+function accountLabel(auth: AuthState) {
+  if (auth.accountType === 'owner' || auth.workspaceRole === 'owner') return 'Owner';
+  if (auth.accountType === 'admin' || auth.workspaceRole === 'administrator') return 'Admin';
+  return 'User';
+}
+
+function accountTypeLabel(role: string) {
+  if (role === 'owner') return 'Owner';
+  if (role === 'admin') return 'Admin';
+  return 'User';
 }
 
 function AppRoutes() {

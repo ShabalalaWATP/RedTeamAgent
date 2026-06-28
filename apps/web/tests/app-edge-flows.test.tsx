@@ -80,6 +80,7 @@ describe('edge UI flows', () => {
     renderApp('/projects/project-1/reviews/new');
     fireEvent.submit(screen.getByLabelText(/^title$/i).closest('form') as HTMLFormElement);
     expect(screen.getByRole('heading', { name: 'New review' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
   });
 
   it('recovers from malformed stored auth and logs out cleanly', async () => {
@@ -331,6 +332,7 @@ describe('edge UI flows', () => {
     });
     renderApp('/runs/run-2');
     expect(await screen.findByText('Missing source')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'JSON' }));
     expect(await screen.findByLabelText(/export output/i)).toHaveValue('{"ok":true}');
     await user.click(screen.getByRole('button', { name: 'HTML' }));

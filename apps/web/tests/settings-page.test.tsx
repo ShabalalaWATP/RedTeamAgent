@@ -15,6 +15,7 @@ describe('admin settings route', () => {
     renderApp('/settings');
 
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /account security/i })).toBeInTheDocument();
     expect(screen.getByText(/authenticator-app mfa and passkeys are available/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AI setup' })).toBeInTheDocument();

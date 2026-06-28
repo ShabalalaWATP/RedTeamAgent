@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import type { ReportData, Run } from '../../shared/types';
-import { Button, EmptyState, ErrorState, Status } from '../../shared/ui';
+import { BackButton, Button, EmptyState, ErrorState, Status } from '../../shared/ui';
 import { AdvancedReportSections } from './AdvancedReportSections';
 import { ReportComparisonPanel } from './ReportComparisonPanel';
 
@@ -147,7 +147,10 @@ export function ReportPage() {
           <h1>Report preview</h1>
           <p className="muted">Evidence-linked findings with assumptions and methodology visible.</p>
         </div>
-        <Status tone={report ? 'ok' : 'info'}>{run?.state ?? 'Loading'}</Status>
+        <div className="screen-actions">
+          <BackButton fallback="/workflows" />
+          <Status tone={report ? 'ok' : 'info'}>{run?.state ?? 'Loading'}</Status>
+        </div>
       </div>
       <ErrorState message={error} />
       <div className="grid">

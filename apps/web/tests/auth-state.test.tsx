@@ -32,5 +32,15 @@ describe('stored auth state', () => {
     renderApp('/workflows');
     expect(await screen.findByText('Admin')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
+    cleanup();
+
+    storeAuth({ accountType: 'owner', workspaceRole: 'owner', email: 'alexorr@yahoo.co.uk' });
+    mockFetch((url) => {
+      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/workflows');
+    expect(await screen.findByText('Owner')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
   });
 });

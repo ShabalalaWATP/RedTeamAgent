@@ -5,7 +5,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ContextPack, Review, Source, UsageLimits } from '../../shared/types';
-import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { BackButton, Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 import { SourceIntakePanel } from './SourceIntakePanel';
 import { Stage2ReviewSettings } from './Stage2ReviewSettings';
 
@@ -175,13 +175,16 @@ export function NewReviewPage() {
           <h1>New review</h1>
           <p className="muted">Use any source material, inspect routing, then run the structured decision workflow.</p>
         </div>
-        <Status tone={review ? 'ok' : 'info'}>{review ? 'Review created' : 'Draft'}</Status>
-        <Status tone="info">{projectId ? 'Project workflow' : 'Standalone workflow'}</Status>
-        {usage ? (
-          <Status tone={isWorkflowQuotaBlocked(usage) ? 'warn' : 'ok'}>
-            {workflowQuotaLabel(usage)}
-          </Status>
-        ) : null}
+        <div className="screen-actions">
+          <BackButton fallback={projectId ? '/projects' : '/workflows'} />
+          <Status tone={review ? 'ok' : 'info'}>{review ? 'Review created' : 'Draft'}</Status>
+          <Status tone="info">{projectId ? 'Project workflow' : 'Standalone workflow'}</Status>
+          {usage ? (
+            <Status tone={isWorkflowQuotaBlocked(usage) ? 'warn' : 'ok'}>
+              {workflowQuotaLabel(usage)}
+            </Status>
+          ) : null}
+        </div>
       </div>
       <div className="grid">
         <div className="stack">

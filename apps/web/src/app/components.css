@@ -22,6 +22,14 @@
 .status.bad { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-line); }
 .status.info { color: var(--accent); background: var(--info-bg); border-color: var(--info-line); }
 
+.screen-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .method-note {
   display: flex;
   align-items: center;

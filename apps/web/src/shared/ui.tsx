@@ -1,6 +1,7 @@
+import { ArrowLeft } from 'lucide-react';
 import { cloneElement, useId } from 'react';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactElement, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'danger';
@@ -56,6 +57,25 @@ export function Field({
 
 export function Status({ tone, children }: { tone: 'ok' | 'warn' | 'bad' | 'info'; children: ReactNode }) {
   return <span className={`status ${tone}`}>{children}</span>;
+}
+
+export function BackButton({ fallback, label = 'Back' }: { fallback: string; label?: string }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const goBack = () => {
+    if (location.key === 'default') {
+      navigate(fallback);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  return (
+    <Button type="button" onClick={goBack}>
+      <ArrowLeft size={16} aria-hidden="true" />
+      {label}
+    </Button>
+  );
 }
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
