@@ -20,6 +20,51 @@ RedTeamAgent uses a controlled orchestrator with lazily loaded specialist agents
 5. Quality assurance verifies evidence labels, unsupported-claim handling, recommendation presence and coverage metadata.
 6. Report composition stores specialist outputs, assurance output and routing provenance.
 
+## Agent Hierarchy
+
+The hierarchy is deliberately shallow:
+
+1. **Orchestrator:** reads the review frame, source types and focus chips. It sees compact agent cards only, selects the smallest useful specialist set, records exclusions and builds the tool manifest. It must not load full specialist knowledge packs by default.
+2. **Selected specialist agents:** receive their own compact card, the review setup, retrieved evidence excerpts, matching context-pack references and only the tool permissions granted in the run plan. Each selected specialist must return at least one usable structured claim or the run fails closed.
+3. **Assurance agents:** `source_provenance` and `quality_fact_checker` are mandatory assurance lanes. They check source quality, prompt-injection boundaries, claim support, severity calibration and recommendation presence.
+4. **Report composer:** converts validated LLM claims into report data. It must not invent fallback findings when LLM agents return no usable claims.
+
+Non-selected agents are not loaded. Their knowledge refs and specialist instructions stay out of context and the run records an exclusion reason.
+
+## Agent Registry
+
+This table is the production registry implemented in `apps/api/app/domain/agents.py`.
+
+| Key | Agent | Stage | Minimum mode | Default | Routing triggers | Knowledge refs | Tool permissions |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `evidence_context` | Evidence and Context Agent | specialist | basic | yes | evidence, source, citation, context, document, photo, voice, transcript | none | `read_sources` |
+| `alternative_perspectives` | Alternative Perspectives Agent | specialist | standard | no | alternative, challenge, against, trade-off, tradeoff, assumption | none | `read_sources` |
+| `software_architecture` | Software Architecture and Quality Agent | specialist | standard | no | code, architecture, repository, api, frontend, backend, database, refactor | `owasp-asvs`, `clean-architecture`, `maintainability-checklist` | `read_sources` |
+| `cybersecurity_privacy` | Cybersecurity and Privacy Agent | specialist | basic | no | security, privacy, auth, authentication, session, abuse, threat, vulnerability | `owasp-top-10`, `owasp-asvs`, `threat-modelling` | `read_sources` |
+| `secure_by_design` | Secure by Design Agent | specialist | standard | no | secure by design, ncsc, government, risk owner, defence in depth, secure development | `uk-gov-secure-by-design`, `ncsc-secure-development`, `ncsc-caf` | `read_sources` |
+| `vulnerability_research_static` | Vulnerability Research Agent (Static) | specialist | standard | no | sast, static, dependency, semgrep, codeql, secret, sbom, trivy, pip-audit | `owasp-asvs`, `cwe-top-25`, `supply-chain-security` | `read_sources`, `static_code_scan`, `dependency_audit`, `secret_scan` |
+| `vulnerability_research_dynamic` | Vulnerability Research Agent (Dynamic) | specialist | in_depth | no | zap, dast, dynamic, live site, staging, penetration, pentest, passive scan | `owasp-zap-automation`, `owasp-testing-guide`, `scan-authorisation-policy` | `read_sources`, `http_probe`, `browser_probe`, `zap_baseline_scan`, `zap_passive_scan` |
+| `uk_data_protection` | UK Data Protection Agent | specialist | standard | no | gdpr, uk gdpr, ico, personal data, controller, processor, lawful basis, retention | `ico-uk-gdpr-principles`, `ico-lawful-basis`, `ico-controller-processor` | `read_sources` |
+| `legal_regulatory` | Legal and Regulatory Agent | specialist | standard | no | legal, regulatory, contract, licence, compliance | none | `read_sources` |
+| `policy_governance` | Internal Policy and Governance Agent | specialist | standard | no | policy, governance, board, approval, risk appetite | none | `read_sources` |
+| `product_ux` | Product and User Experience Agent | specialist | basic | no | product, ux, user, journey, interface, onboarding | none | `read_sources` |
+| `operations_delivery` | Operations and Delivery Agent | specialist | standard | no | delivery, operations, launch, rollout, support, runbook, incident | none | `read_sources` |
+| `comparable_products_research` | Comparable Products and External Research Agent | specialist | standard | no | market, competitor, research, benchmark, comparable | none | `read_sources` |
+| `physical_systems` | Physical and Systems Engineering Agent | specialist | in_depth | no | hardware, systems, physical, safety case | none | `read_sources` |
+| `math_statistics` | Mathematics and Statistics Agent | specialist | standard | no | statistics, math, metric, sample, forecast, probability | none | `read_sources` |
+| `medical_clinical` | Medical and Clinical Safety Agent | specialist | in_depth | no | medical, clinical, health, patient, diagnosis, treatment | none | `read_sources` |
+| `language_clarity` | Language, Grammar and Clarity Agent | specialist | basic | no | essay, language, clarity, writing, copy, recipe, instructions | none | `read_sources` |
+| `ethics_responsible_use` | Ethics and Responsible Use Agent | specialist | standard | no | ethics, responsible, harm, fairness, misuse | none | `read_sources` |
+| `inclusivity_accessibility` | Inclusivity, Accessibility and Human Factors Agent | specialist | standard | no | accessibility, inclusive, wcag, human factors, disability | `wcag-22` | `read_sources` |
+| `commercial_financial` | Commercial and Financial Agent | specialist | standard | no | commercial, financial, finance, budget, pricing, cost, revenue | none | `read_sources` |
+| `data_ai` | Data and AI Agent | specialist | standard | no | data, ai, model, dataset, ml, llm, analytics | none | `read_sources` |
+| `future_second_order` | Future Development and Second-Order Effects Agent | specialist | in_depth | no | future, second-order, long term, downstream, unintended | none | `read_sources` |
+| `environmental_sustainability` | Environmental and Sustainability Agent | specialist | in_depth | no | environment, sustainability, carbon, energy, climate | none | `read_sources` |
+| `reputation_stakeholder` | Reputation, Communications and Stakeholder Agent | specialist | standard | no | reputation, stakeholder, press, communications, trust | none | `read_sources` |
+| `food_consumer_safety` | Food and Consumer Safety Agent | specialist | basic | no | recipe, food, cooking, ingredient, allergen, kitchen | none | `read_sources` |
+| `source_provenance` | Source Provenance Agent | assurance | basic | yes | source provenance, citation quality, evidence quality | `source-trust-policy`, `prompt-injection-defences` | `read_sources` |
+| `quality_fact_checker` | Quality and Fact Checker | assurance | basic | yes | quality gate, fact check, unsupported claim | `report-quality-gate`, `claim-verification-rubric` | `read_sources` |
+
 ## Specialist Context Packs
 
 Knowledge references are configured by key and maintained as versioned bundled Markdown packs under
@@ -37,9 +82,16 @@ Production packs currently include:
 - `owasp-asvs`: OWASP Application Security Verification Standard.
 - `owasp-top-10`: OWASP Top 10.
 - `owasp-zap-automation`: OWASP ZAP Automation Framework.
+- `owasp-testing-guide`: OWASP Web Security Testing Guide.
+- `cwe-top-25`: CWE Top 25 software weakness context.
+- `supply-chain-security`: dependency, build and supply-chain risk context.
+- `clean-architecture`: maintainability and architecture boundary context.
+- `maintainability-checklist`: code quality and maintainability checks.
 - `wcag-22`: W3C WCAG 2.2.
 - `source-trust-policy`: source provenance, locator quality and prompt-injection boundaries.
+- `prompt-injection-defences`: prompt-injection and hostile-source handling.
 - `report-quality-gate`: final report evidence and recommendation checks.
+- `claim-verification-rubric`: claim, evidence and severity validation rubric.
 
 The orchestrator sees these as references. It does not load the full content unless the relevant selected agent executes.
 

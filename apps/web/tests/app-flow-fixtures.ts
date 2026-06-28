@@ -66,6 +66,19 @@ export function reportResponse() {
     dependency_graph: [{ from: 'Evidence quality', to: 'Operational ownership' }],
     time_horizons: { near: ['Close evidence gaps.'] },
     evidence_quality: { retrieval_score: 0.9 },
+    llm_review: {
+      schema: 'multi_agent_specialist_output',
+      summary: 'The LLM agents returned usable claims.',
+      claim_count: 1,
+      agent_outputs: [
+        {
+          agent: 'operations_delivery',
+          label: 'Operations and Delivery Agent',
+          summary: 'Delivery ownership needs tightening.',
+          claims: [{ title: 'Medium risk' }]
+        }
+      ]
+    },
     cross_agent_disagreements: [{ topic: 'Proceed timing', positions: ['Proceed', 'Wait'] }],
     strongest_case_for: 'Validation can reduce uncertainty.',
     strongest_case_against: 'Evidence gaps remain.',

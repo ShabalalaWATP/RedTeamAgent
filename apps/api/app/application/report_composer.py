@@ -24,41 +24,23 @@ def compose_report(
     primary_evidence = retrieved_evidence[0] if retrieved_evidence else None
     evidence_label = str(primary_evidence["locator"]) if primary_evidence else "assumption"
     evidence_type = "source" if primary_evidence else "assumption"
-    llm_claim = _first_llm_claim(provider_output)
+    llm_claims = _llm_claims(provider_output)
     context_packs = _safe_list(routing_plan.get("context_packs", []))
     external_sources = _external_sources(review)
     findings = [
-        {
-            "id": "finding-1",
-            "title": _claim_text(llm_claim, "title", "Review evidence needs explicit ownership before launch."),
-            "severity": _severity(_claim_text(llm_claim, "severity", "medium")),
-            "confidence": _claim_text(llm_claim, "confidence", "high" if primary_evidence else "low"),
-            "agent": "operations_delivery",
-            "category": _claim_text(llm_claim, "category", "delivery"),
-            "evidence_type": evidence_type,
-            "evidence_label": evidence_label,
-            "evidence_excerpt": str(primary_evidence["excerpt"]) if primary_evidence else "",
-            "summary": _claim_text(
-                llm_claim,
-                "summary",
-                "The proposal should assign owners for validation, rollout and operational follow-up.",
-            ),
-            "recommended_action": _claim_text(
-                llm_claim,
-                "recommended_action",
-                "Assign named owners and acceptance criteria for each high-risk dependency.",
-            ),
-        }
+        _finding_from_claim(index, claim, primary_evidence, evidence_label, evidence_type)
+        for index, claim in enumerate(llm_claims, start=1)
     ]
     action_items = [
         {
-            "id": "action-1",
-            "title": "Assign validation owners",
+            "id": f"action-{index}",
+            "title": finding["recommended_action"],
             "status": "open",
             "owner": "Unassigned",
             "due": None,
-            "source": evidence_label,
+            "source": finding["evidence_label"],
         }
+        for index, finding in enumerate(findings, start=1)
     ]
     return {
         "id": f"report-{run_id}",
@@ -74,9 +56,9 @@ def compose_report(
         "top_risks": [finding["title"] for finding in findings],
         "dependencies": ["Provider routing policy", "Evidence quality", "Operational ownership"],
         "blockers": [] if primary_evidence else ["No retrievable evidence was available."],
-        "assumptions": ["Report is decision support and not professional sign-off."],
+        "assumptions": ["Report is decision support and not a formal approval record."],
         "evidence_gaps": [] if primary_evidence else ["No source-backed evidence was retrieved."],
-        "specialist_findings": _specialist_findings(routing_plan["selected_agents"]),
+        "specialist_findings": _specialist_findings(provider_output, routing_plan["selected_agents"]),
         "context_packs": context_packs,
         "agent_cards": _safe_list(routing_plan.get("agent_cards", [])),
         "assurance_agents": _safe_list(routing_plan.get("assurance_cards", [])),
@@ -105,7 +87,8 @@ def compose_report(
         },
         "evidence_quality": {
             "retrieval_score": retrieved_evidence[0]["score"] if retrieved_evidence else 0.0,
-            "llm_claim_count": len(_llm_claims(provider_output)),
+            "llm_claim_count": len(llm_claims),
+            "llm_agent_count": len(_agent_outputs(provider_output)),
         },
         "llm_review": _llm_review_record(provider_output),
         "cross_agent_disagreements": [
@@ -180,9 +163,35 @@ def _llm_claims(provider_output: dict[str, Any] | None) -> list[dict[str, Any]]:
     return [claim for claim in claims if isinstance(claim, dict)] if isinstance(claims, list) else []
 
 
-def _first_llm_claim(provider_output: dict[str, Any] | None) -> dict[str, Any] | None:
-    claims = _llm_claims(provider_output)
-    return claims[0] if claims else None
+def _agent_outputs(provider_output: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(provider_output, dict):
+        return []
+    outputs = provider_output.get("agent_outputs", [])
+    return [output for output in outputs if isinstance(output, dict)] if isinstance(outputs, list) else []
+
+
+def _finding_from_claim(
+    index: int,
+    claim: dict[str, Any],
+    primary_evidence: dict[str, object] | None,
+    fallback_label: str,
+    fallback_type: str,
+) -> dict[str, str]:
+    evidence_label = _claim_text(claim, "evidence_label", fallback_label)
+    evidence_type = _evidence_type(_claim_text(claim, "evidence_type", fallback_type))
+    return {
+        "id": f"finding-{index}",
+        "title": _claim_title(claim, index),
+        "severity": _severity(_claim_text(claim, "severity", "medium")),
+        "confidence": _confidence(_claim_text(claim, "confidence", "medium")),
+        "agent": _claim_text(claim, "agent", "unknown"),
+        "category": _claim_text(claim, "category", "review"),
+        "evidence_type": evidence_type,
+        "evidence_label": evidence_label,
+        "evidence_excerpt": str(primary_evidence["excerpt"]) if primary_evidence else "",
+        "summary": _claim_text(claim, "summary", _claim_title(claim, index)),
+        "recommended_action": _claim_text(claim, "recommended_action", "Review and resolve this agent finding."),
+    }
 
 
 def _claim_text(claim: dict[str, Any] | None, key: str, fallback: str) -> str:
@@ -192,21 +201,51 @@ def _claim_text(claim: dict[str, Any] | None, key: str, fallback: str) -> str:
     return str(value) if isinstance(value, str) and value.strip() else fallback
 
 
+def _claim_title(claim: dict[str, Any], index: int) -> str:
+    title = _claim_text(claim, "title", "")
+    if title:
+        return title
+    summary = _claim_text(claim, "summary", "")
+    if summary:
+        return summary[:160]
+    return f"LLM agent finding {index}"
+
+
 def _severity(value: str) -> str:
     return value if value in {"low", "medium", "high", "critical"} else "medium"
 
 
+def _confidence(value: str) -> str:
+    return value if value in {"low", "medium", "high", "critical"} else "medium"
+
+
+def _evidence_type(value: str) -> str:
+    return value if value in {"source", "inference", "assumption", "unknown"} else "unknown"
+
+
 def _llm_review_record(provider_output: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(provider_output, dict):
-        return {"summary": "", "claim_count": 0}
+        return {"summary": "", "claim_count": 0, "agent_outputs": []}
     return {
         "schema": str(provider_output.get("schema", "")),
         "summary": str(provider_output.get("summary", "")),
         "claim_count": len(_llm_claims(provider_output)),
+        "agent_outputs": _agent_outputs(provider_output),
     }
 
 
-def _specialist_findings(selected_agents: object) -> list[dict[str, str]]:
+def _specialist_findings(provider_output: dict[str, Any] | None, selected_agents: object) -> list[dict[str, Any]]:
+    outputs = _agent_outputs(provider_output)
+    if outputs:
+        return [
+            {
+                "agent": str(output.get("agent", "unknown")),
+                "label": str(output.get("label", output.get("agent", "unknown"))),
+                "summary": str(output.get("summary", "")),
+                "claim_count": len(output.get("claims", [])) if isinstance(output.get("claims"), list) else 0,
+            }
+            for output in outputs
+        ]
     if not isinstance(selected_agents, list):
         return []
     agent_keys = {agent.value for agent in AgentKey}

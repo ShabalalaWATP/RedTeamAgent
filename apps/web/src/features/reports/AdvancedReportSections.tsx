@@ -25,6 +25,7 @@ export function AdvancedReportSections({ report }: { report: ReportData }) {
           </div>
         )}
       </section>
+      <LlmAgentOutputSection report={report} />
       <section className="panel stack" aria-labelledby="research-heading">
         <h2 id="research-heading">External sources</h2>
         {report.external_sources.length === 0 ? (
@@ -78,6 +79,31 @@ export function AdvancedReportSections({ report }: { report: ReportData }) {
       </section>
       <ActionTrackingSection report={report} />
     </div>
+  );
+}
+
+function LlmAgentOutputSection({ report }: { report: ReportData }) {
+  const outputs = report.llm_review?.agent_outputs ?? [];
+  return (
+    <section className="panel stack" aria-labelledby="llm-agent-output-heading">
+      <h2 id="llm-agent-output-heading">LLM agent output</h2>
+      {outputs.length === 0 ? (
+        <EmptyState title="No agent output" body="The run has not recorded usable LLM agent claims." />
+      ) : (
+        <div className="list">
+          {outputs.map((output) => (
+            <article className="list-item" key={output.agent}>
+              <div>
+                <strong>{output.label}</strong>
+                <p className="muted">{output.summary || 'No summary returned.'}</p>
+                <small>{output.agent}</small>
+              </div>
+              <Status tone={output.claims.length > 0 ? 'ok' : 'bad'}>{output.claims.length} claims</Status>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

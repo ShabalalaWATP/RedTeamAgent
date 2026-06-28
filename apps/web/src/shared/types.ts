@@ -227,6 +227,20 @@ export type ReportComparison = {
   changed_recommendations: string[];
 };
 
+export type LlmAgentOutput = {
+  agent: string;
+  label: string;
+  summary: string;
+  claims: Array<Record<string, unknown>>;
+};
+
+export type LlmReview = {
+  schema: string;
+  summary: string;
+  claim_count: number;
+  agent_outputs: LlmAgentOutput[];
+};
+
 export type EvaluationResult = {
   workspace_id: string;
   fixture_count: number;
@@ -251,6 +265,8 @@ export type ReportData = {
   tool_manifest?: Record<string, unknown>;
   context_strategy?: Record<string, unknown>;
   quality_assurance?: Record<string, unknown>;
+  llm_review?: LlmReview;
+  specialist_findings?: Array<Record<string, unknown>>;
   findings: ReportFinding[];
   retrieved_evidence: RetrievedEvidence[];
   external_sources: ExternalSource[];

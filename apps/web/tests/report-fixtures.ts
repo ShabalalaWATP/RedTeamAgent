@@ -55,6 +55,19 @@ export function reportResponse() {
     ],
     sources: [],
     methodology: 'Method',
+    llm_review: {
+      schema: 'multi_agent_specialist_output',
+      summary: 'The LLM agents returned usable claims.',
+      claim_count: 1,
+      agent_outputs: [
+        {
+          agent: 'operations_delivery',
+          label: 'Operations and Delivery Agent',
+          summary: 'Delivery ownership needs tightening.',
+          claims: [{ title: 'Owner needed' }]
+        }
+      ]
+    },
     findings: [
       {
         id: 'finding-1',

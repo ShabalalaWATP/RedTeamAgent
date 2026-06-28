@@ -152,7 +152,6 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert [item["state"] for item in events.json()][0] == "intake"
     stream = client.get(f"/runs/{run.json()['id']}/events/stream")
     assert '"state": "completed"' in stream.text
-    assert '"sequence": 9' in stream.text
 
     report = client.get(f"/runs/{run.json()['id']}/report")
     assert report.status_code == 200, report.text
@@ -163,7 +162,10 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report_data["retrieved_evidence"][0]["locator"] == "proposal.md:1"
     assert "support coverage" in report_data["retrieved_evidence"][0]["excerpt"]
     assert report_data["coverage_map"]["retrieved_evidence"] == 1
-    assert "professional sign-off" in report_data["assumptions"][0]
+    assert "formal approval" in report_data["assumptions"][0]
+    assert report_data["llm_review"]["claim_count"] >= 1
+    assert report_data["llm_review"]["agent_outputs"]
+    assert report_data["specialist_findings"][0]["claim_count"] >= 1
     assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
     assert all("markdown" not in pack for pack in report_data["context_packs"])
     assert report_data["quality_assurance"]["status"] == "passed"
@@ -177,7 +179,7 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert workflow["project_title"] == "Payments rollout"
     assert workflow["state"] == "completed"
     assert workflow["has_report"] is True
-    assert workflow["finding_count"] == 1
+    assert workflow["finding_count"] == report_data["llm_review"]["claim_count"]
     assert workflow["top_risks"]
 
     exported_json = client.get(f"/runs/{run.json()['id']}/report/export?fmt=json")
@@ -298,5 +300,5 @@ def test_invalid_provider_output_fails_closed(client: TestClient) -> None:
     assert failed.json()["state"] == "failed"
     events = client.get(f"/runs/{run.json()['id']}/events")
     assert events.status_code == 200
-    assert events.json()[-1]["message"] == "Provider output failed strict schema validation."
+    assert "returned no usable LLM claims" in events.json()[-1]["message"]
     assert client.get(f"/runs/{run.json()['id']}/report").status_code == 404

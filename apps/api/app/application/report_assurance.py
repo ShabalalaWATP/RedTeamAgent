@@ -9,8 +9,10 @@ SUPPORTED_EVIDENCE_TYPES = {"source", "inference", "assumption", "unknown"}
 
 def quality_assurance_record(report_data: dict[str, Any]) -> dict[str, Any]:
     findings = _findings(report_data)
+    llm_claim_count = _llm_claim_count(report_data)
     checks = [
         _check("findings_present", bool(findings), "Report has at least one structured finding."),
+        _check("llm_claims_present", llm_claim_count > 0, "Report includes usable LLM agent claims."),
         _check("coverage_map_present", bool(report_data.get("coverage_map")), "Coverage map is present."),
         _check(
             "unsupported_claims_labelled",
@@ -37,6 +39,7 @@ def quality_assurance_record(report_data: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "checks": checks,
         "claim_count": len(findings),
+        "llm_claim_count": llm_claim_count,
         "source_backed_findings": sum(1 for finding in findings if finding.get("evidence_type") == "source"),
     }
 
@@ -53,6 +56,14 @@ def _findings(report_data: dict[str, Any]) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
+def _llm_claim_count(report_data: dict[str, Any]) -> int:
+    review = report_data.get("llm_review", {})
+    if isinstance(review, dict):
+        value = review.get("claim_count")
+        if isinstance(value, int):
+            return value
+    return 0
+
+
 def _check(name: str, passed: bool, description: str) -> dict[str, object]:
     return {"name": name, "passed": passed, "description": description}
-
