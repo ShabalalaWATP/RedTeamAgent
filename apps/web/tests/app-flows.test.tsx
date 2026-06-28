@@ -102,7 +102,7 @@ describe('RedTeamAgent app flows', () => {
     expect(screen.getByText('No project groups yet')).toBeInTheDocument();
   });
 
-  it('creates a review, ingests text, preflights and starts a run', async () => {
+  it('auto-creates a review from the first source and starts a run', async () => {
     storeAuth();
     const user = userEvent.setup();
     let contextPacks: unknown[] = [];
@@ -169,13 +169,6 @@ describe('RedTeamAgent app flows', () => {
         contextPacks = [contextPackResponse(body)];
         return jsonResponse(contextPacks[0]);
       }
-      if (url.includes('/preflight')) {
-        return jsonResponse({
-          selected_agents: [{ key: 'cybersecurity_privacy' }],
-          external_research: true,
-          research_policy: { private_mode: true, domain_allowlist: ['example.com'] }
-        });
-      }
       if (url.includes('/reviews/review-1/runs') && init?.method === 'POST') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('run-1', 'completed'));
       if (url.includes('/runs/run-1/events')) return jsonResponse([{ id: 'event-1', state: 'completed', message: 'done', sequence: 1 }]);
@@ -186,8 +179,8 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByLabelText(/enable external research/i));
     await user.clear(screen.getByLabelText(/domain allow-list/i));
     await user.type(screen.getByLabelText(/domain allow-list/i), 'example.com');
-    await user.click(screen.getByRole('button', { name: /create review/i }));
-    await user.click(await screen.findByRole('button', { name: /add pasted text/i }));
+    expect(screen.queryByRole('button', { name: /preflight/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByText('proposal.md')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /snapshot website/i }));
     expect(await screen.findByText('example.com.html')).toBeInTheDocument();
@@ -199,9 +192,6 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(await screen.findByText('Version 1')).toBeInTheDocument();
     expect(screen.getByText('policy_governance')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /preflight/i }));
-    expect(await screen.findByText(/cybersecurity_privacy/i)).toBeInTheDocument();
-    expect(screen.getByText(/domain_allowlist/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /run review/i }));
     await waitFor(() => expect(screen.getByText(/Report preview/i)).toBeInTheDocument());
   });
@@ -332,6 +322,9 @@ describe('RedTeamAgent app flows', () => {
           focus_chips: ['security']
         });
       }
+      if (url.includes('/reviews/review-standalone/sources/text')) {
+        return jsonResponse({ id: 'source-1', filename: 'proposal.md', content_type: 'text/markdown', state: 'ingested', metadata: {}, warnings: [] });
+      }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
@@ -339,7 +332,7 @@ describe('RedTeamAgent app flows', () => {
     await user.click(await screen.findByRole('button', { name: /start workflow/i }));
     expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
     expect(screen.getByText('Standalone workflow')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /create review/i }));
+    await user.click(screen.getByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByText('Review created')).toBeInTheDocument();
   });
 

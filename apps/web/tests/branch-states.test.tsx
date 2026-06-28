@@ -46,7 +46,6 @@ describe('unauthenticated and alternate branch states', () => {
       </Routes>,
       '/projects/project-1/reviews/new'
     );
-    await user.click(screen.getByRole('button', { name: /create review/i }));
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -100,9 +99,9 @@ describe('unauthenticated and alternate branch states', () => {
     expect(await screen.findByText(/capability probe needs review/i)).toBeInTheDocument();
   });
 
-  it('keeps disabled review actions defensive when no review exists', async () => {
+  it('surfaces draft creation errors before adding sources', async () => {
     const user = userEvent.setup();
-    const fetchMock = mockFetch((url) => {
+    mockFetch((url) => {
       if (url.includes('/context-packs?')) return jsonResponse([]);
       if (url.includes('/usage/limits')) {
         return jsonResponse({
@@ -111,6 +110,9 @@ describe('unauthenticated and alternate branch states', () => {
           runs_remaining_today: 20,
           resets_at: '2026-06-25T00:00:00Z'
         });
+      }
+      if (url.includes('/projects/project-1/reviews')) {
+        return jsonResponse({ message: 'draft failed' }, 500);
       }
       return jsonResponse({ message: 'unexpected' }, 500);
     });
@@ -122,14 +124,9 @@ describe('unauthenticated and alternate branch states', () => {
       '/projects/project-1/reviews/new'
     );
     expect(await screen.findByText('No context packs yet')).toBeInTheDocument();
-    for (const name of [/add pasted text/i, /preflight/i]) {
-      const button = screen.getByRole('button', { name }) as HTMLButtonElement;
-      button.disabled = false;
-      await user.click(button);
-    }
-    const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
-    await user.upload(screen.getByLabelText(/upload rich evidence/i), file);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('button', { name: /preflight/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /add pasted text/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('draft failed');
   });
 
   it('shows workflow delete errors without removing the saved workflow', async () => {

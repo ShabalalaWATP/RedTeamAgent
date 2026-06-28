@@ -1,5 +1,5 @@
-import { BookOpen, Play, ShieldQuestion } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { BookOpen, Play } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
@@ -32,11 +32,12 @@ export function NewReviewPage() {
   const [contextMarkdown, setContextMarkdown] = useState(DEFAULT_CONTEXT);
   const [contextMessage, setContextMessage] = useState<string | null>(null);
   const [contextError, setContextError] = useState<string | null>(null);
-  const [preflight, setPreflight] = useState<Record<string, unknown> | null>(null);
   const [usage, setUsage] = useState<UsageLimits | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sourceError, setSourceError] = useState<string | null>(null);
+  const reviewRef = useRef<Review | null>(null);
+  const creatingReviewRef = useRef<Promise<Review> | null>(null);
 
   const refreshUsage = async () => {
     try {
@@ -65,9 +66,11 @@ export function NewReviewPage() {
 
   const createReviewDraft = async () => {
     if (!auth) throw new Error('Session is missing.');
+    if (reviewRef.current) return reviewRef.current;
+    if (creatingReviewRef.current) return creatingReviewRef.current;
     const body = {
-      title,
-      proposal_text: proposal,
+      title: reviewTitle(title),
+      proposal_text: reviewProposal(proposal),
       mode,
       focus_chips: toList(focus),
       external_research: externalResearch,
@@ -75,46 +78,44 @@ export function NewReviewPage() {
       domain_allowlist: toList(allowlist),
       domain_blocklist: toList(blocklist)
     };
-    const next = projectId
-      ? await api.createReview(auth.csrfToken, projectId, body)
-      : await api.createStandaloneReview(auth.csrfToken, auth.workspaceId, body);
-    setReview(next);
-    return next;
-  };
-
-  const createReview = async () => {
-    setError(null);
+    const creating = (projectId
+      ? api.createReview(auth.csrfToken, projectId, body)
+      : api.createStandaloneReview(auth.csrfToken, auth.workspaceId, body)
+    ).then((next) => {
+      reviewRef.current = next;
+      setReview(next);
+      return next;
+    });
+    creatingReviewRef.current = creating;
     try {
-      await createReviewDraft();
-    } catch (err) {
-      setError((err as Error).message);
+      return await creating;
+    } finally {
+      if (creatingReviewRef.current === creating) creatingReviewRef.current = null;
     }
   };
 
   const addText = async () => {
-    /* v8 ignore next -- the add-text button is disabled until a review exists. */
-    if (!auth || !review) return;
-    await addSource(() => api.addTextSource(auth.csrfToken, review.id, proposal));
+    await addSource((currentReview, csrf) => api.addTextSource(csrf, currentReview.id, reviewProposal(proposal)));
   };
 
   const upload = async (file: File) => {
-    /* v8 ignore next -- uploads are ignored until a review and file are present. */
-    if (!auth || !review) return;
-    await addSource(() => api.uploadSource(auth.csrfToken, review.id, file));
+    await addSource((currentReview, csrf) => api.uploadSource(csrf, currentReview.id, file));
   };
 
   const addWebsite = async (url: string) => {
-    await addSource(() => api.addWebsiteSource(auth!.csrfToken, review!.id, url.trim()));
+    await addSource((currentReview, csrf) => api.addWebsiteSource(csrf, currentReview.id, url.trim()));
   };
 
   const addRepository = async (url: string) => {
-    await addSource(() => api.addRepositorySource(auth!.csrfToken, review!.id, url.trim()));
+    await addSource((currentReview, csrf) => api.addRepositorySource(csrf, currentReview.id, url.trim()));
   };
 
-  const addSource = async (operation: () => Promise<Source>) => {
+  const addSource = async (operation: (currentReview: Review, csrf: string) => Promise<Source>) => {
     setSourceError(null);
     try {
-      const source = await operation();
+      if (!auth) throw new Error('Sign in to add evidence.');
+      const currentReview = await createReviewDraft();
+      const source = await operation(currentReview, auth.csrfToken);
       setSources((current) => [source, ...current]);
     } catch (err) {
       setSourceError((err as Error).message);
@@ -139,12 +140,6 @@ export function NewReviewPage() {
     }
   };
 
-  const runPreflight = async () => {
-    /* v8 ignore next -- the preflight button is disabled until a review exists. */
-    if (!review) return;
-    setPreflight(await api.preflight(review.id));
-  };
-
   const startRun = async () => {
     /* v8 ignore next -- the app layout prevents unauthenticated rendering of this route. */
     if (!auth) return;
@@ -154,7 +149,7 @@ export function NewReviewPage() {
     try {
       const currentReview = review ?? await createReviewDraft();
       if (sources.length === 0) {
-        const source = await api.addTextSource(auth.csrfToken, currentReview.id, proposal);
+        const source = await api.addTextSource(auth.csrfToken, currentReview.id, reviewProposal(proposal));
         setSources((current) => [source, ...current]);
       }
       const run = await api.startRun(auth.csrfToken, currentReview.id);
@@ -208,9 +203,6 @@ export function NewReviewPage() {
               </Field>
             </div>
             <ErrorState message={error} />
-            <div className="row">
-              <Button type="button" variant="primary" onClick={createReview}>Create review</Button>
-            </div>
           </form>
           <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
             <div className="section-title">
@@ -275,7 +267,7 @@ export function NewReviewPage() {
         </div>
         <aside className="stack">
           <SourceIntakePanel
-            disabled={!review}
+            disabled={!auth || starting || isWorkflowQuotaBlocked(usage)}
             sources={sources}
             error={sourceError}
             onAddText={addText}
@@ -283,24 +275,19 @@ export function NewReviewPage() {
             onWebsite={addWebsite}
             onRepository={addRepository}
           />
-          <section className="panel stack" aria-labelledby="preflight-heading">
-          <h2 id="preflight-heading">Preflight</h2>
-          <div className="row">
-            <Button type="button" onClick={runPreflight} disabled={!review}><ShieldQuestion size={16} /> Preflight</Button>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={startRun}
-              disabled={starting || !title.trim() || !proposal.trim() || isWorkflowQuotaBlocked(usage)}
-            >
-              <Play size={16} /> {starting ? 'Starting' : 'Run review'}
-            </Button>
-          </div>
-          {preflight ? (
-            <pre className="panel">{JSON.stringify(preflight, null, 2)}</pre>
-          ) : (
-            <p className="muted">Preflight shows sources, selected agents, exclusions, provider route and warnings.</p>
-          )}
+          <section className="panel stack" aria-labelledby="run-review-heading">
+            <h2 id="run-review-heading">Run review</h2>
+            <p className="muted">Routing and source checks run automatically before analysis starts.</p>
+            <div className="row">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={startRun}
+                disabled={starting || isWorkflowQuotaBlocked(usage)}
+              >
+                <Play size={16} /> {starting ? 'Starting' : 'Run review'}
+              </Button>
+            </div>
           </section>
         </aside>
       </div>
@@ -315,6 +302,14 @@ function preview(markdown: string) {
 
 function toList(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function reviewTitle(value: string) {
+  return value.trim() || 'Untitled review';
+}
+
+function reviewProposal(value: string) {
+  return value.trim() || 'Review the supplied evidence and identify risks, assumptions, blockers and practical next steps.';
 }
 
 function isWorkflowQuotaBlocked(usage: UsageLimits | null) {
