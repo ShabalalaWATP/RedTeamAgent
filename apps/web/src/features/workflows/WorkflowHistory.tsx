@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import type { WorkflowSummary } from '../../shared/types';
+import EvilEye from '../../shared/EvilEye/EvilEye';
 import { TiltCard } from '../../shared/TiltCard';
 import { Button, EmptyState, ErrorState, Status } from '../../shared/ui';
 
@@ -49,9 +50,14 @@ export function WorkflowHistory() {
   return (
     <section className="screen">
       <div className="screen-header">
-        <div>
-          <h1>Workflows</h1>
-          <p className="muted">Start a red-team review or reopen previous work.</p>
+        <div className="workflows-title">
+          <span className="workflows-eye" aria-hidden="true">
+            <EvilEye eyeColor="#ff3a26" intensity={1.3} glowIntensity={0.4} scale={0.95} flameSpeed={0.85} />
+          </span>
+          <div>
+            <h1>Workflows</h1>
+            <p className="muted">The all-seeing eye watches your red-team reviews. Start one or reopen past work.</p>
+          </div>
         </div>
         <Button type="button" variant="primary" onClick={startWorkflow}>Start workflow</Button>
       </div>

@@ -69,9 +69,10 @@ async function verifyVisualJourney(page: Page, suffix: string) {
 
   await page.getByRole('link', { name: 'New review' }).click();
   await expect(page.getByRole('heading', { name: 'New review' })).toBeVisible();
-  await page.getByRole('button', { name: 'Create review' }).click();
-  await expect(page.getByText('Review created')).toBeVisible();
+  await page.getByRole('button', { name: 'Next stage' }).click();
   await page.getByRole('button', { name: 'Add pasted text' }).click();
+  await expect(page.getByText('Review created')).toBeVisible();
+  await page.getByRole('button', { name: 'Next stage' }).click();
   await page.getByRole('button', { name: 'Add context pack' }).click();
   await expect(page.getByText('Stage 1 governance context', { exact: true })).toBeVisible();
   await verifyScreen(page, `new-review${suffix}`);
@@ -121,6 +122,8 @@ test('stage 1 screens pass WCAG and responsive layout matrix', async ({ page }, 
 async function verifyScreen(page: Page, name: string) {
   await assertNoWcagViolations(page);
   await expectNoHorizontalOverflow(page);
+  // Reset scroll so viewport screenshots are stable after multi-step interactions.
+  await page.evaluate(() => window.scrollTo(0, 0));
   // The login eye is a live WebGL canvas; mask it so baselines stay deterministic.
   await expect(page).toHaveScreenshot(`${name}.png`, {
     ...screenshotOptions,
@@ -149,9 +152,10 @@ async function auditDashboard(page: Page) {
 async function auditNewReview(page: Page) {
   await page.goto('/projects/project-1/reviews/new');
   await expect(page.getByRole('heading', { name: 'New review' })).toBeVisible();
-  await page.getByRole('button', { name: 'Create review' }).click();
-  await expect(page.getByText('Review created')).toBeVisible();
+  await page.getByRole('button', { name: 'Next stage' }).click();
   await page.getByRole('button', { name: 'Add pasted text' }).click();
+  await expect(page.getByText('Review created')).toBeVisible();
+  await page.getByRole('button', { name: 'Next stage' }).click();
   await page.getByRole('button', { name: 'Add context pack' }).click();
   await expect(page.getByText('Stage 1 governance context', { exact: true })).toBeVisible();
   await auditCurrentScreen(page);
