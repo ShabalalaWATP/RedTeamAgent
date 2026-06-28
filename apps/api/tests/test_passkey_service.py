@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from webauthn.helpers import bytes_to_base64url
+from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
 from webauthn.helpers.exceptions import InvalidAuthenticationResponse
 
 from app.application.passkey_service import PasskeyService
@@ -144,6 +144,7 @@ def test_registration_options_allow_replacement_before_session_verification() ->
 
     assert recovery_options["excludeCredentials"] == []
     assert recovery_options["user"]["id"] != bytes_to_base64url(repo.user.id.encode("utf-8"))
+    assert len(base64url_to_bytes(recovery_options["user"]["id"])) <= 64
 
     repo.session.passkey_verified_at = repo.now
     normal_options = service.registration_options(repo.user, repo.session.id)

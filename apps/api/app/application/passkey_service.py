@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from typing import Any
 from urllib.parse import urlparse
 
@@ -232,7 +233,7 @@ def _hostname_matches_rp_id(hostname: str, rp_id: str) -> bool:
 
 def _registration_user_handle(user_id: str, session_id: str, recovery_registration: bool) -> bytes:
     if recovery_registration:
-        return f"{user_id}:passkey-recovery:{session_id}".encode()
+        return sha256(f"{user_id}:passkey-recovery:{session_id}".encode()).digest()
     return user_id.encode()
 
 
