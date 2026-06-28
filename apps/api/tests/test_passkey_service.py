@@ -135,6 +135,23 @@ def test_passkey_service_rejects_duplicate_registration(monkeypatch: pytest.Monk
         )
 
 
+def test_registration_options_allow_replacement_before_session_verification() -> None:
+    repo = FakePasskeyRepo()
+    service = PasskeyService(repo, "https://redteamagent.co.uk", "", "RedTeamAgent")
+    repo.passkeys.append(_fake_passkey(repo, "passkey-1", repo.user.id))
+
+    recovery_options = service.registration_options(repo.user, repo.session.id)
+
+    assert recovery_options["excludeCredentials"] == []
+    assert recovery_options["user"]["id"] != bytes_to_base64url(repo.user.id.encode("utf-8"))
+
+    repo.session.passkey_verified_at = repo.now
+    normal_options = service.registration_options(repo.user, repo.session.id)
+
+    assert normal_options["excludeCredentials"] == [{"id": bytes_to_base64url(b"passkey-1"), "type": "public-key"}]
+    assert normal_options["user"]["id"] == bytes_to_base64url(repo.user.id.encode("utf-8"))
+
+
 def test_passkey_service_accepts_origin_aliases_and_wraps_library_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

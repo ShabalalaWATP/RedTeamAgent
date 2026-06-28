@@ -72,10 +72,13 @@ class PasskeyService:
         }
 
     def registration_options(self, user: Any, session_id: str) -> dict[str, Any]:
+        existing_passkeys = self.repo.list_user_passkeys(user.id)
+        session = self.repo.get_session(session_id)
+        recovery_registration = bool(existing_passkeys) and not bool(session and session.passkey_verified_at)
         options = generate_registration_options(
             rp_id=self.rp_id,
             rp_name=self.rp_name,
-            user_id=user.id.encode("utf-8"),
+            user_id=_registration_user_handle(user.id, session_id, recovery_registration),
             user_name=user.email,
             user_display_name=user.email,
             authenticator_selection=AuthenticatorSelectionCriteria(
@@ -84,8 +87,8 @@ class PasskeyService:
             ),
             exclude_credentials=[
                 PublicKeyCredentialDescriptor(id=base64url_to_bytes(item.credential_id))
-                for item in self.repo.list_user_passkeys(user.id)
-            ],
+                for item in existing_passkeys
+            ] if not recovery_registration else [],
         )
         self.repo.set_session_passkey_challenge(
             session_id,
@@ -225,6 +228,12 @@ def _origin_and_hostname(url: str, label: str) -> tuple[str, str]:
 
 def _hostname_matches_rp_id(hostname: str, rp_id: str) -> bool:
     return hostname == rp_id or hostname.endswith(f".{rp_id}")
+
+
+def _registration_user_handle(user_id: str, session_id: str, recovery_registration: bool) -> bytes:
+    if recovery_registration:
+        return f"{user_id}:passkey-recovery:{session_id}".encode()
+    return user_id.encode()
 
 
 def _totp_enabled(repo: Any, user_id: str) -> bool:

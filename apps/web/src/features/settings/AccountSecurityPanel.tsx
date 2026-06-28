@@ -302,6 +302,9 @@ export function AccountSecurityPanel() {
 function passkeyError(err: unknown) {
   const message = err instanceof Error ? err.message : '';
   if (message.toLowerCase().includes('notallowed')) return 'Passkey action was cancelled or timed out.';
+  if (message.toLowerCase().includes('previously registered') || message.toLowerCase().includes('already registered')) {
+    return 'This authenticator still has the old passkey. Try another passkey provider, or remove the old passkey from your device settings and add it again.';
+  }
   if (message.toLowerCase().includes('request could not be completed')) {
     return 'Passkey verification could not be completed. Use the same domain and passkey provider you registered with.';
   }

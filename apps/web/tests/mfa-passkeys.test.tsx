@@ -168,6 +168,20 @@ describe('MFA passkeys', () => {
     );
   });
 
+  it('explains stale authenticator registration failures', async () => {
+    vi.mocked(startRegistration).mockRejectedValue(new Error('The authenticator was previously registered.'));
+    storeAuth();
+    mockSecurityEndpoints({ required: true, mfaEnabled: true, passkeyRegistered: true, passkeyVerified: false });
+    const user = userEvent.setup();
+    renderApp('/settings');
+
+    await user.click(await screen.findByRole('button', { name: /add passkey/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This authenticator still has the old passkey. Try another passkey provider'
+    );
+  });
+
   it('surfaces unsupported passkey browsers without calling WebAuthn', async () => {
     vi.mocked(browserSupportsWebAuthn).mockReturnValue(false);
     vi.mocked(platformAuthenticatorIsAvailable).mockResolvedValue(false);
