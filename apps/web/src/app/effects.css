@@ -140,12 +140,12 @@ textarea {
 
 .workflows-eye {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 92px;
+  aspect-ratio: 5 / 3;
   flex: 0 0 auto;
   border-radius: 50%;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 45%, #3a0c0c, #070405 70%);
+  background: radial-gradient(ellipse at 50% 50%, #3a0c0c, #070405 72%);
   border: 1px solid rgb(240 96 109 / 0.5);
   box-shadow: 0 0 0 1px rgb(240 96 109 / 0.2), 0 0 18px rgb(240 96 109 / 0.35);
 }

@@ -3,18 +3,18 @@
 
 .auth-brand-eye {
   position: relative;
-  width: clamp(132px, 14vw, 176px);
-  aspect-ratio: 1;
+  width: clamp(188px, 20vw, 256px);
+  aspect-ratio: 5 / 3;
   flex: 0 0 auto;
   border-radius: 50%;
   overflow: hidden;
-  /* Dark-red orb shown if WebGL is unavailable (the eye canvas covers it otherwise). */
-  background: radial-gradient(circle at 50% 45%, #3a0c0c, #070405 70%);
+  /* Dark-red oval shown if WebGL is unavailable (the eye canvas covers it otherwise). */
+  background: radial-gradient(ellipse at 50% 50%, #3a0c0c, #070405 72%);
   border: 1px solid rgb(240 96 109 / 0.5);
   box-shadow:
-    inset 0 0 24px rgb(0 0 0 / 0.6),
+    inset 0 0 26px rgb(0 0 0 / 0.6),
     0 0 0 1px rgb(240 96 109 / 0.22),
-    0 0 38px rgb(240 96 109 / 0.42);
+    0 0 40px rgb(240 96 109 / 0.42);
   animation: auth-logo-bounce 4.6s ease-in-out infinite;
 }
 
@@ -63,9 +63,9 @@
 }
 
 @media (max-width: 860px) {
-  .auth-brand-eye { width: 124px; }
+  .auth-brand-eye { width: 180px; }
 }
 
 @media (max-width: 420px) {
-  .auth-brand-eye { width: 108px; }
+  .auth-brand-eye { width: 152px; }
 }
