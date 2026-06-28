@@ -1,13 +1,15 @@
-import { BookOpen, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
-import { AGENT_OPTIONS } from '../../shared/agentOptions';
 import type { ContextPack, Review, Source, UsageLimits } from '../../shared/types';
-import { BackButton, Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
+import { BackButton, ErrorState, Status } from '../../shared/ui';
+import { ContextPackStep, ReviewSetupStep, RunReviewStep, StageActions } from './ReviewWizardPanels';
+import { ReviewWizardSteps } from './ReviewWizardSteps';
 import { SourceIntakePanel } from './SourceIntakePanel';
 import { Stage2ReviewSettings } from './Stage2ReviewSettings';
+import { REVIEW_STAGES, nextReviewStage, previousReviewStage } from './reviewStages';
+import type { ReviewStage } from './reviewStages';
 
 const DEFAULT_PROPOSAL = 'Adopt the proposal with staged validation, named owners, evidence checks and rollback criteria.';
 const DEFAULT_CONTEXT = '# Governance\nUse source-linked claims and show assumptions.';
@@ -16,6 +18,8 @@ export function NewReviewPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { auth } = useAuth();
+  const [stage, setStage] = useState<ReviewStage>('setup');
+  const [maxStageIndex, setMaxStageIndex] = useState(0);
   const [title, setTitle] = useState('Decision readiness review');
   const [proposal, setProposal] = useState(DEFAULT_PROPOSAL);
   const [mode, setMode] = useState<'basic' | 'standard' | 'in_depth'>('standard');
@@ -38,6 +42,9 @@ export function NewReviewPage() {
   const [sourceError, setSourceError] = useState<string | null>(null);
   const reviewRef = useRef<Review | null>(null);
   const creatingReviewRef = useRef<Promise<Review> | null>(null);
+  const setupReady = Boolean(title.trim()) && Boolean(proposal.trim());
+  const currentStageIndex = REVIEW_STAGES.indexOf(stage);
+  const completedStages = REVIEW_STAGES.slice(0, maxStageIndex);
 
   const refreshUsage = async () => {
     try {
@@ -64,20 +71,22 @@ export function NewReviewPage() {
     };
   }, [auth]);
 
+  const reviewBody = () => ({
+    title: reviewTitle(title),
+    proposal_text: reviewProposal(proposal),
+    mode,
+    focus_chips: toList(focus),
+    external_research: externalResearch,
+    private_research: privateResearch,
+    domain_allowlist: toList(allowlist),
+    domain_blocklist: toList(blocklist)
+  });
+
   const createReviewDraft = async () => {
     if (!auth) throw new Error('Session is missing.');
     if (reviewRef.current) return reviewRef.current;
     if (creatingReviewRef.current) return creatingReviewRef.current;
-    const body = {
-      title: reviewTitle(title),
-      proposal_text: reviewProposal(proposal),
-      mode,
-      focus_chips: toList(focus),
-      external_research: externalResearch,
-      private_research: privateResearch,
-      domain_allowlist: toList(allowlist),
-      domain_blocklist: toList(blocklist)
-    };
+    const body = reviewBody();
     const creating = (projectId
       ? api.createReview(auth.csrfToken, projectId, body)
       : api.createStandaloneReview(auth.csrfToken, auth.workspaceId, body)
@@ -92,6 +101,15 @@ export function NewReviewPage() {
     } finally {
       if (creatingReviewRef.current === creating) creatingReviewRef.current = null;
     }
+  };
+
+  const syncReviewDraft = async () => {
+    if (!auth) throw new Error('Session is missing.');
+    const currentReview = await createReviewDraft();
+    const updated = await api.updateReview(auth.csrfToken, currentReview.id, reviewBody());
+    reviewRef.current = updated;
+    setReview(updated);
+    return updated;
   };
 
   const addText = async () => {
@@ -147,7 +165,7 @@ export function NewReviewPage() {
     setSourceError(null);
     setStarting(true);
     try {
-      const currentReview = review ?? await createReviewDraft();
+      const currentReview = await syncReviewDraft();
       if (sources.length === 0) {
         const source = await api.addTextSource(auth.csrfToken, currentReview.id, reviewProposal(proposal));
         setSources((current) => [source, ...current]);
@@ -161,6 +179,29 @@ export function NewReviewPage() {
     } finally {
       setStarting(false);
     }
+  };
+
+  const canSelectStage = (candidate: ReviewStage) => REVIEW_STAGES.indexOf(candidate) <= maxStageIndex;
+
+  const selectStage = (candidate: ReviewStage) => {
+    if (canSelectStage(candidate)) setStage(candidate);
+  };
+
+  const goToNextStage = () => {
+    if (stage === 'setup' && !setupReady) {
+      setError('Add a title and proposal before continuing.');
+      return;
+    }
+    setError(null);
+    const next = nextReviewStage(stage);
+    const nextIndex = REVIEW_STAGES.indexOf(next);
+    setMaxStageIndex((current) => Math.max(current, nextIndex));
+    setStage(next);
+  };
+
+  const goToPreviousStage = () => {
+    setError(null);
+    setStage(previousReviewStage(stage));
   };
 
   return (
@@ -181,79 +222,52 @@ export function NewReviewPage() {
           ) : null}
         </div>
       </div>
-      <div className="grid">
-        <div className="stack">
-          <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-            <Field label="Title">
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
-            </Field>
-            <Field label="Proposal">
-              <textarea rows={7} value={proposal} onChange={(event) => setProposal(event.target.value)} />
-            </Field>
-            <div className="row">
-              <Field label="Mode">
-                <select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)}>
-                  <option value="basic">Basic</option>
-                  <option value="standard">Standard</option>
-                  <option value="in_depth">In-depth</option>
-                </select>
-              </Field>
-              <Field label="Focus chips">
-                <input value={focus} onChange={(event) => setFocus(event.target.value)} />
-              </Field>
-            </div>
-            <ErrorState message={error} />
-          </form>
-          <form className="panel stack" onSubmit={(event) => event.preventDefault()}>
-            <div className="section-title">
-              <BookOpen size={18} />
-              <h2>Context packs</h2>
-            </div>
-            <div className="row">
-              <Field label="Context pack name">
-                <input value={contextName} onChange={(event) => setContextName(event.target.value)} />
-              </Field>
-              <Field label="Agent">
-                <select value={contextAgent} onChange={(event) => setContextAgent(event.target.value)}>
-                  {AGENT_OPTIONS.map(([key, label]) => (
-                    <option value={key} key={key}>{label}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            <Field label="Markdown">
-              <textarea rows={5} value={contextMarkdown} onChange={(event) => setContextMarkdown(event.target.value)} />
-            </Field>
-            <ErrorState message={contextError} />
-            {contextMessage ? <p className="muted" role="status">{contextMessage}</p> : null}
-            <div className="row">
-              <Button
-                type="button"
-                onClick={addContextPack}
-                disabled={!contextName.trim() || !contextMarkdown.trim()}
-              >
-                Add context pack
-              </Button>
-            </div>
-            {contextPacks.length === 0 ? (
-              <EmptyState title="No context packs yet" body="Create a Markdown pack for an agent." />
-            ) : (
-              <div className="list">
-                {contextPacks.map((pack) => (
-                  <article className="list-item" key={pack.id}>
-                    <div className="stack">
-                      <strong>{pack.name}</strong>
-                      <span className="muted">{preview(pack.markdown)}</span>
-                      <div className="row">
-                        <Status tone="info">{pack.agent_key}</Status>
-                        <Status tone="ok">Version {pack.version}</Status>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </form>
+      <div className="review-wizard stack">
+        <ReviewWizardSteps
+          canSelect={canSelectStage}
+          current={stage}
+          completed={completedStages}
+          onSelect={selectStage}
+        />
+        <ErrorState message={error} />
+        {stage === 'setup' ? (
+          <ReviewSetupStep
+            title={title}
+            proposal={proposal}
+            mode={mode}
+            focus={focus}
+            onTitle={setTitle}
+            onProposal={setProposal}
+            onMode={setMode}
+            onFocus={setFocus}
+          />
+        ) : null}
+        {stage === 'sources' ? (
+          <SourceIntakePanel
+            disabled={!auth || starting || isWorkflowQuotaBlocked(usage)}
+            sources={sources}
+            error={sourceError}
+            onAddText={addText}
+            onUpload={upload}
+            onWebsite={addWebsite}
+            onRepository={addRepository}
+          />
+        ) : null}
+        {stage === 'context' ? (
+          <ContextPackStep
+            contextAgent={contextAgent}
+            contextError={contextError}
+            contextMarkdown={contextMarkdown}
+            contextMessage={contextMessage}
+            contextName={contextName}
+            contextPacks={contextPacks}
+            onAddContextPack={addContextPack}
+            onContextAgent={setContextAgent}
+            onContextMarkdown={setContextMarkdown}
+            onContextName={setContextName}
+          />
+        ) : null}
+        {stage === 'research' ? (
           <Stage2ReviewSettings
             externalResearch={externalResearch}
             privateResearch={privateResearch}
@@ -264,40 +278,27 @@ export function NewReviewPage() {
             onAllowlist={setAllowlist}
             onBlocklist={setBlocklist}
           />
-        </div>
-        <aside className="stack">
-          <SourceIntakePanel
-            disabled={!auth || starting || isWorkflowQuotaBlocked(usage)}
-            sources={sources}
-            error={sourceError}
-            onAddText={addText}
-            onUpload={upload}
-            onWebsite={addWebsite}
-            onRepository={addRepository}
+        ) : null}
+        {stage === 'run' ? (
+          <RunReviewStep
+            contextPackCount={contextPacks.length}
+            disabled={isWorkflowQuotaBlocked(usage)}
+            onRun={startRun}
+            sourceCount={sources.length}
+            starting={starting}
+            usage={usage}
           />
-          <section className="panel stack" aria-labelledby="run-review-heading">
-            <h2 id="run-review-heading">Run review</h2>
-            <p className="muted">Routing and source checks run automatically before analysis starts.</p>
-            <div className="row">
-              <Button
-                type="button"
-                variant="primary"
-                onClick={startRun}
-                disabled={starting || isWorkflowQuotaBlocked(usage)}
-              >
-                <Play size={16} /> {starting ? 'Starting' : 'Run review'}
-              </Button>
-            </div>
-          </section>
-        </aside>
+        ) : null}
+        <StageActions
+          canGoBack={currentStageIndex > 0}
+          canGoNext
+          isFinalStage={stage === 'run'}
+          onBack={goToPreviousStage}
+          onNext={goToNextStage}
+        />
       </div>
     </section>
   );
-}
-
-function preview(markdown: string) {
-  const firstLine = markdown.split(/\r?\n/).find((line) => line.trim());
-  return firstLine ? firstLine.replace(/^#+\s*/, '') : 'Markdown context';
 }
 
 function toList(value: string) {

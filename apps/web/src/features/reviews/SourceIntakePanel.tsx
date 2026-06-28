@@ -1,5 +1,5 @@
 import { FileUp, GitBranch, Globe2, Mic, Square } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { Source } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 
@@ -27,6 +27,8 @@ export function SourceIntakePanel({
   const [recording, setRecording] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('No voice note recorded.');
   const [uploadStatus, setUploadStatus] = useState('No files selected.');
+  const fileInputId = useId();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -86,14 +88,22 @@ export function SourceIntakePanel({
         <Button type="button" onClick={() => void onAddText()} disabled={disabled}>
           Add pasted text
         </Button>
-        <Field
-          label="Upload rich evidence"
-          hint="TXT, Markdown, PDF, DOCX, PPTX, CSV, XLSX, PNG, JPEG, WebP, audio, video, ZIP or TAR."
-        >
+        <div className="field source-upload-field">
+          <label htmlFor={fileInputId}>Upload rich evidence</label>
+          <div className="file-upload-control">
+            <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
+              <FileUp size={16} /> Choose files
+            </Button>
+            <span className="muted" role="status">{uploadStatus}</span>
+          </div>
           <input
+            id={fileInputId}
+            ref={fileInputRef}
+            className="visually-hidden-file"
             type="file"
             multiple
             accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.csv,.xlsx,.png,.jpg,.jpeg,.webp,.mp3,.wav,.webm,.m4a,.mp4,.mov,.zip,.tar,.gz,.tgz,text/plain,text/markdown,text/csv,application/pdf,image/*,audio/*,video/*"
+            aria-describedby={`${fileInputId}-hint`}
             onChange={(event) => {
               const input = event.currentTarget;
               void uploadSelected(Array.from(input.files ?? []), onUpload, setUploadStatus)
@@ -103,8 +113,10 @@ export function SourceIntakePanel({
             }}
             disabled={disabled}
           />
-        </Field>
-        <span className="muted" role="status">{uploadStatus}</span>
+          <small id={`${fileInputId}-hint`}>
+            TXT, Markdown, PDF, DOCX, PPTX, CSV, XLSX, PNG, JPEG, WebP, audio, video, ZIP or TAR.
+          </small>
+        </div>
       </div>
       <div className="row">
         <Field label="Website URL">

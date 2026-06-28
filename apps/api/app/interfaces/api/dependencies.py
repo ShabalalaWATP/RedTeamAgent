@@ -187,7 +187,14 @@ def review_service(
     settings: Annotated[Settings, Depends(get_settings)],
     storage: Annotated[ObjectStoragePort, Depends(object_storage)],
 ) -> ReviewService:
-    return ReviewService(repo, storage, SourceExtractor(), SafeExternalSourceIngestor(), settings.max_upload_bytes)
+    return ReviewService(
+        repo,
+        storage,
+        SourceExtractor(),
+        SafeExternalSourceIngestor(),
+        settings.max_upload_bytes,
+        settings.allow_fake_provider,
+    )
 
 
 def workflow_service(
@@ -195,8 +202,16 @@ def workflow_service(
     governance: Annotated[ProviderGovernanceService, Depends(provider_governance)],
     registry: Annotated[ProviderRegistry, Depends(provider_registry)],
     policy: Annotated[UsagePolicy, Depends(usage_policy)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> WorkflowService:
-    return WorkflowService(repo, registry, governance, policy)
+    return WorkflowService(
+        repo,
+        registry,
+        governance,
+        policy,
+        FernetCredentialVault(settings.app_secret_key),
+        settings.allow_fake_provider,
+    )
 
 
 def enterprise_service(

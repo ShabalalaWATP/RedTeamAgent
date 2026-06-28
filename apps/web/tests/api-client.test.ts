@@ -102,6 +102,22 @@ describe('ApiClient', () => {
           description: 'Changed'
         });
       }
+      if (url.endsWith('/reviews/review-1') && init?.method === 'PUT') {
+        expect(init.headers).toMatchObject({ 'X-CSRF-Token': 'csrf' });
+        return jsonResponse({
+          id: 'review-1',
+          workspace_id: 'workspace-1',
+          project_id: 'project-1',
+          title: 'Updated review',
+          proposal_text: 'Updated proposal',
+          mode: 'standard',
+          focus_chips: ['security'],
+          external_research: false,
+          private_research: true,
+          domain_allowlist: [],
+          domain_blocklist: []
+        });
+      }
       if (url.endsWith('/projects/project-1') && init?.method === 'DELETE') return jsonResponse(null, 204);
       if (url.endsWith('/runs/run-1/cancel') && init?.method === 'POST') return jsonResponse(runResponse('cancelled'));
       if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('completed'));
@@ -207,6 +223,7 @@ describe('ApiClient', () => {
     await expect(client.addWebsiteSource('csrf', 'review-1', 'https://example.com')).resolves.toMatchObject({ id: 'source-web' });
     await expect(client.addRepositorySource('csrf', 'review-1', 'https://github.com/a/b')).resolves.toMatchObject({ id: 'source-repo' });
     await expect(client.updateProject('csrf', 'project-1', 'Updated', 'Changed')).resolves.toMatchObject({ title: 'Updated' });
+    await expect(client.updateReview('csrf', 'review-1', {})).resolves.toMatchObject({ title: 'Updated review' });
     await expect(client.deleteProject('csrf', 'project-1')).resolves.toBeUndefined();
     await expect(client.getRun('run-1')).resolves.toMatchObject({ state: 'completed' });
     await expect(client.cancelRun('csrf', 'run-1')).resolves.toMatchObject({ state: 'cancelled' });

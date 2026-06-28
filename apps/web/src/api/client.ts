@@ -155,6 +155,10 @@ export class ApiClient {
     );
   }
 
+  async updateReview(csrf: string, reviewId: string, body: Record<string, unknown>) {
+    return reviewSchema.parse(await this.request(`/reviews/${reviewId}`, 'PUT', { csrf, body }));
+  }
+
   async addTextSource(csrf: string, reviewId: string, text: string) {
     return sourceSchema.parse(await this.request(`/reviews/${reviewId}/sources/text`, 'POST', { csrf, body: { text } }));
   }
@@ -182,10 +186,6 @@ export class ApiClient {
   async listContextPacks(workspaceId: string) {
     const path = `/context-packs?workspace_id=${encodeURIComponent(workspaceId)}`;
     return z.array(contextPackSchema).parse(await this.request(path, 'GET'));
-  }
-
-  async preflight(reviewId: string) {
-    return this.request(`/reviews/${reviewId}/preflight`, 'GET');
   }
 
   async adapterSchemas() {

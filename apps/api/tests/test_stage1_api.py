@@ -130,6 +130,11 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     completed_run = client.get(f"/runs/{run.json()['id']}")
     assert completed_run.status_code == 200, completed_run.text
     assert completed_run.json()["state"] == "completed"
+    assert completed_run.json()["usage"]["provider"] == "fake"
+    assert completed_run.json()["usage"]["model_identifier"] == "fake-reviewer"
+    assert completed_run.json()["usage"]["model_profile"] == "Security fake profile"
+    assert completed_run.json()["routing_plan"]["primary_model"]["provider"] == "fake"
+    assert completed_run.json()["routing_plan"]["primary_model"]["model_identifier"] == "fake-reviewer"
     run_context = completed_run.json()["routing_plan"]["context_packs"][0]
     assert run_context["agent_key"] == "policy_governance"
     assert run_context["markdown_sha256"] == policy_hash

@@ -45,6 +45,8 @@ describe('new review context packs', () => {
     });
 
     renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     expect(await screen.findByText('Existing policy pack')).toBeInTheDocument();
     expect(screen.getByText('policy_governance')).toBeInTheDocument();
     expect(screen.getByText('Version 3')).toBeInTheDocument();
@@ -63,12 +65,15 @@ describe('new review context packs', () => {
 
   it('surfaces context-pack load errors', async () => {
     storeAuth();
+    const user = userEvent.setup();
     mockFetch((url) => {
       if (url.includes('/context-packs?')) return jsonResponse({ message: 'context denied' }, 403);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
 
     renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('context denied');
   });
 
@@ -84,10 +89,37 @@ describe('new review context packs', () => {
     });
 
     renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     fireEvent.submit(screen.getByRole('heading', { name: 'Context packs' }).closest('form') as HTMLFormElement);
     expect(screen.getByRole('heading', { name: 'New review' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('invalid context');
+  });
+
+  it('renders empty Markdown context previews', async () => {
+    storeAuth();
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/context-packs?')) {
+        return jsonResponse([
+          {
+            id: 'pack-empty',
+            workspace_id: authState.workspaceId,
+            name: 'Empty pack',
+            agent_key: 'policy_governance',
+            markdown: '',
+            version: 1
+          }
+        ]);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    expect(await screen.findByText('Markdown context')).toBeInTheDocument();
   });
 });

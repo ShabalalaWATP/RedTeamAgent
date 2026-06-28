@@ -23,8 +23,8 @@ def test_background_workflow_preserves_provider_registry_settings(monkeypatch) -
             }
 
     class FakeWorkflowService:
-        def __init__(self, repo: object, registry: object, governance: object) -> None:
-            seen["service"] = (repo, registry, governance)
+        def __init__(self, repo: object, registry: object, governance: object, **kwargs: object) -> None:
+            seen["service"] = (repo, registry, governance, kwargs)
 
         def execute_run(self, run_id: str, actor_user_id: str) -> None:
             seen["run"] = (run_id, actor_user_id)
@@ -36,7 +36,8 @@ def test_background_workflow_preserves_provider_registry_settings(monkeypatch) -
     monkeypatch.setattr(background, "ProviderRegistry", FakeRegistry)
     monkeypatch.setattr(background, "WorkflowService", FakeWorkflowService)
 
-    background.execute_workflow_background("run-1", False, False, "user-1")
+    background.execute_workflow_background("run-1", False, False, "test-secret-key", "user-1")
 
     assert seen["registry"] == {"self_hosted_mode": False, "allow_fake_provider": False}
+    assert "credential_vault" in seen["service"][3]
     assert seen["run"] == ("run-1", "user-1")

@@ -198,6 +198,17 @@ describe('account and usage controls', () => {
           focus_chips: ['security']
         });
       }
+      if (url.endsWith('/reviews/review-quota') && init?.method === 'PUT') {
+        return jsonResponse({
+          id: 'review-quota',
+          workspace_id: authState.workspaceId,
+          project_id: 'project-1',
+          title: 'Decision readiness review',
+          proposal_text: 'Red team this hiring plan.',
+          mode: 'standard',
+          focus_chips: ['security']
+        });
+      }
       if (url.includes('/reviews/review-quota/sources/text')) {
         return jsonResponse({
           id: 'source-quota',
@@ -218,9 +229,13 @@ describe('account and usage controls', () => {
     expect(await screen.findByText(/1 left this week/i)).toBeInTheDocument();
     await user.clear(screen.getByLabelText(/^proposal$/i));
     await user.type(screen.getByLabelText(/^proposal$/i), 'Red team this hiring plan.');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /run review/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Weekly workflow limit reached.');
-    expect(await screen.findByText(/0 left this week/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/0 left this week/i)).length).toBeGreaterThan(0);
   });
 });
 

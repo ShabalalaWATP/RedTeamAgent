@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.ports.credentials import CredentialVault
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provider_governance import ProviderGovernanceService
 from app.application.usage_policy import UsagePolicy
@@ -20,11 +21,13 @@ class WorkflowService:
         registry: Any,
         governance: ProviderGovernanceService | None = None,
         usage_policy: UsagePolicy | None = None,
+        credential_vault: CredentialVault | None = None,
+        allow_fake_provider: bool = True,
     ) -> None:
         self.repo = repo
         self.quota = WorkflowQuotaService(repo, usage_policy or UsagePolicy())
-        self.routing = WorkflowRoutingPlanner(repo, governance)
-        self.executor = WorkflowExecutor(repo, registry)
+        self.routing = WorkflowRoutingPlanner(repo, governance, allow_fake_provider)
+        self.executor = WorkflowExecutor(repo, registry, credential_vault)
 
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         user = self._require_user(user_id)

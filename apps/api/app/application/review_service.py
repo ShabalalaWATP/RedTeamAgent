@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.application.agent_plan import assurance_agent_views, selected_agent_views
+from app.application.model_routing import select_model_route
 from app.application.ports.ingestion import ExternalSourceIngestor
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
@@ -21,12 +22,14 @@ class ReviewService:
         extractor: Any,
         external_sources: ExternalSourceIngestor,
         max_upload_bytes: int,
+        allow_fake_provider: bool = True,
     ) -> None:
         self.repo = repo
         self.storage = storage
         self.extractor = extractor
         self.external_sources = external_sources
         self.max_upload_bytes = max_upload_bytes
+        self.allow_fake_provider = allow_fake_provider
 
     def create_review(self, user_id: str, project_id: str, data: dict[str, Any]) -> Any:
         project = self._require_project_write(user_id, project_id)
@@ -45,6 +48,13 @@ class ReviewService:
     def list_reviews(self, user_id: str, project_id: str) -> list[Any]:
         project = self._require_project_member(user_id, project_id)
         return self.repo.list_reviews(project.id)
+
+    def update_review(self, user_id: str, review_id: str, data: dict[str, Any]) -> Any:
+        review = self._require_review_write(user_id, review_id)
+        updated = self.repo.update_review(review.id, data)
+        self.repo.audit(review.workspace_id, user_id, "review.updated", {"review_id": review.id})
+        self.repo.commit()
+        return updated
 
     def add_pasted_text(self, user_id: str, review_id: str, text: str) -> Any:
         content = text.encode("utf-8")
@@ -192,22 +202,20 @@ class ReviewService:
         }
 
     def _routing_metadata(self, review: Any, selected_agents: list[str]) -> dict[str, Any]:
-        models = self.repo.list_models(review.workspace_id)
+        route = select_model_route(self.repo, review.workspace_id, selected_agents)
         fallback_routes = []
-        if not models:
+        if route is None:
             fallback_routes.append(
                 {
                     "from": "configured model profile",
                     "to": "fake-local",
-                    "reason": "No verified model profiles are configured for this workspace.",
+                    "reason": "No verified model profile is configured for this workspace.",
                 }
             )
         diversity_enabled = review.mode == ReviewMode.IN_DEPTH.value
-        diversity_routes = [
-            {"agent": agent, "provider": "fake", "model_profile": "fake-local"}
-            for agent in selected_agents
-        ] if diversity_enabled else []
+        diversity_routes = _diversity_routes(diversity_enabled, selected_agents, route, self.allow_fake_provider)
         return {
+            "primary_model": route.metadata() if route is not None else None,
             "model_diversity": {
                 "enabled": diversity_enabled,
                 "policy": {
@@ -290,3 +298,26 @@ class ReviewService:
             "warnings": source.warnings,
             "metadata": source.metadata_json,
         }
+
+
+def _diversity_routes(
+    diversity_enabled: bool,
+    selected_agents: list[str],
+    route: Any,
+    allow_fake: bool,
+) -> list[dict[str, str]]:
+    if not diversity_enabled:
+        return []
+    if route is None:
+        if not allow_fake:
+            return []
+        return [{"agent": agent, "provider": "fake", "model_profile": "fake-local"} for agent in selected_agents]
+    return [
+        {
+            "agent": agent,
+            "provider": route.provider,
+            "model_profile": route.model_profile,
+            "model_identifier": route.model_identifier,
+        }
+        for agent in selected_agents
+    ]

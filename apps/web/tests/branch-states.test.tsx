@@ -46,6 +46,8 @@ describe('unauthenticated and alternate branch states', () => {
       </Routes>,
       '/projects/project-1/reviews/new'
     );
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -123,7 +125,8 @@ describe('unauthenticated and alternate branch states', () => {
       </Routes>,
       '/projects/project-1/reviews/new'
     );
-    expect(await screen.findByText('No context packs yet')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    expect(await screen.findByRole('heading', { name: 'Sources and snapshots' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /preflight/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('draft failed');
@@ -276,32 +279,6 @@ describe('unauthenticated and alternate branch states', () => {
     await user.click(screen.getByRole('button', { name: /load models/i }));
     await user.click(screen.getByRole('button', { name: /test and save/i }));
     expect(await screen.findByText(/provider connection saved/i)).toBeInTheDocument();
-  });
-
-  it('renders empty Markdown context previews', async () => {
-    mockFetch((url) => {
-      if (url.includes('/context-packs?')) {
-        return jsonResponse([
-          {
-            id: 'pack-empty',
-            workspace_id: 'workspace-1',
-            name: 'Empty pack',
-            agent_key: 'policy_governance',
-            markdown: '',
-            version: 1
-          }
-        ]);
-      }
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-    sessionStorage.setItem('rta.auth', JSON.stringify(auth()));
-    renderWithAuth(
-      <Routes>
-        <Route path="/projects/:projectId/reviews/new" element={<NewReviewPage />} />
-      </Routes>,
-      '/projects/project-1/reviews/new'
-    );
-    expect(await screen.findByText('Markdown context')).toBeInTheDocument();
   });
 
   it('ignores late context-pack loads after unmount', async () => {

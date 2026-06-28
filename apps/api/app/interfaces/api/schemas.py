@@ -159,6 +159,10 @@ class StandaloneReviewCreate(ReviewCreate):
     workspace_id: str
 
 
+class ReviewUpdate(ReviewCreate):
+    pass
+
+
 class ReviewView(BaseModel):
     id: str
     workspace_id: str

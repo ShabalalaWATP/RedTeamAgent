@@ -109,6 +109,27 @@ describe('RedTeamAgent app flows', () => {
     mockFetch((url, init) => {
       if (url.includes('/projects/project-1/reviews') && init?.method === 'POST') {
         expect(JSON.parse(String(init.body))).toMatchObject({
+          external_research: false,
+          private_research: true,
+          domain_allowlist: [],
+          domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
+        });
+        return jsonResponse({
+          id: 'review-1',
+          workspace_id: authState.workspaceId,
+          project_id: 'project-1',
+          title: 'Checkout provider migration',
+          proposal_text: 'proposal',
+          mode: 'standard',
+          focus_chips: ['security'],
+          external_research: true,
+          private_research: true,
+          domain_allowlist: ['example.com'],
+          domain_blocklist: ['localhost', '127.0.0.1', '169.254.169.254']
+        });
+      }
+      if (url.endsWith('/reviews/review-1') && init?.method === 'PUT') {
+        expect(JSON.parse(String(init.body))).toMatchObject({
           external_research: true,
           private_research: true,
           domain_allowlist: ['example.com'],
@@ -176,10 +197,8 @@ describe('RedTeamAgent app flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/projects/project-1/reviews/new');
-    await user.click(screen.getByLabelText(/enable external research/i));
-    await user.clear(screen.getByLabelText(/domain allow-list/i));
-    await user.type(screen.getByLabelText(/domain allow-list/i), 'example.com');
     expect(screen.queryByRole('button', { name: /preflight/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByText('proposal.md')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /snapshot website/i }));
@@ -189,9 +208,15 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /record voice note/i }));
     expect(await screen.findByText('voice-note.txt')).toBeInTheDocument();
     expect(screen.getByText(/fallback note submitted/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(await screen.findByText('Version 1')).toBeInTheDocument();
     expect(screen.getByText('policy_governance')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
+    await user.click(screen.getByLabelText(/enable external research/i));
+    await user.clear(screen.getByLabelText(/domain allow-list/i));
+    await user.type(screen.getByLabelText(/domain allow-list/i), 'example.com');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /run review/i }));
     await waitFor(() => expect(screen.getByText(/Report preview/i)).toBeInTheDocument());
   });
@@ -301,57 +326,6 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /^delete$/i }));
     await waitFor(() => expect(screen.queryByText('Essay argument review')).not.toBeInTheDocument());
     expect(deleted).toBe(true);
-  });
-
-  it('starts a workflow without requiring a project first', async () => {
-    storeAuth();
-    const user = userEvent.setup();
-    mockFetch((url, init) => {
-      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
-      if (url.includes('/context-packs?')) return jsonResponse([]);
-      if (url.includes('/usage/limits')) return jsonResponse(usageLimits());
-      if (url.endsWith('/reviews') && init?.method === 'POST') {
-        expect(JSON.parse(String(init.body))).toMatchObject({ workspace_id: authState.workspaceId });
-        return jsonResponse({
-          id: 'review-standalone',
-          workspace_id: authState.workspaceId,
-          project_id: null,
-          title: 'Decision readiness review',
-          proposal_text: 'proposal',
-          mode: 'standard',
-          focus_chips: ['security']
-        });
-      }
-      if (url.includes('/reviews/review-standalone/sources/text')) {
-        return jsonResponse({ id: 'source-1', filename: 'proposal.md', content_type: 'text/markdown', state: 'ingested', metadata: {}, warnings: [] });
-      }
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-
-    renderApp('/workflows');
-    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
-    expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
-    expect(screen.getByText('Standalone workflow')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /add pasted text/i }));
-    expect(await screen.findByText('Review created')).toBeInTheDocument();
-  });
-
-  it('does not fetch projects when starting a standalone workflow', async () => {
-    storeAuth();
-    const user = userEvent.setup();
-    const requests: string[] = [];
-    mockFetch((url, init) => {
-      requests.push(`${init?.method ?? 'GET'} ${url}`);
-      if (url.includes('/workspaces/workspace-1/workflows')) return jsonResponse([]);
-      if (url.includes('/context-packs?')) return jsonResponse([]);
-      if (url.includes('/usage/limits')) return jsonResponse(usageLimits());
-      return jsonResponse({ message: 'unexpected' }, 500);
-    });
-
-    renderApp('/workflows');
-    await user.click(await screen.findByRole('button', { name: /start workflow/i }));
-    expect(await screen.findByRole('heading', { name: 'New review' })).toBeInTheDocument();
-    expect(requests.some((request) => request.includes('/projects'))).toBe(false);
   });
 
 });

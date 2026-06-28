@@ -266,6 +266,7 @@ describe('edge UI flows', () => {
     await user.selectOptions(screen.getByLabelText(/^mode$/i), 'basic');
     await user.clear(screen.getByLabelText(/focus chips/i));
     await user.type(screen.getByLabelText(/focus chips/i), 'ops');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     const file = new File(['bad'], 'bad.pdf', { type: 'application/pdf' });
     await user.upload(screen.getByLabelText(/upload rich evidence/i), file);
     expect(await screen.findByText('bad.pdf')).toBeInTheDocument();
@@ -282,6 +283,7 @@ describe('edge UI flows', () => {
       return jsonResponse({ message: 'project missing' }, 404);
     });
     renderApp('/projects/project-1/reviews/new');
+    await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /add pasted text/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('project missing');
   });
@@ -395,5 +397,4 @@ describe('edge UI flows', () => {
 });
 
 function renderWithNoProvider(element: ReactElement) { return render(element); }
-
 function renderProviderSettings() { return render(<AuthProvider><ProviderSettings /></AuthProvider>); }

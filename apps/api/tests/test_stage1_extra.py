@@ -108,6 +108,24 @@ def test_me_project_lists_updates_deletes_and_cancel(client: TestClient) -> None
     assert reviews.status_code == 200
     assert reviews.json()[0]["id"] == ids["review_id"]
 
+    review_update = client.put(
+        f"/reviews/{ids['review_id']}",
+        headers=csrf_headers(auth),
+        json={
+            "title": "Updated review",
+            "proposal_text": "Updated proposal",
+            "mode": "standard",
+            "focus_chips": ["ops"],
+            "external_research": True,
+            "private_research": True,
+            "domain_allowlist": ["example.com"],
+            "domain_blocklist": ["localhost"],
+        },
+    )
+    assert review_update.status_code == 200, review_update.text
+    assert review_update.json()["title"] == "Updated review"
+    assert review_update.json()["domain_allowlist"] == ["example.com"]
+
     uploaded = client.post(
         f"/reviews/{ids['review_id']}/sources/upload",
         headers=csrf_headers(auth),

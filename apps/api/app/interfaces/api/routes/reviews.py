@@ -19,6 +19,7 @@ from app.interfaces.api.schemas import (
     PastedTextRequest,
     RepositorySourceRequest,
     ReviewCreate,
+    ReviewUpdate,
     ReviewView,
     SourceView,
     StandaloneReviewCreate,
@@ -59,6 +60,17 @@ def list_reviews(
     service: Annotated[ReviewService, Depends(review_service)],
 ) -> list[ReviewView]:
     return [ReviewView.model_validate(item) for item in service.list_reviews(context.user.id, project_id)]
+
+
+@router.put("/reviews/{review_id}", response_model=ReviewView, dependencies=[Depends(require_csrf)])
+def update_review(
+    review_id: str,
+    payload: ReviewUpdate,
+    context: Annotated[AuthContext, Depends(current_context)],
+    service: Annotated[ReviewService, Depends(review_service)],
+) -> ReviewView:
+    review = service.update_review(context.user.id, review_id, payload.model_dump())
+    return ReviewView.model_validate(review)
 
 
 @router.post(

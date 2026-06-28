@@ -50,6 +50,7 @@ def start_run(
         run.id,
         settings.self_hosted_provider_mode,
         settings.allow_fake_provider,
+        settings.app_secret_key,
         context.user.id,
     )
     return RunView.model_validate(run)

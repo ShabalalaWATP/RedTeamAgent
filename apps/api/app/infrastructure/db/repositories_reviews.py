@@ -63,6 +63,25 @@ class ReviewRepositoryMixin:
     def list_reviews(self, project_id: str) -> list[models.Review]:
         return list(self.session.scalars(select(models.Review).where(models.Review.project_id == project_id)))
 
+    def update_review(self, review_id: str, data: dict[str, Any]) -> models.Review:
+        review = self.session.get(models.Review, review_id)
+        if review is None:
+            raise LookupError(review_id)
+        for field in (
+            "title",
+            "proposal_text",
+            "mode",
+            "focus_chips",
+            "external_research",
+            "private_research",
+            "domain_allowlist",
+            "domain_blocklist",
+        ):
+            if field in data:
+                setattr(review, field, data[field])
+        self.session.flush()
+        return review
+
     def add_source(self, data: dict[str, Any]) -> models.Source:
         source = models.Source(state=SourceState.PENDING.value, **data)
         self.session.add(source)
