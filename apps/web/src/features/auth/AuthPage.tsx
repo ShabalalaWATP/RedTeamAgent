@@ -14,18 +14,18 @@ import './authFx.css';
 const AUTH_FEATURES = [
   {
     icon: Shield,
-    title: 'Adversarial multi-agent review',
-    body: 'Specialist agents stress-test proposals, plans, code and writing.'
+    title: 'Spot hidden bias',
+    body: 'Find the assumptions and blind spots quietly steering the decision.'
   },
   {
     icon: ListChecks,
-    title: 'Evidence-linked findings',
-    body: 'Every risk ties back to a source, scored in a clear risk matrix.'
+    title: 'Find the blockers',
+    body: 'Surface the people, process and technical snags that could slow you down.'
   },
   {
     icon: FileText,
-    title: 'Decision-ready reports',
-    body: 'Export structured decision support, with assumptions shown.'
+    title: 'Reality-check the plan',
+    body: 'Separate wishful thinking from what the evidence actually supports.'
   }
 ] as const;
 
@@ -182,12 +182,6 @@ export function AuthPage() {
               <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
             </div>
           </div>
-          <p className="auth-status" aria-hidden="true">
-            <span className="auth-status-dot" />
-            <span>Encrypted session</span>
-            <span className="auth-status-sep">//</span>
-            <span>Evidence-bound analysis</span>
-          </p>
           <ul className="auth-features">
             {AUTH_FEATURES.map(({ icon: Icon, title, body }) => (
               <li key={title}>
@@ -199,7 +193,6 @@ export function AuthPage() {
               </li>
             ))}
           </ul>
-          <p className="auth-brand-foot">Provisional decision support, not professional sign-off.</p>
         </div>
         <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
           <div className="auth-form-header">

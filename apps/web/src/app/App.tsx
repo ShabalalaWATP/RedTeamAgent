@@ -1,4 +1,4 @@
-import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
 import { useEffect, type ReactElement } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
@@ -64,10 +64,6 @@ function Layout() {
           </div>
         </header>
         <Outlet />
-        <footer className="method-note">
-          <FileText aria-hidden="true" size={16} />
-          Reports are provisional decision support, not professional sign-off.
-        </footer>
       </main>
     </div>
   );

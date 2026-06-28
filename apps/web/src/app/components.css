@@ -30,23 +30,6 @@
   flex-wrap: wrap;
 }
 
-.method-note {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: fit-content;
-  margin: 24px 28px 24px auto;
-  max-width: min(460px, calc(100vw - 36px));
-  color: var(--muted);
-  font-size: 0.85rem;
-  background: var(--note-bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 10px 13px;
-}
-
-.method-note svg { color: var(--accent); flex: 0 0 auto; }
-
 .section-title,
 .workflow-heading {
   display: flex;
@@ -292,5 +275,4 @@ pre.panel {
   .project-actions { justify-content: stretch; }
   .project-actions .button { flex: 1 1 auto; }
 
-  .method-note { margin: 18px 14px; }
 }
