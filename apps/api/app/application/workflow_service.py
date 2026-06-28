@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.model_routing import select_model_route
 from app.application.ports.credentials import CredentialVault
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provider_governance import ProviderGovernanceService
@@ -9,8 +10,8 @@ from app.application.usage_policy import UsagePolicy
 from app.application.workflow_execution import TERMINAL_STATES, WorkflowExecutor
 from app.application.workflow_quota import WorkflowQuotaService
 from app.application.workflow_routing import WorkflowRoutingPlanner
-from app.domain.enums import RunState, WorkspaceRole
-from app.domain.exceptions import AuthorisationError, NotFoundError
+from app.domain.enums import RunState, SourceState, WorkspaceRole
+from app.domain.exceptions import AuthorisationError, NotFoundError, ValidationFailure
 from app.domain.policies import require_write
 
 
@@ -28,6 +29,7 @@ class WorkflowService:
         self.quota = WorkflowQuotaService(repo, usage_policy or UsagePolicy())
         self.routing = WorkflowRoutingPlanner(repo, governance, allow_fake_provider)
         self.executor = WorkflowExecutor(repo, registry, credential_vault)
+        self.allow_fake_provider = allow_fake_provider
 
     def start_run(self, user_id: str, review_id: str, *, execute_immediately: bool = True) -> Any:
         user = self._require_user(user_id)
@@ -35,6 +37,7 @@ class WorkflowService:
         self._require_write(user_id, review.workspace_id)
         self.quota.enforce(user)
         routing_plan = self.routing.build_plan(review, user_id)
+        self._require_review_ready(review, routing_plan)
         run = self.repo.create_run(review.workspace_id, review.id, routing_plan, user_id)
         self.repo.add_run_event(run.id, RunState.INTAKE.value, "Run queued for background execution.")
         self.repo.audit(review.workspace_id, user_id, "run.started", {"run_id": run.id})
@@ -132,3 +135,27 @@ class WorkflowService:
         if role is None:
             raise AuthorisationError("Workspace access denied.")
         require_write(WorkspaceRole(role))
+
+    def _require_review_ready(self, review: Any, routing_plan: dict[str, Any]) -> None:
+        sources = self.repo.list_sources(review.id)
+        if not sources:
+            raise ValidationFailure("Add at least one evidence source before running the review.")
+        if any(source.state == SourceState.FAILED.value for source in sources):
+            raise ValidationFailure("Fix failed evidence ingestion before running the review.")
+        if any(source.state != SourceState.INGESTED.value for source in sources):
+            raise ValidationFailure("Wait for evidence ingestion to finish before running the review.")
+        route = select_model_route(self.repo, review.workspace_id, _selected_agent_keys(routing_plan))
+        if route is None and not self.allow_fake_provider:
+            raise ValidationFailure(
+                "Configure and verify a production AI provider before running a review. "
+                "Evidence is reviewed by the LLM only after a verified model profile is available."
+            )
+
+
+def _selected_agent_keys(routing_plan: Any) -> list[str]:
+    if not isinstance(routing_plan, dict):
+        return []
+    agents = routing_plan.get("selected_agents", [])
+    if not isinstance(agents, list):
+        return []
+    return [agent for agent in agents if isinstance(agent, str)]

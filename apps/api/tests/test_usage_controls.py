@@ -138,6 +138,12 @@ def _create_standalone_review(client: TestClient, auth: dict[str, object]) -> di
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["project_id"] is None
+    source = client.post(
+        f"/reviews/{body['id']}/sources/text",
+        headers=csrf_headers(auth),
+        json={"text": "Evidence for quota workflow execution."},
+    )
+    assert source.status_code == 200, source.text
     return body
 
 

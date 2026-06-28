@@ -8,7 +8,13 @@ from app.domain.agents import AGENT_LABELS
 from app.domain.enums import AgentKey
 
 
-def compose_report(repo: RepositoryPorts, review: Any, run_id: str, routing_plan: dict[str, Any]) -> dict[str, Any]:
+def compose_report(
+    repo: RepositoryPorts,
+    review: Any,
+    run_id: str,
+    routing_plan: dict[str, Any],
+    provider_output: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     sources = repo.list_sources(review.id)
     source_labels = [f"{source.filename}:{source.id}" for source in sources]
     evidence_query = " ".join([review.title, review.proposal_text, *review.focus_chips])
@@ -16,21 +22,30 @@ def compose_report(repo: RepositoryPorts, review: Any, run_id: str, routing_plan
     primary_evidence = retrieved_evidence[0] if retrieved_evidence else None
     evidence_label = str(primary_evidence["locator"]) if primary_evidence else "assumption"
     evidence_type = "source" if primary_evidence else "assumption"
+    llm_claim = _first_llm_claim(provider_output)
     context_packs = _safe_list(routing_plan.get("context_packs", []))
     external_sources = _external_sources(review)
     findings = [
         {
             "id": "finding-1",
-            "title": "Review evidence needs explicit ownership before launch.",
-            "severity": "medium",
-            "confidence": "high" if primary_evidence else "low",
+            "title": _claim_text(llm_claim, "title", "Review evidence needs explicit ownership before launch."),
+            "severity": _severity(_claim_text(llm_claim, "severity", "medium")),
+            "confidence": _claim_text(llm_claim, "confidence", "high" if primary_evidence else "low"),
             "agent": "operations_delivery",
-            "category": "delivery",
+            "category": _claim_text(llm_claim, "category", "delivery"),
             "evidence_type": evidence_type,
             "evidence_label": evidence_label,
             "evidence_excerpt": str(primary_evidence["excerpt"]) if primary_evidence else "",
-            "summary": "The proposal should assign owners for validation, rollout and operational follow-up.",
-            "recommended_action": "Assign named owners and acceptance criteria for each high-risk dependency.",
+            "summary": _claim_text(
+                llm_claim,
+                "summary",
+                "The proposal should assign owners for validation, rollout and operational follow-up.",
+            ),
+            "recommended_action": _claim_text(
+                llm_claim,
+                "recommended_action",
+                "Assign named owners and acceptance criteria for each high-risk dependency.",
+            ),
         }
     ]
     action_items = [
@@ -86,7 +101,11 @@ def compose_report(repo: RepositoryPorts, review: Any, run_id: str, routing_plan
             "mid": ["Run validation experiments against assumptions."],
             "long": ["Monitor second-order stakeholder and operating impacts."],
         },
-        "evidence_quality": {"retrieval_score": retrieved_evidence[0]["score"] if retrieved_evidence else 0.0},
+        "evidence_quality": {
+            "retrieval_score": retrieved_evidence[0]["score"] if retrieved_evidence else 0.0,
+            "llm_claim_count": len(_llm_claims(provider_output)),
+        },
+        "llm_review": _llm_review_record(provider_output),
         "cross_agent_disagreements": [
             {
                 "topic": "Proceed timing",
@@ -111,8 +130,8 @@ def compose_report(repo: RepositoryPorts, review: Any, run_id: str, routing_plan
         "recommended_actions": [finding["recommended_action"] for finding in findings],
         "sources": source_labels,
         "methodology": (
-            "Deterministic Stage 2 workflow with hybrid evidence retrieval, optional external research, "
-            "full specialist routing, source-linked quality gate and context-pack version snapshot."
+            "LLM-grounded workflow with local evidence extraction, hybrid evidence retrieval, optional external "
+            "research, full specialist routing, source-linked quality gate and context-pack version snapshot."
         ),
     }
 
@@ -131,6 +150,39 @@ def _safe_list(value: object) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, dict)]
+
+
+def _llm_claims(provider_output: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(provider_output, dict):
+        return []
+    claims = provider_output.get("claims", [])
+    return [claim for claim in claims if isinstance(claim, dict)] if isinstance(claims, list) else []
+
+
+def _first_llm_claim(provider_output: dict[str, Any] | None) -> dict[str, Any] | None:
+    claims = _llm_claims(provider_output)
+    return claims[0] if claims else None
+
+
+def _claim_text(claim: dict[str, Any] | None, key: str, fallback: str) -> str:
+    if claim is None:
+        return fallback
+    value = claim.get(key)
+    return str(value) if isinstance(value, str) and value.strip() else fallback
+
+
+def _severity(value: str) -> str:
+    return value if value in {"low", "medium", "high", "critical"} else "medium"
+
+
+def _llm_review_record(provider_output: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(provider_output, dict):
+        return {"summary": "", "claim_count": 0}
+    return {
+        "schema": str(provider_output.get("schema", "")),
+        "summary": str(provider_output.get("summary", "")),
+        "claim_count": len(_llm_claims(provider_output)),
+    }
 
 
 def _specialist_findings(selected_agents: object) -> list[dict[str, str]]:

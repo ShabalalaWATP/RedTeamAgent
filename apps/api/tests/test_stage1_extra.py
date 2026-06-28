@@ -146,6 +146,12 @@ def test_me_project_lists_updates_deletes_and_cancel(client: TestClient) -> None
 def test_queued_run_can_be_cancelled_before_background_execution(client: TestClient) -> None:
     auth = register_verified(client, "queued@example.com")
     ids = create_project_review(client, auth)
+    source = client.post(
+        f"/reviews/{ids['review_id']}/sources/text",
+        headers=csrf_headers(auth),
+        json={"text": "Evidence for queued cancellation path."},
+    )
+    assert source.status_code == 200
 
     with SessionLocal() as session:
         service = WorkflowService(SqlRepository(session), ProviderRegistry(False))

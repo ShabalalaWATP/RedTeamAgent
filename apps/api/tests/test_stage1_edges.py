@@ -108,15 +108,12 @@ def test_failed_extraction_is_visible_and_context_pack_list_works(client: TestCl
     assert packs.json()[0]["name"] == "Listed"
 
 
-def test_no_source_report_and_quality_gate_branches(client: TestClient) -> None:
+def test_no_source_run_is_rejected_and_quality_gate_branches(client: TestClient) -> None:
     auth = register_verified(client, "nosource@example.com")
     ids = create_project_review(client, auth)
     run = client.post(f"/reviews/{ids['review_id']}/runs", headers=csrf_headers(auth))
-    assert run.status_code == 200
-    report = client.get(f"/runs/{run.json()['id']}/report")
-    assert report.json()["data"]["findings"][0]["evidence_type"] == "assumption"
-    assert report.json()["data"]["retrieved_evidence"] == []
-    assert report.json()["data"]["blockers"]
+    assert run.status_code == 422
+    assert "Add at least one evidence source" in run.json()["message"]
 
     with pytest.raises(QualityGateError):
         enforce_quality_gate({"findings": [{"evidence_type": "unsupported"}]})

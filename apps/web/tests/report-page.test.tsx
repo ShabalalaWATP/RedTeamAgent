@@ -66,16 +66,15 @@ describe('ReportPage run controls', () => {
     act(() => {
       FakeEventSource.instances[0].emit({ id: 'event-2', state: 'completed', message: 'done', sequence: 2 });
     });
-    expect((await screen.findAllByText('completed')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Completed')).length).toBeGreaterThan(0);
     expect(await screen.findByText('Streamed report')).toBeInTheDocument();
     expect(screen.getByText('Architecture policy')).toBeInTheDocument();
     expect(screen.getByText('software_architecture')).toBeInTheDocument();
-    expect(screen.getByText('done')).toBeInTheDocument();
+    expect(screen.getAllByText('done').length).toBeGreaterThan(0);
     expect(FakeEventSource.instances[0].closed).toBe(true);
     act(() => FakeEventSource.instances[0].fail());
     expect(FakeEventSource.instances[0].closed).toBe(true);
   });
-
   it('surfaces completed report load failures', async () => {
     storeAuth();
     mockFetch((url, init) => {
@@ -84,12 +83,23 @@ describe('ReportPage run controls', () => {
       if (url.includes('/runs/run-1/report')) return jsonResponse({ message: 'Report missing' }, 404);
       return jsonResponse({ message: 'unexpected' }, 500);
     });
-
     renderApp('/runs/run-1');
-
     expect(await screen.findByRole('alert')).toHaveTextContent('Report missing');
   });
-
+  it('shows the latest failure stage when a run fails before report creation', async () => {
+    storeAuth();
+    mockFetch((url, init) => {
+      if (url.endsWith('/runs/run-1') && init?.method === 'GET') return jsonResponse(runResponse('failed'));
+      if (url.includes('/runs/run-1/events')) return jsonResponse([{ id: 'event-failed', state: 'failed', message: 'Provider route missing', sequence: 2 }]);
+      return url.includes('/runs/run-1/report')
+        ? jsonResponse({ message: 'Report not found' }, 404)
+        : jsonResponse({ message: 'unexpected' }, 500);
+    });
+    renderApp('/runs/run-1');
+    await screen.findByText('Review failed');
+    expect((await screen.findAllByText('Provider route missing')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
+  });
   it('surfaces cancel and retry failures', async () => {
     storeAuth();
     const user = userEvent.setup();
@@ -250,8 +260,8 @@ describe('ReportPage run controls', () => {
 
     expect(await screen.findByText('Report loading')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /cancel run/i }));
-    expect(await screen.findByText('cancelled by user')).toBeInTheDocument();
-    expect(screen.getAllByText('cancelled').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('cancelled by user')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cancelled').length).toBeGreaterThan(0);
   });
 
   it('ignores cancel and retry actions without an authenticated user', async () => {
@@ -298,7 +308,7 @@ describe('ReportPage run controls', () => {
     act(() => {
       FakeEventSource.instances[0].emit({ id: 'event-early', state: 'framing', message: 'early', sequence: 1 });
     });
-    expect(await screen.findByText('early')).toBeInTheDocument();
+    expect((await screen.findAllByText('early')).length).toBeGreaterThan(0);
     rendered.unmount();
     await act(async () => {
       resolveRun(jsonResponse(runResponse('completed')));
@@ -365,7 +375,7 @@ describe('ReportPage run controls', () => {
     });
 
     const rendered = renderApp('/runs/run-1');
-    await screen.findByText('completed');
+    await screen.findAllByText('Completed');
     rendered.unmount();
     await act(async () => {
       resolveReport(jsonResponse({ data: reportResponse() }));

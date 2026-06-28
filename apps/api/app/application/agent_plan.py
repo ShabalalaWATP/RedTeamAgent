@@ -19,6 +19,8 @@ def routing_plan_payload(
     routing_metadata: dict[str, Any],
 ) -> dict[str, Any]:
     selected_agents = [agent.value for agent in decision.selected_agents]
+    primary_model = routing_metadata.get("primary_model")
+    fallback_routes = routing_metadata.get("fallback_routes", [])
     return {
         "selected_agents": selected_agents,
         "excluded_agents": {agent.value: reason for agent, reason in decision.excluded_agents.items()},
@@ -28,8 +30,8 @@ def routing_plan_payload(
         "tool_manifest": decision.tool_manifest,
         "context_strategy": decision.context_strategy,
         "context_packs": context_packs,
-        "model_profile": "fake-local",
-        "permitted_fallbacks": ["fake-local"],
+        "model_profile": _model_profile(primary_model, fallback_routes),
+        "permitted_fallbacks": _permitted_fallbacks(fallback_routes),
         **routing_metadata,
     }
 
@@ -41,3 +43,19 @@ def _agent_view(card: dict[str, object]) -> dict[str, object]:
         "reason": card["selection_reason"],
     }
 
+
+def _model_profile(primary_model: object, fallback_routes: object) -> str:
+    if isinstance(primary_model, dict) and isinstance(primary_model.get("model_profile"), str):
+        return primary_model["model_profile"]
+    fallbacks = _permitted_fallbacks(fallback_routes)
+    return fallbacks[0] if fallbacks else "unconfigured"
+
+
+def _permitted_fallbacks(fallback_routes: object) -> list[str]:
+    if not isinstance(fallback_routes, list):
+        return []
+    return [
+        route["to"]
+        for route in fallback_routes
+        if isinstance(route, dict) and isinstance(route.get("to"), str) and route["to"] != "blocked"
+    ]

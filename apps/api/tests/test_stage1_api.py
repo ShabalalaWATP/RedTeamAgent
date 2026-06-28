@@ -283,8 +283,14 @@ def test_invalid_provider_output_fails_closed(client: TestClient) -> None:
     review = client.post(
         f"/projects/{project.json()['id']}/reviews",
         headers=csrf_headers(auth),
-        json={"title": "Bad schema", "proposal_text": "invalid_schema", "mode": "basic", "focus_chips": []},
+        json={"title": "Bad schema", "proposal_text": "Normal proposal text.", "mode": "basic", "focus_chips": []},
     )
+    source = client.post(
+        f"/reviews/{review.json()['id']}/sources/text",
+        headers=csrf_headers(auth),
+        json={"text": "Evidence contains invalid_schema and must reach the provider prompt."},
+    )
+    assert source.status_code == 200, source.text
     run = client.post(f"/reviews/{review.json()['id']}/runs", headers=csrf_headers(auth))
     assert run.status_code == 200
     failed = client.get(f"/runs/{run.json()['id']}")

@@ -16,6 +16,19 @@ type RunEvent = {
 };
 
 const TERMINAL_STATES = new Set(['completed', 'failed', 'cancelled']);
+const STAGE_LABELS: Record<string, string> = {
+  intake: 'Intake',
+  ingestion: 'Evidence ingestion',
+  framing: 'Review framing',
+  agent_planning: 'Agent planning',
+  specialist_review: 'LLM specialist review',
+  reconciliation: 'Reconciliation',
+  report_composition: 'Report composition',
+  quality_gate: 'Quality gate',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled'
+};
 
 function severityTone(severity: string): 'ok' | 'warn' | 'bad' | 'info' {
   if (severity === 'critical' || severity === 'high') return 'bad';
@@ -28,6 +41,11 @@ function mergeEvent(events: RunEvent[], next: RunEvent) {
   const byId = new Map(events.map((event) => [event.id, event]));
   byId.set(next.id, next);
   return Array.from(byId.values()).sort((left, right) => left.sequence - right.sequence);
+}
+
+function stageLabel(state: string | undefined) {
+  if (!state) return 'Loading';
+  return STAGE_LABELS[state] ?? state;
 }
 
 export function ReportPage() {
@@ -139,6 +157,12 @@ export function ReportPage() {
   };
 
   const canCancel = run ? !TERMINAL_STATES.has(run.state) : false;
+  const latestEvent = events.at(-1);
+  const currentStage = latestEvent?.state ?? run?.state;
+  const emptyTitle = run?.state === 'failed' ? 'Review failed' : 'Report loading';
+  const emptyBody = run?.state === 'failed'
+    ? latestEvent?.message ?? 'The run failed before a report could be created.'
+    : 'Run progress and report data will appear here.';
 
   return (
     <section className="screen">
@@ -149,7 +173,7 @@ export function ReportPage() {
         </div>
         <div className="screen-actions">
           <BackButton fallback="/workflows" />
-          <Status tone={report ? 'ok' : 'info'}>{run?.state ?? 'Loading'}</Status>
+          <Status tone={run?.state === 'failed' ? 'bad' : report ? 'ok' : 'info'}>{stageLabel(run?.state)}</Status>
         </div>
       </div>
       <ErrorState message={error} />
@@ -192,7 +216,7 @@ export function ReportPage() {
                 <p className="muted">{report.methodology}</p>
               </>
             ) : (
-              <EmptyState title="Report loading" body="Run progress and report data will appear here." />
+              <EmptyState title={emptyTitle} body={emptyBody} />
             )}
           </section>
           {report ? <AdvancedReportSections report={report} /> : null}
@@ -200,10 +224,15 @@ export function ReportPage() {
         <aside className="stack">
           <section className="panel stack">
             <h2>Run timeline</h2>
+            <div className="report-reco">
+              <span className="report-reco-label">Current stage</span>
+              <strong>{stageLabel(currentStage)}</strong>
+              {latestEvent?.message ? <p className="muted">{latestEvent.message}</p> : null}
+            </div>
             <ol className="timeline">
               {events.map((event) => (
                 <li key={event.id}>
-                  <strong>{event.state}</strong>
+                  <strong>{stageLabel(event.state)}</strong>
                   <p className="muted">{event.message}</p>
                 </li>
               ))}

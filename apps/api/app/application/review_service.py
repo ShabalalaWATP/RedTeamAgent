@@ -8,6 +8,7 @@ from app.application.model_routing import select_model_route
 from app.application.ports.ingestion import ExternalSourceIngestor
 from app.application.ports.repositories import RepositoryPorts
 from app.application.provenance import context_pack_snapshot
+from app.application.workflow_routing import missing_model_route
 from app.domain.agents import AGENT_LABELS
 from app.domain.enums import ReviewMode, SourceState, WorkspaceRole
 from app.domain.exceptions import AuthorisationError, NotFoundError
@@ -205,13 +206,7 @@ class ReviewService:
         route = select_model_route(self.repo, review.workspace_id, selected_agents)
         fallback_routes = []
         if route is None:
-            fallback_routes.append(
-                {
-                    "from": "configured model profile",
-                    "to": "fake-local",
-                    "reason": "No verified model profile is configured for this workspace.",
-                }
-            )
+            fallback_routes.append(missing_model_route(self.allow_fake_provider))
         diversity_enabled = review.mode == ReviewMode.IN_DEPTH.value
         diversity_routes = _diversity_routes(diversity_enabled, selected_agents, route, self.allow_fake_provider)
         return {

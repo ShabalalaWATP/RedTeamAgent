@@ -283,9 +283,9 @@ describe('RedTeamAgent app flows', () => {
       return jsonResponse({ message: 'unexpected' }, 500);
     });
     renderApp('/runs/run-1');
-    expect((await screen.findAllByText('specialist_review')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('LLM specialist review')).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /cancel run/i }));
-    expect(await screen.findByText('cancelled')).toBeInTheDocument();
+    expect(await screen.findByText('Cancelled')).toBeInTheDocument();
   });
 
   it('shows previous workflows for the signed-in account', async () => {

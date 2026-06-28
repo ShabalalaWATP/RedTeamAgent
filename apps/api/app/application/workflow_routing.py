@@ -75,13 +75,7 @@ class WorkflowRoutingPlanner:
         route = select_model_route(self.repo, review.workspace_id, selected_agents)
         fallback_routes = []
         if route is None:
-            fallback_routes.append(
-                {
-                    "from": "configured model profile",
-                    "to": "fake-local",
-                    "reason": "No verified model profile is configured for this workspace.",
-                }
-            )
+            fallback_routes.append(missing_model_route(self.allow_fake_provider))
         diversity_enabled = review.mode == ReviewMode.IN_DEPTH.value
         diversity_routes = _diversity_routes(diversity_enabled, selected_agents, route, self.allow_fake_provider)
         return {
@@ -121,3 +115,17 @@ def _diversity_routes(
         }
         for agent in selected_agents
     ]
+
+
+def missing_model_route(allow_fake_provider: bool) -> dict[str, str]:
+    if allow_fake_provider:
+        return {
+            "from": "configured model profile",
+            "to": "fake-local",
+            "reason": "No verified model profile is configured for this workspace.",
+        }
+    return {
+        "from": "configured model profile",
+        "to": "blocked",
+        "reason": "No verified production model profile is configured for this workspace.",
+    }

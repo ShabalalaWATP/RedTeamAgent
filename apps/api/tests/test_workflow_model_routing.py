@@ -7,6 +7,34 @@ from tests.conftest import csrf_headers, register_verified
 from tests.test_stage1_api import create_project_review
 
 
+def test_production_run_requires_verified_model_route(client: TestClient) -> None:
+    client.app.dependency_overrides[get_settings] = lambda: Settings(
+        expose_auth_tokens=True,
+        auto_bootstrap_site_owner=True,
+        allow_fake_provider=False,
+    )
+    auth = register_verified(client, "missing-provider-route@example.com")
+    ids = create_project_review(client, auth)
+    source = client.post(
+        f"/reviews/{ids['review_id']}/sources/text",
+        headers=csrf_headers(auth),
+        json={"text": "Evidence is ready but no production provider is configured."},
+    )
+    assert source.status_code == 200
+
+    preflight = client.get(f"/reviews/{ids['review_id']}/preflight")
+    assert preflight.status_code == 200, preflight.text
+    assert preflight.json()["fallback_routes"][0]["to"] == "blocked"
+
+    run = client.post(f"/reviews/{ids['review_id']}/runs", headers=csrf_headers(auth))
+    assert run.status_code == 422
+    assert "Configure and verify a production AI provider" in run.json()["message"]
+
+    workflows = client.get(f"/workspaces/{auth['workspace_id']}/workflows")
+    assert workflows.status_code == 200
+    assert workflows.json() == []
+
+
 def test_saved_provider_route_runs_when_fake_provider_is_disabled(client: TestClient) -> None:
     client.app.dependency_overrides[get_settings] = lambda: Settings(
         expose_auth_tokens=True,
