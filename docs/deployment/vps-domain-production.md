@@ -77,6 +77,7 @@ PUBLIC_APP_URL=https://redteamagent.co.uk
 PRIVILEGED_MFA_REQUIRED=true
 WEBAUTHN_RP_ID=redteamagent.co.uk
 WEBAUTHN_RP_NAME=RedTeamAgent
+WEBAUTHN_ALLOWED_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk
 CAPTCHA_REQUIRED=true
 CAPTCHA_PROVIDER=turnstile
 TURNSTILE_SECRET_KEY=<private-turnstile-secret>

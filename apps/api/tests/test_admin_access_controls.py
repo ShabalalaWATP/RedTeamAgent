@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from tests.conftest import csrf_headers, register_verified
+from tests.conftest import complete_privileged_mfa_for_user, csrf_headers, register_verified
 
 
 def test_auth_response_includes_workspace_owner_role(client: TestClient) -> None:
@@ -66,3 +66,30 @@ def test_workspace_member_cannot_access_admin_settings(client: TestClient) -> No
     assert member_client.get(f"/enterprise/workspaces/{workspace_id}/governance").status_code == 403
     assert member_client.get(f"/enterprise/workspaces/{workspace_id}/members").status_code == 403
     assert member_client.get(f"/enterprise/workspaces/{workspace_id}/model-comparison").status_code == 403
+
+
+def test_site_admin_cannot_manage_provider_settings_for_personal_workspace(client: TestClient) -> None:
+    owner = register_verified(client, "provider-owner@example.com")
+    admin_client = TestClient(client.app)
+    admin = register_verified(admin_client, "provider-admin@example.com")
+    promoted = client.put(
+        f"/site-admin/users/{admin['user_id']}",
+        headers=csrf_headers(owner),
+        json={"account_type": "admin", "admin_scope": "all"},
+    )
+    assert promoted.status_code == 200, promoted.text
+    complete_privileged_mfa_for_user(admin["user_id"])
+
+    created = admin_client.post(
+        "/providers/connections",
+        headers=csrf_headers(admin),
+        json={
+            "workspace_id": admin["workspace_id"],
+            "adapter": "fake",
+            "name": "Blocked admin fake",
+            "config": {"scenario": "valid"},
+            "credentials": {},
+        },
+    )
+    assert created.status_code == 403
+    assert admin_client.get(f"/providers/connections?workspace_id={admin['workspace_id']}").status_code == 403

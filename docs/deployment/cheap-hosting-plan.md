@@ -81,6 +81,7 @@ Edit `.env.production`:
 - Keep `PRIVILEGED_MFA_REQUIRED=true` in production so Owner and Admin accounts must use authenticator-app MFA and passkeys.
 - Set `WEBAUTHN_RP_ID` to the registrable app domain, for example `redteamagent.co.uk`.
 - Set `WEBAUTHN_RP_NAME` to the product name users should see when creating a passkey.
+- Set `WEBAUTHN_ALLOWED_ORIGINS` to every HTTPS origin that can serve the app, for example `https://redteamagent.co.uk,https://www.redteamagent.co.uk`.
 - Set `MAIL_DELIVERY=smtp`.
 - Set `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `SMTP_STARTTLS`.
 

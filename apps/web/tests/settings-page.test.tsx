@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 describe('admin settings route', () => {
-  it('renders AI provider setup and collapsed admin controls as one admin view', async () => {
+  it('renders AI provider setup for workspace owners', async () => {
     storeAuth();
     mockSettingsEndpoints();
     renderApp('/settings');
@@ -60,14 +60,17 @@ describe('admin settings route', () => {
     renderApp('/settings');
 
     expect(await screen.findByRole('heading', { name: /site administration/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /owners/i })).toBeInTheDocument();
+    expect(screen.getByText(/protected owner session/i)).toBeInTheDocument();
     expect(screen.getByText('member@example.com')).toBeInTheDocument();
     expect(screen.getByText(/3 runs/i)).toBeInTheDocument();
     expect(screen.getByText('203.0.113.9')).toBeInTheDocument();
+    expect(screen.getByText(/unique ips/i)).toBeInTheDocument();
     expect(screen.queryByText(/secret project content/i)).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getAllByLabelText(/account status/i)[1], 'suspended');
-    await user.type(screen.getAllByLabelText(/login message/i)[1], 'Manual review required.');
-    await user.click(screen.getAllByRole('button', { name: /^save$/i })[1]);
+    await user.selectOptions(screen.getAllByLabelText(/account status/i)[0], 'suspended');
+    await user.type(screen.getAllByLabelText(/login message/i)[0], 'Manual review required.');
+    await user.click(screen.getAllByRole('button', { name: /^save$/i })[0]);
 
     expect(await screen.findByText(/account updated/i)).toBeInTheDocument();
   });
@@ -87,21 +90,22 @@ describe('admin settings route', () => {
     await user.click(managedUser);
     expect(managedUser).not.toBeChecked();
     await user.click(managedUser);
-    await user.click(screen.getAllByRole('button', { name: /^save$/i })[1]);
+    await user.click(screen.getAllByRole('button', { name: /^save$/i })[0]);
 
     expect(await screen.findByText(/account updated/i)).toBeInTheDocument();
   });
 
   it('lets scoped admins manage assigned users without role controls', async () => {
-    storeAuth({ accountType: 'admin', userId: 'admin-1' });
+    storeAuth({ accountType: 'admin', userId: 'admin-1', workspaceRole: 'member' });
     const user = userEvent.setup();
     mockSettingsEndpoints({ siteAdmin: true, scopedAdmin: true });
     renderApp('/settings');
 
     expect(await screen.findByText('member@example.com')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'AI setup' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/account type/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/anonymous/i)).toBeInTheDocument();
-    expect(screen.getByText(/registered user/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/anonymous/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/registered user/i).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: /^refresh$/i }));
     await user.click(screen.getByRole('button', { name: /^suspend$/i }));
@@ -110,7 +114,6 @@ describe('admin settings route', () => {
     await user.click(screen.getByRole('button', { name: /^ban$/i }));
     expect(await screen.findByText(/account updated/i)).toBeInTheDocument();
   });
-
   it('lets owners delete regular users', async () => {
     storeAuth({ accountType: 'owner', userId: 'owner-1' });
     const user = userEvent.setup();
@@ -121,7 +124,6 @@ describe('admin settings route', () => {
     await user.click(screen.getAllByRole('button', { name: /^delete$/i })[0]);
     expect(await screen.findByText(/account deleted/i)).toBeInTheDocument();
   });
-
   it('surfaces site-admin save and delete failures', async () => {
     storeAuth({ accountType: 'owner', userId: 'owner-1' });
     const user = userEvent.setup();
@@ -129,7 +131,7 @@ describe('admin settings route', () => {
     renderApp('/settings');
 
     expect(await screen.findByText('member@example.com')).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: /^save$/i })[1]);
+    await user.click(screen.getAllByRole('button', { name: /^save$/i })[0]);
     expect(await screen.findByRole('alert')).toHaveTextContent('save failed');
 
     cleanup();

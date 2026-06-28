@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     mfa_change_rate_limit_per_minute: int = Field(default=5, ge=1)
     webauthn_rp_id: str = ""
     webauthn_rp_name: str = "RedTeamAgent"
+    webauthn_allowed_origins: str = ""
     expose_auth_tokens: bool = False
     auto_bootstrap_site_owner: bool = False
     site_owner_bootstrap_token: str = ""

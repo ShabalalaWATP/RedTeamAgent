@@ -37,8 +37,7 @@ class ProviderService:
         ]
 
     def create_connection(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
-        role = self._role(user_id, workspace_id)
-        require_admin(role)
+        self._require_provider_admin(user_id, workspace_id)
         self._validate_governance(workspace_id, data["adapter"], None, "provider_admin", user_id)
         adapter = self._adapter(data["adapter"])
         result = adapter.test_connection(data.get("config", {}), data.get("credentials", {}))
@@ -58,19 +57,19 @@ class ProviderService:
         return self._connection_view(connection)
 
     def list_connections(self, user_id: str, workspace_id: str) -> list[dict[str, Any]]:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         return [self._connection_view(item) for item in self.repo.list_provider_connections(workspace_id)]
 
     def test_connection(self, user_id: str, connection_id: str) -> dict[str, Any]:
         connection = self.repo.get_provider_connection(connection_id)
         if connection is None:
             raise NotFoundError("Provider connection not found.")
-        require_admin(self._role(user_id, connection.workspace_id))
+        self._require_provider_admin(user_id, connection.workspace_id)
         adapter = self._adapter(connection.adapter)
         return adapter.test_connection(connection.config, self._credentials(connection.encrypted_credentials))
 
     def preview_models(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> list[dict[str, Any]]:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         adapter = self._adapter(data["adapter"])
         self._validate_governance(workspace_id, data["adapter"], None, "provider_admin", user_id)
         self._validate_required_fields(adapter, data.get("config", {}), data.get("credentials", {}))
@@ -91,7 +90,7 @@ class ProviderService:
         connection = self.repo.get_provider_connection(connection_id)
         if connection is None:
             raise NotFoundError("Provider connection not found.")
-        require_admin(self._role(user_id, connection.workspace_id))
+        self._require_provider_admin(user_id, connection.workspace_id)
         adapter = self._adapter(connection.adapter)
         synced: list[Any] = []
         for item in adapter.catalogue_models(connection.config, self._credentials(connection.encrypted_credentials)):
@@ -137,7 +136,7 @@ class ProviderService:
         return synced
 
     def create_model(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         connection = self.repo.get_provider_connection(data["provider_connection_id"])
         if connection is None or connection.workspace_id != workspace_id:
             raise NotFoundError("Provider connection not found.")
@@ -154,14 +153,14 @@ class ProviderService:
         return model
 
     def list_models(self, user_id: str, workspace_id: str) -> list[Any]:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         return self.repo.list_models(workspace_id)
 
     def probe_model(self, user_id: str, model_id: str) -> Any:
         model = self.repo.get_model(model_id)
         if model is None:
             raise NotFoundError("Model not found.")
-        require_admin(self._role(user_id, model.workspace_id))
+        self._require_provider_admin(user_id, model.workspace_id)
         connection = self.repo.get_provider_connection(model.provider_connection_id)
         if connection is None or connection.workspace_id != model.workspace_id:
             raise NotFoundError("Provider connection not found.")
@@ -180,7 +179,7 @@ class ProviderService:
         return next_model
 
     def create_profile(self, user_id: str, workspace_id: str, data: dict[str, Any]) -> Any:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         model = self.repo.get_model(data["model_record_id"])
         if model is None or model.workspace_id != workspace_id:
             raise NotFoundError("Model not found.")
@@ -190,7 +189,7 @@ class ProviderService:
         return profile
 
     def list_profiles(self, user_id: str, workspace_id: str) -> list[Any]:
-        require_admin(self._role(user_id, workspace_id))
+        self._require_provider_admin(user_id, workspace_id)
         return self.repo.list_profiles(workspace_id)
 
     def _adapter(self, key: str) -> ProviderAdapter:
@@ -224,6 +223,14 @@ class ProviderService:
         if role is None:
             raise AuthorisationError("Workspace access denied.")
         return WorkspaceRole(role)
+
+    def _require_provider_admin(self, user_id: str, workspace_id: str) -> None:
+        user = self.repo.get_user(user_id)
+        if user is None:
+            raise AuthorisationError("Workspace access denied.")
+        if getattr(user, "account_type", "user") == "admin":
+            raise AuthorisationError("Provider administration is restricted to owners and workspace administrators.")
+        require_admin(self._role(user_id, workspace_id))
 
     def _credentials(self, sealed_credentials: dict[str, str]) -> dict[str, str]:
         try:

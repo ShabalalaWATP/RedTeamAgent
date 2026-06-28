@@ -11,6 +11,7 @@ from webauthn import (  # type: ignore[import-untyped]
     verify_registration_response,
 )
 from webauthn.helpers import base64url_to_bytes, bytes_to_base64url, options_to_json  # type: ignore[import-untyped]
+from webauthn.helpers.exceptions import WebAuthnException  # type: ignore[import-untyped]
 from webauthn.helpers.structs import (  # type: ignore[import-untyped]
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialDescriptor,
@@ -24,9 +25,16 @@ PRIVILEGED_ACCOUNT_TYPES = {"owner", "admin"}
 
 
 class PasskeyService:
-    def __init__(self, repo: Any, public_app_url: str, rp_id: str, rp_name: str) -> None:
+    def __init__(
+        self,
+        repo: Any,
+        public_app_url: str,
+        rp_id: str,
+        rp_name: str,
+        allowed_origins: str = "",
+    ) -> None:
         self.repo = repo
-        self.origin, self.rp_id = _origin_and_rp_id(public_app_url, rp_id)
+        self.origins, self.rp_id = _origins_and_rp_id(public_app_url, rp_id, allowed_origins)
         self.rp_name = rp_name
 
     def requirements(self, user_id: str, session_id: str, account_type: str) -> dict[str, bool]:
@@ -98,13 +106,16 @@ class PasskeyService:
         challenge = self.repo.get_session_passkey_challenge(session_id, "registration")
         if not challenge:
             raise AuthenticationError("Passkey registration expired. Try again.")
-        verification = verify_registration_response(
-            credential=credential,
-            expected_challenge=base64url_to_bytes(challenge),
-            expected_rp_id=self.rp_id,
-            expected_origin=self.origin,
-            require_user_verification=True,
-        )
+        try:
+            verification = verify_registration_response(
+                credential=credential,
+                expected_challenge=base64url_to_bytes(challenge),
+                expected_rp_id=self.rp_id,
+                expected_origin=self.origins,
+                require_user_verification=True,
+            )
+        except WebAuthnException as exc:
+            raise AuthenticationError("Passkey registration failed. Try again from this site and device.") from exc
         credential_id = bytes_to_base64url(verification.credential_id)
         if self.repo.get_passkey_by_credential_id(credential_id):
             raise ConflictError("This passkey is already registered.")
@@ -150,15 +161,18 @@ class PasskeyService:
         passkey = self.repo.get_passkey_by_credential_id(_credential_id(credential))
         if passkey is None or passkey.user_id != user_id:
             raise AuthenticationError("Passkey verification failed.")
-        verification = verify_authentication_response(
-            credential=credential,
-            expected_challenge=base64url_to_bytes(challenge),
-            expected_rp_id=self.rp_id,
-            expected_origin=self.origin,
-            credential_public_key=base64url_to_bytes(passkey.public_key),
-            credential_current_sign_count=passkey.sign_count,
-            require_user_verification=True,
-        )
+        try:
+            verification = verify_authentication_response(
+                credential=credential,
+                expected_challenge=base64url_to_bytes(challenge),
+                expected_rp_id=self.rp_id,
+                expected_origin=self.origins,
+                credential_public_key=base64url_to_bytes(passkey.public_key),
+                credential_current_sign_count=passkey.sign_count,
+                require_user_verification=True,
+            )
+        except WebAuthnException as exc:
+            raise AuthenticationError("Passkey verification failed. Try again from this site and device.") from exc
         if bytes_to_base64url(verification.credential_id) != passkey.credential_id:
             raise AuthenticationError("Passkey verification failed.")
         self.repo.update_passkey_usage(passkey.id, verification.new_sign_count)
@@ -184,11 +198,33 @@ class PasskeyService:
         self.repo.commit()
 
 
-def _origin_and_rp_id(public_app_url: str, configured_rp_id: str) -> tuple[str, str]:
-    parsed = urlparse(public_app_url)
+def _origins_and_rp_id(public_app_url: str, configured_rp_id: str, configured_origins: str) -> tuple[list[str], str]:
+    public_origin, public_hostname = _origin_and_hostname(public_app_url, "PUBLIC_APP_URL")
+    rp_id = configured_rp_id.strip() or public_hostname
+    if not _hostname_matches_rp_id(public_hostname, rp_id):
+        raise RuntimeError("PUBLIC_APP_URL must use the WebAuthn RP ID domain or a subdomain.")
+    origins = [public_origin]
+    for value in configured_origins.split(","):
+        clean = value.strip()
+        if not clean:
+            continue
+        origin, hostname = _origin_and_hostname(clean, "WEBAUTHN_ALLOWED_ORIGINS")
+        if not _hostname_matches_rp_id(hostname, rp_id):
+            raise RuntimeError("WEBAUTHN_ALLOWED_ORIGINS must use the WebAuthn RP ID domain or a subdomain.")
+        if origin not in origins:
+            origins.append(origin)
+    return origins, rp_id
+
+
+def _origin_and_hostname(url: str, label: str) -> tuple[str, str]:
+    parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc or not parsed.hostname:
-        raise RuntimeError("PUBLIC_APP_URL must be an absolute URL for passkey support.")
-    return f"{parsed.scheme}://{parsed.netloc}", configured_rp_id.strip() or parsed.hostname
+        raise RuntimeError(f"{label} must contain absolute URLs for passkey support.")
+    return f"{parsed.scheme}://{parsed.netloc}", parsed.hostname
+
+
+def _hostname_matches_rp_id(hostname: str, rp_id: str) -> bool:
+    return hostname == rp_id or hostname.endswith(f".{rp_id}")
 
 
 def _totp_enabled(repo: Any, user_id: str) -> bool:

@@ -107,6 +107,54 @@
   gap: 18px;
 }
 
+.site-admin-disclosure summary h2,
+.site-visits-disclosure summary h2 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+.site-admin-toolbar {
+  align-items: start;
+}
+
+.site-admin-toolbar p {
+  margin: 0;
+}
+
+.account-role-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.account-role-section {
+  display: grid;
+  gap: 10px;
+}
+
+.account-role-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.account-role-header h3 {
+  margin: 0;
+}
+
+.account-role-header span {
+  min-width: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  text-align: center;
+}
+
 .site-user-grid {
   display: grid;
   gap: 12px;
@@ -154,6 +202,25 @@
   margin: 0;
 }
 
+.protected-owner-note {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field-bg);
+  padding: 12px;
+}
+
+.protected-owner-note span {
+  display: grid;
+  gap: 3px;
+}
+
+.protected-owner-note small {
+  color: var(--muted);
+}
+
 .site-admin-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -180,6 +247,35 @@
 .site-visits {
   display: grid;
   gap: 8px;
+}
+
+.visit-insights {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+}
+
+.visit-insights > div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  padding: 12px;
+}
+
+.visit-insights strong {
+  font-size: 1.35rem;
+}
+
+.visit-insights span {
+  color: var(--muted);
+}
+
+.visit-insights .visit-insight-wide {
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
 }
 
 .site-visits h3 {

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 from webauthn.helpers import bytes_to_base64url
+from webauthn.helpers.exceptions import InvalidAuthenticationResponse
 
 from app.application.passkey_service import PasskeyService
 from app.domain.exceptions import AuthenticationError, ConflictError, NotFoundError, ValidationFailure
@@ -132,6 +133,39 @@ def test_passkey_service_rejects_duplicate_registration(monkeypatch: pytest.Monk
             {"rawId": "ignored", "response": {"transports": "internal"}},
             None,
         )
+
+
+def test_passkey_service_accepts_origin_aliases_and_wraps_library_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = FakePasskeyRepo()
+    service = PasskeyService(
+        repo,
+        "https://redteamagent.co.uk",
+        "redteamagent.co.uk",
+        "RedTeamAgent",
+        "https://www.redteamagent.co.uk",
+    )
+    repo.passkeys.append(_fake_passkey(repo, "passkey-1", repo.user.id))
+    repo.challenges["authentication"] = bytes_to_base64url(b"challenge")
+    seen: dict[str, object] = {}
+
+    def verified_authentication(**kwargs: object) -> SimpleNamespace:
+        seen["expected_origin"] = kwargs["expected_origin"]
+        return SimpleNamespace(credential_id=b"passkey-1", new_sign_count=2)
+
+    monkeypatch.setattr("app.application.passkey_service.verify_authentication_response", verified_authentication)
+    service.verify_authentication(repo.user.id, repo.session.id, {"rawId": bytes_to_base64url(b"passkey-1")})
+
+    assert seen["expected_origin"] == ["https://redteamagent.co.uk", "https://www.redteamagent.co.uk"]
+
+    repo.challenges["authentication"] = bytes_to_base64url(b"challenge")
+    monkeypatch.setattr(
+        "app.application.passkey_service.verify_authentication_response",
+        lambda **_: (_ for _ in ()).throw(InvalidAuthenticationResponse("bad origin")),
+    )
+    with pytest.raises(AuthenticationError, match="Passkey verification failed"):
+        service.verify_authentication(repo.user.id, repo.session.id, {"rawId": bytes_to_base64url(b"passkey-1")})
 
 
 def test_passkey_service_keeps_registration_without_transport_list(monkeypatch: pytest.MonkeyPatch) -> None:

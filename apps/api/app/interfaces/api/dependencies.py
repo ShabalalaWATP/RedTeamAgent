@@ -112,7 +112,13 @@ def passkey_service(
     repo: Annotated[SqlRepository, Depends(get_repo)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> PasskeyService:
-    return PasskeyService(repo, settings.public_app_url, settings.webauthn_rp_id, settings.webauthn_rp_name)
+    return PasskeyService(
+        repo,
+        settings.public_app_url,
+        settings.webauthn_rp_id,
+        settings.webauthn_rp_name,
+        settings.webauthn_allowed_origins,
+    )
 
 
 def auth_service(

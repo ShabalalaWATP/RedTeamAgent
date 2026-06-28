@@ -163,7 +163,11 @@ export function AccountSecurityPanel() {
 
   const passkeyRegistered = Boolean(passkeyStatus?.registered);
   const passkeyVerified = Boolean(passkeyStatus?.passkey_verified);
+  const passkeyStatusLabel = passkeyRegistered
+    ? passkeyVerified ? 'Verified for this login' : 'Registered, verify this login'
+    : 'Not registered';
   const canDisableMfa = enabled && !required;
+  const lastRequiredPasskey = required && Boolean(passkeyStatus?.count && passkeyStatus.count <= 1);
 
   return (
     <section className="settings-block stack">
@@ -239,8 +243,14 @@ export function AccountSecurityPanel() {
         <div className="security-method">
           <h3><Fingerprint size={18} /> Passkeys</h3>
           <Status tone={passkeyRegistered ? passkeyVerified ? 'ok' : 'warn' : required ? 'warn' : 'info'}>
-            {passkeyRegistered ? passkeyVerified ? 'Verified' : 'Registered' : 'Not registered'}
+            {passkeyStatusLabel}
           </Status>
+          {passkeyRegistered && !passkeyVerified ? (
+            <p className="muted">
+              This passkey is saved. Verify it once for this login to continue. If verification keeps failing,
+              add a replacement passkey from this device first.
+            </p>
+          ) : null}
           <Field label="Passkey name" hint={platformAvailable ? 'Platform authenticator available on this device.' : undefined}>
             <input
               value={passkeyName}
@@ -271,13 +281,17 @@ export function AccountSecurityPanel() {
                     type="button"
                     variant="secondary"
                     onClick={() => void removePasskey(item.id)}
-                    disabled={required && passkeyStatus.count <= 1}
+                    disabled={lastRequiredPasskey}
+                    title={lastRequiredPasskey ? 'Add another passkey before removing this one.' : undefined}
                   >
                     <Trash2 size={16} /> Remove
                   </Button>
                 </div>
               ))}
             </div>
+          ) : null}
+          {lastRequiredPasskey ? (
+            <p className="muted">Owners and admins must keep at least one passkey. Add another passkey before removing this one.</p>
           ) : null}
         </div>
       </div>
@@ -288,5 +302,8 @@ export function AccountSecurityPanel() {
 function passkeyError(err: unknown) {
   const message = err instanceof Error ? err.message : '';
   if (message.toLowerCase().includes('notallowed')) return 'Passkey action was cancelled or timed out.';
+  if (message.toLowerCase().includes('request could not be completed')) {
+    return 'Passkey verification could not be completed. Use the same domain and passkey provider you registered with.';
+  }
   return message || 'Passkey action failed. Try again.';
 }

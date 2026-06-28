@@ -90,6 +90,7 @@ describe('MFA passkeys', () => {
     const user = userEvent.setup();
     renderApp('/settings');
 
+    expect(await screen.findByText(/registered, verify this login/i)).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
 
     expect(startAuthentication).toHaveBeenCalled();
@@ -107,6 +108,16 @@ describe('MFA passkeys', () => {
 
     expect(deleted).toEqual(['passkey-1']);
     expect(await screen.findByText(/passkey removed/i)).toBeInTheDocument();
+  });
+
+  it('explains why the last required passkey cannot be removed', async () => {
+    storeAuth({ accountType: 'owner' });
+    mockSecurityEndpoints({ required: true, mfaEnabled: true, passkeyRegistered: true, passkeyVerified: false });
+    renderApp('/settings');
+
+    expect(await screen.findByRole('button', { name: /remove/i })).toBeDisabled();
+    expect(screen.getByText(/owners and admins must keep at least one passkey/i)).toBeInTheDocument();
+    expect(screen.getByText(/add a replacement passkey from this device first/i)).toBeInTheDocument();
   });
 
   it('shows protected privileged MFA state once authenticator and passkey are verified', async () => {
@@ -141,6 +152,20 @@ describe('MFA passkeys', () => {
     await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('verification failed');
+  });
+
+  it('explains generic browser passkey failures', async () => {
+    vi.mocked(startAuthentication).mockRejectedValue(new Error('The request could not be completed.'));
+    storeAuth();
+    mockSecurityEndpoints({ passkeyRegistered: true, passkeyVerified: false });
+    const user = userEvent.setup();
+    renderApp('/settings');
+
+    await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Passkey verification could not be completed. Use the same domain and passkey provider you registered with.'
+    );
   });
 
   it('surfaces unsupported passkey browsers without calling WebAuthn', async () => {
