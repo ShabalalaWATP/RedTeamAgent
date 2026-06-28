@@ -42,6 +42,7 @@ def test_passkey_service_registers_and_verifies_session(monkeypatch: pytest.Monk
 
     auth_options = service.authentication_options(repo.user.id, repo.session.id)
     assert auth_options["userVerification"] == "required"
+    assert auth_options["allowCredentials"][0]["transports"] == ["internal"]
     assert repo.challenges["authentication"]
 
     monkeypatch.setattr(
@@ -183,6 +184,18 @@ def test_passkey_service_accepts_origin_aliases_and_wraps_library_errors(
         lambda **_: (_ for _ in ()).throw(InvalidAuthenticationResponse("bad origin")),
     )
     with pytest.raises(AuthenticationError, match="Passkey verification failed"):
+        service.verify_authentication(repo.user.id, repo.session.id, {"rawId": bytes_to_base64url(b"passkey-1")})
+
+    repo.challenges["authentication"] = bytes_to_base64url(b"challenge")
+    monkeypatch.setattr(
+        "app.application.passkey_service.verify_authentication_response",
+        lambda **_: (_ for _ in ()).throw(
+            InvalidAuthenticationResponse(
+                "User verification is required but user was not verified during authentication"
+            )
+        ),
+    )
+    with pytest.raises(AuthenticationError, match="Windows Hello"):
         service.verify_authentication(repo.user.id, repo.session.id, {"rawId": bytes_to_base64url(b"passkey-1")})
 
 

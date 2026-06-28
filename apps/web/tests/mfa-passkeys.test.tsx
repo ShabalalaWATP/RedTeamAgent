@@ -12,7 +12,11 @@ import { jsonResponse, mockFetch, renderApp, storeAuth } from './test-utils';
 vi.mock('@simplewebauthn/browser', () => ({
   browserSupportsWebAuthn: vi.fn(() => true),
   platformAuthenticatorIsAvailable: vi.fn(() => Promise.resolve(true)),
-  startAuthentication: vi.fn(async () => ({ id: 'auth-credential', rawId: 'auth-credential', response: {} })),
+  startAuthentication: vi.fn(async () => ({
+    id: 'auth-credential',
+    rawId: 'auth-credential',
+    response: { authenticatorData: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAA' }
+  })),
   startRegistration: vi.fn(async () => ({ id: 'new-credential', rawId: 'new-credential', response: {} }))
 }));
 
@@ -23,7 +27,7 @@ beforeEach(() => {
   vi.mocked(startAuthentication).mockResolvedValue({
     id: 'auth-credential',
     rawId: 'auth-credential',
-    response: {},
+    response: { authenticatorData: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAA' },
   } as Awaited<ReturnType<typeof startAuthentication>>);
   vi.mocked(startRegistration).mockResolvedValue({
     id: 'new-credential',
@@ -110,6 +114,17 @@ describe('MFA passkeys', () => {
     expect(await screen.findByText(/passkey removed/i)).toBeInTheDocument();
   });
 
+  it('surfaces passkey removal failures', async () => {
+    storeAuth();
+    mockSecurityEndpoints({ passkeyRegistered: true, deleteError: true });
+    const user = userEvent.setup();
+    renderApp('/settings');
+
+    await user.click(await screen.findByRole('button', { name: /remove/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Passkey could not be removed.');
+  });
+
   it('explains why the last required passkey cannot be removed', async () => {
     storeAuth({ accountType: 'owner' });
     mockSecurityEndpoints({ required: true, mfaEnabled: true, passkeyRegistered: true, passkeyVerified: false });
@@ -152,6 +167,22 @@ describe('MFA passkeys', () => {
     await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('verification failed');
+  });
+
+  it('explains passkey responses without device verification', async () => {
+    vi.mocked(startAuthentication).mockResolvedValue({
+      id: 'auth-credential',
+      rawId: 'auth-credential',
+      response: { authenticatorData: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+    } as Awaited<ReturnType<typeof startAuthentication>>);
+    storeAuth();
+    mockSecurityEndpoints({ passkeyRegistered: true, passkeyVerified: false });
+    const user = userEvent.setup();
+    renderApp('/settings');
+
+    await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Passkey device verification was not completed.');
   });
 
   it('explains generic browser passkey failures', async () => {
@@ -235,6 +266,7 @@ function mockSecurityEndpoints(
     passkeyRegistered?: boolean;
     passkeyVerified?: boolean;
     statusError?: boolean;
+    deleteError?: boolean;
   } = {},
   deleted: string[] = []
 ) {
@@ -263,6 +295,7 @@ function mockSecurityEndpoints(
     if (path === '/auth/passkeys/authentication/options') return jsonResponse({ options: { challenge: 'auth' } });
     if (path === '/auth/passkeys/authentication/verify') return jsonResponse(null, 204);
     if (path.startsWith('/auth/passkeys/') && init?.method === 'DELETE') {
+      if (options.deleteError) return jsonResponse({ message: 'Passkey could not be removed.' }, 409);
       deleted.push(path.split('/').pop() ?? '');
       return jsonResponse(null, 204);
     }

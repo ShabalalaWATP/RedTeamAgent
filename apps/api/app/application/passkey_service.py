@@ -15,6 +15,7 @@ from webauthn.helpers import base64url_to_bytes, bytes_to_base64url, options_to_
 from webauthn.helpers.exceptions import WebAuthnException  # type: ignore[import-untyped]
 from webauthn.helpers.structs import (  # type: ignore[import-untyped]
     AuthenticatorSelectionCriteria,
+    AuthenticatorTransport,
     PublicKeyCredentialDescriptor,
     ResidentKeyRequirement,
     UserVerificationRequirement,
@@ -87,7 +88,7 @@ class PasskeyService:
                 user_verification=UserVerificationRequirement.REQUIRED,
             ),
             exclude_credentials=[
-                PublicKeyCredentialDescriptor(id=base64url_to_bytes(item.credential_id))
+                _passkey_descriptor(item)
                 for item in existing_passkeys
             ] if not recovery_registration else [],
         )
@@ -145,7 +146,7 @@ class PasskeyService:
         options = generate_authentication_options(
             rp_id=self.rp_id,
             allow_credentials=[
-                PublicKeyCredentialDescriptor(id=base64url_to_bytes(item.credential_id)) for item in passkeys
+                _passkey_descriptor(item) for item in passkeys
             ],
             user_verification=UserVerificationRequirement.REQUIRED,
         )
@@ -180,14 +181,15 @@ class PasskeyService:
                 require_user_verification=True,
             )
         except WebAuthnException as exc:
+            detail = str(exc)
             self.repo.audit(
                 None,
                 user_id,
                 "auth.passkey_verification_failed",
-                {"reason": type(exc).__name__, "detail": str(exc)[:240], "passkey_id": passkey.id},
+                {"reason": type(exc).__name__, "detail": detail[:240], "passkey_id": passkey.id},
             )
             self.repo.commit()
-            raise AuthenticationError("Passkey verification failed. Try again from this site and device.") from exc
+            raise AuthenticationError(_authentication_error_message(detail)) from exc
         if bytes_to_base64url(verification.credential_id) != passkey.credential_id:
             self.repo.audit(None, user_id, "auth.passkey_verification_failed", {"reason": "credential_mismatch"})
             self.repo.commit()
@@ -248,6 +250,36 @@ def _registration_user_handle(user_id: str, session_id: str, recovery_registrati
     if recovery_registration:
         return sha256(f"{user_id}:passkey-recovery:{session_id}".encode()).digest()
     return user_id.encode()
+
+
+def _passkey_descriptor(passkey: Any) -> PublicKeyCredentialDescriptor:
+    return PublicKeyCredentialDescriptor(
+        id=base64url_to_bytes(passkey.credential_id),
+        transports=_authenticator_transports(getattr(passkey, "transports", None)),
+    )
+
+
+def _authenticator_transports(values: object) -> list[AuthenticatorTransport] | None:
+    if not isinstance(values, list):
+        return None
+    transports: list[AuthenticatorTransport] = []
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        try:
+            transports.append(AuthenticatorTransport(value))
+        except ValueError:
+            continue
+    return transports or None
+
+
+def _authentication_error_message(detail: str) -> str:
+    if "User verification is required" in detail and "not verified" in detail:
+        return (
+            "Passkey verification needs Windows Hello, device PIN, fingerprint, or face confirmation. "
+            "Try again and approve the device verification prompt."
+        )
+    return "Passkey verification failed. Try again from this site and device."
 
 
 def _totp_enabled(repo: Any, user_id: str) -> bool:
