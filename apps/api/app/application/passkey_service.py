@@ -17,6 +17,7 @@ from webauthn.helpers.structs import (  # type: ignore[import-untyped]
     AuthenticatorSelectionCriteria,
     AuthenticatorTransport,
     PublicKeyCredentialDescriptor,
+    PublicKeyCredentialHint,
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
@@ -87,6 +88,7 @@ class PasskeyService:
                 resident_key=ResidentKeyRequirement.PREFERRED,
                 user_verification=UserVerificationRequirement.REQUIRED,
             ),
+            hints=[PublicKeyCredentialHint.CLIENT_DEVICE],
             exclude_credentials=[
                 _passkey_descriptor(item)
                 for item in existing_passkeys
@@ -157,7 +159,9 @@ class PasskeyService:
         )
         self.repo.audit(None, user_id, "auth.passkey_authentication_started", {})
         self.repo.commit()
-        return json.loads(options_to_json(options))
+        response = json.loads(options_to_json(options))
+        response["hints"] = [PublicKeyCredentialHint.CLIENT_DEVICE.value]
+        return response
 
     def verify_authentication(self, user_id: str, session_id: str, credential: dict[str, Any]) -> None:
         challenge = self.repo.get_session_passkey_challenge(session_id, "authentication")
@@ -270,6 +274,8 @@ def _authenticator_transports(values: object) -> list[AuthenticatorTransport] | 
             transports.append(AuthenticatorTransport(value))
         except ValueError:
             continue
+    if AuthenticatorTransport.INTERNAL in transports:
+        return [AuthenticatorTransport.INTERNAL]
     return transports or None
 
 

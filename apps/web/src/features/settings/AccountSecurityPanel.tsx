@@ -5,7 +5,6 @@ import {
   startRegistration
 } from '@simplewebauthn/browser';
 import type {
-  AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON
 } from '@simplewebauthn/browser';
@@ -148,11 +147,6 @@ export function AccountSecurityPanel() {
       const credential = await startAuthentication({
         optionsJSON: options as unknown as PublicKeyCredentialRequestOptionsJSON
       });
-      if (!passkeyUserVerified(credential)) {
-        throw new Error(
-          'Passkey device verification was not completed. Try again and approve Windows Hello, device PIN, fingerprint, or face verification.'
-        );
-      }
       await api.verifyPasskeyAuthentication(auth!.csrfToken, credential);
       setMessage('Passkey verified for this session.');
       await refreshSecurityState();
@@ -273,19 +267,19 @@ export function AccountSecurityPanel() {
             />
           </Field>
           <div className="button-row">
+            {passkeyRegistered && !passkeyVerified ? (
+              <Button type="button" variant="primary" onClick={verifyPasskey} disabled={passkeyBusy}>
+                <Fingerprint size={16} /> Verify passkey
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant={passkeyRegistered ? 'secondary' : 'primary'}
               onClick={registerPasskey}
               disabled={passkeyBusy}
             >
-              <Fingerprint size={16} /> Add passkey
+              <Fingerprint size={16} /> {passkeyRegistered ? 'Add replacement' : 'Add passkey'}
             </Button>
-            {passkeyRegistered && !passkeyVerified ? (
-              <Button type="button" variant="primary" onClick={verifyPasskey} disabled={passkeyBusy}>
-                <Fingerprint size={16} /> Verify passkey
-              </Button>
-            ) : null}
           </div>
           {passkeyStatus?.credentials.length ? (
             <div className="passkey-list">
@@ -327,17 +321,4 @@ function passkeyError(err: unknown) {
     return 'Passkey verification could not be completed. Use the same domain and passkey provider you registered with.';
   }
   return message || 'Passkey action failed. Try again.';
-}
-
-function passkeyUserVerified(credential: AuthenticationResponseJSON) {
-  const data = base64UrlToBytes(credential.response.authenticatorData);
-  const flags = data[32] ?? 0;
-  return (flags & 0x04) === 0x04;
-}
-
-function base64UrlToBytes(value: string) {
-  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  const binary = window.atob(padded);
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }

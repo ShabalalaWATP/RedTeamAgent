@@ -16,6 +16,7 @@ def test_passkey_service_registers_and_verifies_session(monkeypatch: pytest.Monk
 
     options = service.registration_options(repo.user, repo.session.id)
     assert options["rp"]["id"] == "redteamagent.co.uk"
+    assert options["hints"] == ["client-device"]
     assert repo.challenges["registration"]
 
     monkeypatch.setattr(
@@ -43,6 +44,7 @@ def test_passkey_service_registers_and_verifies_session(monkeypatch: pytest.Monk
     auth_options = service.authentication_options(repo.user.id, repo.session.id)
     assert auth_options["userVerification"] == "required"
     assert auth_options["allowCredentials"][0]["transports"] == ["internal"]
+    assert auth_options["hints"] == ["client-device"]
     assert repo.challenges["authentication"]
 
     monkeypatch.setattr(
@@ -152,6 +154,18 @@ def test_registration_options_allow_replacement_before_session_verification() ->
 
     assert normal_options["excludeCredentials"] == [{"id": bytes_to_base64url(b"passkey-1"), "type": "public-key"}]
     assert normal_options["user"]["id"] == bytes_to_base64url(repo.user.id.encode("utf-8"))
+
+
+def test_authentication_options_prefer_internal_transport_when_available() -> None:
+    repo = FakePasskeyRepo()
+    service = PasskeyService(repo, "https://redteamagent.co.uk", "", "RedTeamAgent")
+    passkey = _fake_passkey(repo, "passkey-1", repo.user.id)
+    passkey.transports = ["hybrid", "internal"]
+    repo.passkeys.append(passkey)
+
+    options = service.authentication_options(repo.user.id, repo.session.id)
+
+    assert options["allowCredentials"][0]["transports"] == ["internal"]
 
 
 def test_passkey_service_accepts_origin_aliases_and_wraps_library_errors(

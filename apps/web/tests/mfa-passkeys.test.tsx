@@ -101,6 +101,17 @@ describe('MFA passkeys', () => {
     expect(await screen.findByText(/passkey verified for this session/i)).toBeInTheDocument();
   });
 
+  it('presents replacement as the secondary path for registered passkeys', async () => {
+    storeAuth();
+    mockSecurityEndpoints({ passkeyRegistered: true, passkeyVerified: false });
+    renderApp('/settings');
+
+    const verify = await screen.findByRole('button', { name: /verify passkey/i });
+    const replacement = screen.getByRole('button', { name: /add replacement/i });
+
+    expect(verify.compareDocumentPosition(replacement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('removes a passkey from account security settings', async () => {
     storeAuth();
     const deleted: string[] = [];
@@ -169,20 +180,19 @@ describe('MFA passkeys', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('verification failed');
   });
 
-  it('explains passkey responses without device verification', async () => {
-    vi.mocked(startAuthentication).mockResolvedValue({
-      id: 'auth-credential',
-      rawId: 'auth-credential',
-      response: { authenticatorData: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
-    } as Awaited<ReturnType<typeof startAuthentication>>);
+  it('surfaces backend passkey verification failures', async () => {
     storeAuth();
-    mockSecurityEndpoints({ passkeyRegistered: true, passkeyVerified: false });
+    mockSecurityEndpoints({
+      passkeyRegistered: true,
+      passkeyVerified: false,
+      authenticationVerifyError: 'Passkey verification needs Windows Hello, device PIN, fingerprint, or face confirmation.'
+    });
     const user = userEvent.setup();
     renderApp('/settings');
 
     await user.click(await screen.findByRole('button', { name: /verify passkey/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Passkey device verification was not completed.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Passkey verification needs Windows Hello');
   });
 
   it('explains generic browser passkey failures', async () => {
@@ -206,7 +216,7 @@ describe('MFA passkeys', () => {
     const user = userEvent.setup();
     renderApp('/settings');
 
-    await user.click(await screen.findByRole('button', { name: /add passkey/i }));
+    await user.click(await screen.findByRole('button', { name: /add replacement/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This authenticator still has the old passkey. Try another passkey provider'
@@ -267,6 +277,7 @@ function mockSecurityEndpoints(
     passkeyVerified?: boolean;
     statusError?: boolean;
     deleteError?: boolean;
+    authenticationVerifyError?: string;
   } = {},
   deleted: string[] = []
 ) {
@@ -293,7 +304,12 @@ function mockSecurityEndpoints(
       return jsonResponse(null, 204);
     }
     if (path === '/auth/passkeys/authentication/options') return jsonResponse({ options: { challenge: 'auth' } });
-    if (path === '/auth/passkeys/authentication/verify') return jsonResponse(null, 204);
+    if (path === '/auth/passkeys/authentication/verify') {
+      if (options.authenticationVerifyError) {
+        return jsonResponse({ message: options.authenticationVerifyError }, 401);
+      }
+      return jsonResponse(null, 204);
+    }
     if (path.startsWith('/auth/passkeys/') && init?.method === 'DELETE') {
       if (options.deleteError) return jsonResponse({ message: 'Passkey could not be removed.' }, 409);
       deleted.push(path.split('/').pop() ?? '');
