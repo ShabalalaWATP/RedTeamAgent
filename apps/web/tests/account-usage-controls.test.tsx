@@ -135,6 +135,41 @@ describe('account and usage controls', () => {
     expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeInTheDocument();
   });
 
+  it('prompts for MFA when the API omits the machine-readable code', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/login')) {
+        return jsonResponse({ message: 'Multi-factor authentication code required.' }, 401);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByLabelText(/authenticator or recovery code/i)).toBeInTheDocument();
+    expect(screen.queryByText(/email or password is incorrect/i)).not.toBeInTheDocument();
+  });
+
+  it('shows rate limiting separately from incorrect credentials', async () => {
+    const user = userEvent.setup();
+    mockFetch((url) => {
+      if (url.includes('/auth/login')) {
+        return jsonResponse({ code: 'rate_limit_exceeded', message: 'Too many requests. Try again later.' }, 429);
+      }
+      return jsonResponse({ message: 'unexpected' }, 500);
+    });
+
+    renderApp('/auth');
+    await user.type(screen.getByLabelText(/^email$/i), 'new@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Correct-Horse-42!');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many sign-in attempts');
+  });
+
   it('surfaces verification errors from a local verification link', async () => {
     mockFetch((url) => {
       if (url.includes('/auth/verify-email')) return jsonResponse({ message: 'bad token' }, 401);

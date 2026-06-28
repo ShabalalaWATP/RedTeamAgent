@@ -49,7 +49,18 @@ function loginErrorMessage(err: unknown) {
   if (message.includes('failed to fetch')) {
     return 'Sign in is unavailable. Check the service and try again.';
   }
+  if (err instanceof ApiRequestError && err.code === 'rate_limit_exceeded') {
+    return 'Too many sign-in attempts. Wait a minute, then try again.';
+  }
+  if (message.includes('too many requests')) {
+    return 'Too many sign-in attempts. Wait a minute, then try again.';
+  }
   return 'Email or password is incorrect.';
+}
+
+function requiresMfaCode(err: unknown) {
+  if (err instanceof ApiRequestError && err.code === 'mfa_required') return true;
+  return String(err).toLowerCase().includes('multi-factor authentication code required');
 }
 
 export function AuthPage() {
@@ -133,7 +144,7 @@ export function AuthPage() {
       });
       navigate(response.mfa_setup_required || response.passkey_verification_required ? '/settings' : '/workflows');
     } catch (err) {
-      if (err instanceof ApiRequestError && err.code === 'mfa_required') {
+      if (requiresMfaCode(err)) {
         setRequiresMfa(true);
         setMessage('Enter your authenticator code or recovery code.');
         setError(null);
