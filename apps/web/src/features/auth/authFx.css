@@ -55,19 +55,19 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgb(240 96 109 / 0.42) 22%,
-    rgb(255 92 110 / 0.78) 50%,
-    rgb(240 96 109 / 0.42) 78%,
+    rgb(240 96 109 / 0.36) 22%,
+    rgb(255 92 110 / 0.68) 50%,
+    rgb(240 96 109 / 0.36) 78%,
     transparent
   );
-  box-shadow: 0 0 8px rgb(240 96 109 / 0.5), 0 0 18px rgb(240 96 109 / 0.26);
-  animation: auth-laser 9s linear infinite;
+  box-shadow: 0 0 8px rgb(240 96 109 / 0.42), 0 0 18px rgb(240 96 109 / 0.2);
+  animation: auth-laser 15s linear infinite;
 }
 
 @keyframes auth-laser {
   0% { top: 0; opacity: 0; }
-  8% { opacity: 0.6; }
-  92% { opacity: 0.6; }
+  8% { opacity: 0.52; }
+  92% { opacity: 0.52; }
   100% { top: 100%; opacity: 0; }
 }
 
