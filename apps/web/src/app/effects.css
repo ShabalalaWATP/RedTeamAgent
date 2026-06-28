@@ -126,8 +126,8 @@ textarea {
   bottom: -1px;
   height: 1px;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, var(--accent-soft) 18%, var(--accent) 50%, var(--accent-soft) 82%, transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, var(--accent) 26%, var(--accent-red) 64%, transparent 94%);
+  opacity: 0.7;
 }
 
 @media (max-width: 480px) {

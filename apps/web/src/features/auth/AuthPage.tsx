@@ -4,11 +4,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiRequestError, api } from '../../api/client';
 import { useAuth } from '../../app/AuthContext';
 import { ThemeToggle } from '../../app/ThemeToggle';
-import { OrbitalCore } from '../../shared/OrbitalCore';
+import logo from '../../assets/redteamagent-logo.png';
 import { Button, ErrorState, Field } from '../../shared/ui';
 import { CaptchaChallenge } from './CaptchaChallenge';
 import { PasswordField, passwordMeetsPolicy } from './PasswordField';
 import './auth.css';
+import './authFx.css';
 
 const AUTH_FEATURES = [
   {
@@ -173,7 +174,9 @@ export function AuthPage() {
         <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-brand-panel">
           <div className="auth-brand-top">
-            <OrbitalCore />
+            <span className="auth-logo-wrap">
+              <img className="auth-logo" src={logo} alt="" width="176" height="176" />
+            </span>
             <div>
               <h1 id="auth-title">RedTeamAgent</h1>
               <p className="auth-tagline">Adversarial review for the decisions that matter.</p>
