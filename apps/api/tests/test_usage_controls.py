@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings, get_settings
 from app.core.database import SessionLocal
 from app.infrastructure.db import models
-from tests.conftest import csrf_headers, register_verified
+from tests.conftest import complete_privileged_mfa_for_user, csrf_headers, register_verified
 
 
 def test_login_honours_secure_cookie_setting(client: TestClient) -> None:
@@ -147,3 +147,5 @@ def _set_account_type(user_id: str, account_type: str) -> None:
         assert user is not None
         user.account_type = account_type
         session.commit()
+    if account_type in {"owner", "admin"}:
+        complete_privileged_mfa_for_user(user_id)

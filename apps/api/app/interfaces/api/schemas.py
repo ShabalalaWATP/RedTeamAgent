@@ -53,6 +53,15 @@ class WorkspaceView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MfaRequirementView(BaseModel):
+    required: bool = False
+    authenticator_app_enabled: bool = False
+    passkey_registered: bool = False
+    passkey_verified: bool = False
+    setup_required: bool = False
+    passkey_verification_required: bool = False
+
+
 class AuthResponse(BaseModel):
     user: UserView
     workspace: WorkspaceView
@@ -60,6 +69,9 @@ class AuthResponse(BaseModel):
     csrf_token: str | None = None
     verification_token: str | None = None
     reset_token: str | None = None
+    mfa_requirements: MfaRequirementView = Field(default_factory=MfaRequirementView)
+    mfa_setup_required: bool = False
+    passkey_verification_required: bool = False
 
 
 class CaptchaChallengeView(BaseModel):
@@ -72,6 +84,7 @@ class CaptchaChallengeView(BaseModel):
 
 class MfaStatusView(BaseModel):
     enabled: bool
+    required: bool = False
 
 
 class MfaSetupView(BaseModel):
@@ -83,6 +96,32 @@ class MfaSetupView(BaseModel):
 
 class MfaCodeRequest(BaseModel):
     code: str = Field(min_length=6, max_length=64)
+
+
+class PasskeyCredentialView(BaseModel):
+    id: str
+    name: str
+    created_at: datetime
+    last_used_at: datetime | None = None
+
+
+class PasskeyStatusView(MfaRequirementView):
+    registered: bool = False
+    count: int = 0
+    credentials: list[PasskeyCredentialView] = Field(default_factory=list)
+
+
+class PasskeyOptionsView(BaseModel):
+    options: dict[str, Any]
+
+
+class PasskeyRegistrationVerifyRequest(BaseModel):
+    credential: dict[str, Any]
+    name: str | None = Field(default=None, max_length=120)
+
+
+class PasskeyAuthenticationVerifyRequest(BaseModel):
+    credential: dict[str, Any]
 
 
 class ProjectCreate(BaseModel):

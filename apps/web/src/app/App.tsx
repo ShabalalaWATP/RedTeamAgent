@@ -1,4 +1,4 @@
-import { Activity, FileText, FolderKanban, Settings } from 'lucide-react';
+import { Activity, FileText, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
 import { useEffect, type ReactElement } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
@@ -7,8 +7,10 @@ import { AuthPage } from '../features/auth/AuthPage';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
 import { NewReviewPage } from '../features/reviews/NewReviewPage';
+import { AccountSecurityPanel } from '../features/settings/AccountSecurityPanel';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { WorkflowHistory } from '../features/workflows/WorkflowHistory';
+import type { AuthState } from '../shared/types';
 import { Button } from '../shared/ui';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -26,6 +28,9 @@ function Layout() {
     await api.logout(auth.csrfToken);
     setAuth(null);
   };
+  if (isPrivilegedMfaPending(auth)) {
+    return <PrivilegedMfaGate auth={auth} logout={logout} />;
+  }
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
@@ -67,6 +72,47 @@ function Layout() {
   );
 }
 
+function PrivilegedMfaGate({ auth, logout }: { auth: AuthState; logout: () => void }) {
+  return (
+    <div className="app-shell">
+      <aside className="sidebar" aria-label="Primary">
+        <div className="brand">
+          <img src={logo} alt="" width="40" height="40" />
+          <span className="brand-name">
+            RedTeamAgent
+            <small>Decision intelligence</small>
+          </span>
+        </div>
+        <p className="sidebar-foot">Privileged accounts require authenticator-app MFA and a verified passkey.</p>
+      </aside>
+      <main>
+        <header className="topbar">
+          <div className="topbar-user">
+            <ShieldCheck aria-hidden="true" size={20} />
+            <div className="topbar-meta">
+              <strong>{auth.email}</strong>
+              <span className="role-badge is-admin">{auth.accountType}</span>
+            </div>
+          </div>
+          <div className="topbar-actions">
+            <ThemeToggle />
+            <Button onClick={logout}>Log out</Button>
+          </div>
+        </header>
+        <section className="screen settings-screen">
+          <div className="screen-header">
+            <div>
+              <h1>Secure account access</h1>
+              <p className="muted">Complete the required MFA checks before using the app.</p>
+            </div>
+          </div>
+          <AccountSecurityPanel />
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function VisitTracker() {
   const location = useLocation();
   useEffect(() => {
@@ -95,6 +141,10 @@ function isWorkspaceAdmin(role: string) {
 
 function isSiteAdmin(role: string) {
   return role === 'owner' || role === 'admin';
+}
+
+function isPrivilegedMfaPending(auth: { accountType: string; mfaSetupRequired: boolean; passkeyVerificationRequired: boolean }) {
+  return isSiteAdmin(auth.accountType) && (auth.mfaSetupRequired || auth.passkeyVerificationRequired);
 }
 
 function roleLabel(role: string) {

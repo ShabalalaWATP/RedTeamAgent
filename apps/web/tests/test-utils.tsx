@@ -12,7 +12,9 @@ export const authState = {
   workspaceRole: 'owner',
   accountType: 'user',
   accountStatus: 'active',
-  csrfToken: 'csrf-token'
+  csrfToken: 'csrf-token',
+  mfaSetupRequired: false,
+  passkeyVerificationRequired: false
 };
 
 export function storeAuth(overrides: Partial<typeof authState> = {}) {

@@ -51,6 +51,21 @@ class UserMfaSetting(Base):
     enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class UserPasskey(Base):
+    __tablename__ = "user_passkeys"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    credential_id: Mapped[str] = mapped_column(Text, unique=True)
+    public_key: Mapped[str] = mapped_column(Text)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    transports: Mapped[list[str]] = mapped_column(JsonType, default=list)
+    aaguid: Mapped[str] = mapped_column(String(80), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class SessionRecord(Base):
     __tablename__ = "sessions"
 
@@ -59,6 +74,9 @@ class SessionRecord(Base):
     csrf_token: Mapped[str] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    passkey_registration_challenge: Mapped[str | None] = mapped_column(Text, nullable=True)
+    passkey_authentication_challenge: Mapped[str | None] = mapped_column(Text, nullable=True)
+    passkey_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Workspace(Base):

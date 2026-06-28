@@ -34,6 +34,7 @@ def initialise_database() -> None:
     Base.metadata.create_all(bind=engine)
     upgrade_site_account_schema()
     upgrade_workflow_quota_schema()
+    upgrade_passkey_schema()
 
 
 def upgrade_site_account_schema() -> None:
@@ -72,6 +73,23 @@ def upgrade_workflow_quota_schema() -> None:
         if project_column and not project_column.get("nullable", True):
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE reviews ALTER COLUMN project_id DROP NOT NULL"))
+
+
+def upgrade_passkey_schema() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "sessions" not in table_names:
+        return
+    columns = {column["name"] for column in inspector.get_columns("sessions")}
+    additions = {
+        "passkey_registration_challenge": "TEXT",
+        "passkey_authentication_challenge": "TEXT",
+        "passkey_verified_at": "TIMESTAMP WITH TIME ZONE",
+    }
+    missing = [(name, definition) for name, definition in additions.items() if name not in columns]
+    with engine.begin() as connection:
+        for name, definition in missing:
+            connection.execute(text(f"ALTER TABLE sessions ADD COLUMN {name} {definition}"))
 
 
 def _json_column_default() -> str:

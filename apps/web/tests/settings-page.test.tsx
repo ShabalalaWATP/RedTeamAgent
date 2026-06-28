@@ -16,7 +16,7 @@ describe('admin settings route', () => {
 
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /account security/i })).toBeInTheDocument();
-    expect(screen.getByText(/two-factor authentication is optional/i)).toBeInTheDocument();
+    expect(screen.getByText(/authenticator-app mfa and passkeys are available/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AI setup' })).toBeInTheDocument();
     expect(screen.getByLabelText(/ai provider/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
@@ -38,18 +38,18 @@ describe('admin settings route', () => {
     }
   });
 
-  it('sets up optional two-factor authentication from settings', async () => {
+  it('sets up optional MFA from settings', async () => {
     storeAuth();
     const user = userEvent.setup();
     mockSettingsEndpoints();
     renderApp('/settings');
 
-    await user.click(await screen.findByRole('button', { name: /set up 2fa/i }));
-    expect(await screen.findByLabelText(/authenticator uri/i)).toHaveValue('otpauth://totp/test');
-    expect(screen.getByText('aaaa-bbbb')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /set up authenticator app/i }));
+    expect(await screen.findByText('aaaa-bbbb')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('JBSWY3DPEHPK3PXP')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/authenticator code/i), '123456');
-    await user.click(screen.getByRole('button', { name: /enable 2fa/i }));
-    expect(await screen.findByText(/two-factor authentication enabled/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /enable mfa/i }));
+    expect(await screen.findByText(/authenticator-app mfa enabled/i)).toBeInTheDocument();
   });
 
   it('lets site owners manage users and review visit metadata', async () => {
@@ -166,25 +166,25 @@ describe('admin settings route', () => {
     expect(screen.queryByText(/secret project content/i)).not.toBeInTheDocument();
   });
 
-  it('disables two-factor authentication from settings', async () => {
+  it('disables optional MFA from settings', async () => {
     storeAuth();
     const user = userEvent.setup();
     mockSettingsEndpoints({ mfaEnabled: true });
     renderApp('/settings');
 
-    expect(await screen.findByText(/two-factor authentication is enabled/i)).toBeInTheDocument();
+    expect(await screen.findByText(/^enabled$/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/authenticator or recovery code/i), '123456');
-    await user.click(screen.getByRole('button', { name: /disable 2fa/i }));
-    expect(await screen.findByText(/two-factor authentication disabled/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /disable mfa/i }));
+    expect(await screen.findByText(/authenticator-app mfa disabled/i)).toBeInTheDocument();
   });
 
-  it('surfaces two-factor setup and enable errors', async () => {
+  it('surfaces MFA setup and enable errors', async () => {
     storeAuth();
     const user = userEvent.setup();
     mockSettingsEndpoints({ setupError: true });
     renderApp('/settings');
 
-    await user.click(await screen.findByRole('button', { name: /set up 2fa/i }));
+    await user.click(await screen.findByRole('button', { name: /set up authenticator app/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('setup failed');
 
     cleanup();
@@ -192,20 +192,20 @@ describe('admin settings route', () => {
     mockSettingsEndpoints({ enableError: true });
     renderApp('/settings');
 
-    await user.click(await screen.findByRole('button', { name: /set up 2fa/i }));
+    await user.click(await screen.findByRole('button', { name: /set up authenticator app/i }));
     await user.type(await screen.findByLabelText(/authenticator code/i), '123456');
-    await user.click(screen.getByRole('button', { name: /enable 2fa/i }));
+    await user.click(screen.getByRole('button', { name: /enable mfa/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('enable failed');
   });
 
-  it('surfaces two-factor disable errors', async () => {
+  it('surfaces MFA disable errors', async () => {
     storeAuth();
     const user = userEvent.setup();
     mockSettingsEndpoints({ mfaEnabled: true, disableError: true });
     renderApp('/settings');
 
     await user.type(await screen.findByLabelText(/authenticator or recovery code/i), '123456');
-    await user.click(screen.getByRole('button', { name: /disable 2fa/i }));
+    await user.click(screen.getByRole('button', { name: /disable mfa/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('disable failed');
   });
 
@@ -239,7 +239,12 @@ function mockSettingsEndpoints(
 ) {
   mockFetch((url, init) => {
     const path = new URL(url).pathname;
-    if (path === '/auth/mfa/status') return jsonResponse({ enabled: Boolean(options.mfaEnabled) });
+    if (path === '/auth/mfa/status') return jsonResponse({ enabled: Boolean(options.mfaEnabled), required: false });
+    if (path === '/auth/passkeys/status') return jsonResponse({
+      required: false, authenticator_app_enabled: Boolean(options.mfaEnabled), passkey_registered: false,
+      passkey_verified: false, setup_required: false, passkey_verification_required: false, registered: false, count: 0,
+      credentials: []
+    });
     if (path === '/auth/mfa/setup') {
       if (options.setupError) return jsonResponse({ message: 'setup failed' }, 500);
       return jsonResponse({

@@ -14,7 +14,10 @@
     "generate:api": "openapi-typescript ../../packages/contracts/openapi.json -o src/api/openapi.ts"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.2.2",
+    "@types/qrcode": "^1.5.6",
     "lucide-react": "0.561.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-router-dom": "^7.18.0",

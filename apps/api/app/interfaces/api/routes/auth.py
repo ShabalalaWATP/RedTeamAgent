@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.application.auth_service import AuthService
 from app.application.mfa_service import MfaService
+from app.application.passkey_service import PRIVILEGED_ACCOUNT_TYPES, PasskeyService
 from app.core.config import Settings, get_settings
-from app.domain.exceptions import AuthenticationError
+from app.domain.exceptions import AuthenticationError, AuthorisationError
 from app.infrastructure.auth.security import new_csrf_token
 from app.infrastructure.security.captcha import CaptchaVerifier
 from app.infrastructure.security.rate_limit import AbuseLimiter, LimitRule
@@ -20,6 +21,7 @@ from app.interfaces.api.dependencies import (
     client_identity,
     current_context,
     mfa_service,
+    passkey_service,
     require_csrf,
 )
 from app.interfaces.api.schemas import (
@@ -27,6 +29,7 @@ from app.interfaces.api.schemas import (
     CaptchaChallengeView,
     LoginRequest,
     MfaCodeRequest,
+    MfaRequirementView,
     MfaSetupView,
     MfaStatusView,
     PasswordResetConfirmRequest,
@@ -90,6 +93,7 @@ def login(
     request: Request,
     response: Response,
     service: Annotated[AuthService, Depends(auth_service)],
+    passkeys: Annotated[PasskeyService, Depends(passkey_service)],
     limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthResponse:
@@ -110,12 +114,7 @@ def login(
         secure=settings.cookie_secure,
     )
     response.set_cookie("rta_csrf", csrf_token, httponly=False, samesite="lax", secure=settings.cookie_secure)
-    return AuthResponse(
-        user=UserView.model_validate(result["user"]),
-        workspace=WorkspaceView.model_validate(result["workspace"]),
-        workspace_role=result["workspace_role"],
-        csrf_token=csrf_token,
-    )
+    return _auth_response(result, csrf_token, passkeys)
 
 
 @router.post("/logout", status_code=204, dependencies=[Depends(require_csrf)])
@@ -162,13 +161,20 @@ def confirm_password_reset(
 
 
 @router.get("/me", response_model=AuthResponse)
-def me(context: Annotated[AuthContext, Depends(current_context)]) -> AuthResponse:
+def me(
+    context: Annotated[AuthContext, Depends(current_context)],
+    passkeys: Annotated[PasskeyService, Depends(passkey_service)],
+) -> AuthResponse:
     workspace = context.user and context.session
     del workspace
+    requirements = passkeys.requirements(context.user.id, context.session.id, context.user.account_type)
     return AuthResponse(
         user=UserView.model_validate(context.user),
         workspace=WorkspaceView(id="active", name="Active workspace"),
         csrf_token=context.session.csrf_token,
+        mfa_requirements=MfaRequirementView.model_validate(requirements),
+        mfa_setup_required=requirements["setup_required"],
+        passkey_verification_required=requirements["passkey_verification_required"],
     )
 
 
@@ -177,7 +183,9 @@ def mfa_status(
     context: Annotated[AuthContext, Depends(current_context)],
     service: Annotated[MfaService, Depends(mfa_service)],
 ) -> MfaStatusView:
-    return MfaStatusView.model_validate(service.status(context.user.id))
+    status = service.status(context.user.id)
+    status["required"] = context.user.account_type in PRIVILEGED_ACCOUNT_TYPES
+    return MfaStatusView.model_validate(status)
 
 
 @router.post("/mfa/setup", response_model=MfaSetupView, dependencies=[Depends(require_csrf)])
@@ -211,6 +219,8 @@ def mfa_disable(
     limiter: Annotated[AbuseLimiter, Depends(abuse_limiter)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
+    if settings.privileged_mfa_required and context.user.account_type in PRIVILEGED_ACCOUNT_TYPES:
+        raise AuthorisationError("Owner and admin accounts must keep authenticator-app MFA enabled.")
     _check_mfa_change_rate_limit(limiter, settings, context.user.id)
     try:
         service.disable(context.user.id, payload.code)
@@ -220,3 +230,18 @@ def mfa_disable(
 
 def _check_mfa_change_rate_limit(limiter: AbuseLimiter, settings: Settings, user_id: str) -> None:
     limiter.check(LimitRule("mfa_change:user", settings.mfa_change_rate_limit_per_minute, 60), user_id)
+
+
+def _auth_response(result: dict[str, Any], csrf_token: str, passkeys: PasskeyService) -> AuthResponse:
+    user = result["user"]
+    session = result["session"]
+    requirements = passkeys.requirements(user.id, session.id, user.account_type)
+    return AuthResponse(
+        user=UserView.model_validate(user),
+        workspace=WorkspaceView.model_validate(result["workspace"]),
+        workspace_role=result["workspace_role"],
+        csrf_token=csrf_token,
+        mfa_requirements=MfaRequirementView.model_validate(requirements),
+        mfa_setup_required=requirements["setup_required"],
+        passkey_verification_required=requirements["passkey_verification_required"],
+    )

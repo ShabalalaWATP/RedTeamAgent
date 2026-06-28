@@ -24,7 +24,9 @@ function readStoredAuth(): AuthState | null {
       workspaceRole: parsed.workspaceRole ?? 'member',
       accountType: parsed.accountType ?? 'user',
       accountStatus: parsed.accountStatus ?? 'active',
-      csrfToken: parsed.csrfToken ?? ''
+      csrfToken: parsed.csrfToken ?? '',
+      mfaSetupRequired: parsed.mfaSetupRequired ?? false,
+      passkeyVerificationRequired: parsed.passkeyVerificationRequired ?? false
     };
   } catch {
     sessionStorage.removeItem(STORAGE_KEY);

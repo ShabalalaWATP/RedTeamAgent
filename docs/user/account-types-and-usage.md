@@ -27,6 +27,7 @@ The owner can:
 - suspend, ban or delete users and admins;
 - choose whether an admin manages all users or selected users;
 - view site admin telemetry, including registered and anonymous visits;
+- complete and keep authenticator-app MFA plus at least one passkey;
 - configure provider governance, retention and enterprise settings where the owner is also a workspace administrator.
 
 The owner should be created deliberately with `SITE_OWNER_BOOTSTRAP_TOKEN`. Production disables automatic first-user owner bootstrap.
@@ -43,6 +44,8 @@ Admins cannot manage owners. Admin visibility excludes privileged users and anon
 
 Admin accounts receive `ADMIN_USAGE_MULTIPLIER` times the standard project and workflow limits.
 
+Admin accounts must complete and keep authenticator-app MFA plus at least one passkey.
+
 ## User
 
 Users can:
@@ -54,7 +57,7 @@ Users can:
 - run reviews;
 - inspect reports;
 - export reports where authorised;
-- manage their own security settings, including optional MFA.
+- manage their own security settings, including optional authenticator-app MFA and passkeys.
 
 Users cannot see stored provider credentials. Provider credentials are write-only from the browser perspective.
 
@@ -89,6 +92,10 @@ Password rules:
 - At least one lowercase letter.
 - At least one number.
 - At least one symbol.
+
+## MFA And Passkeys
+
+Owner and Admin accounts must keep authenticator-app MFA enabled and register at least one passkey. After password and authenticator-code login, a privileged session remains restricted until a passkey is verified. Incomplete privileged sessions can access only logout, MFA setup and passkey setup or verification endpoints. Standard users may enable the same controls voluntarily.
 
 ## Creating A Review
 

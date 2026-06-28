@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
-from tests.conftest import csrf_headers, register_verified
+from tests.conftest import complete_privileged_mfa_for_user, csrf_headers, register_verified
 
 
 def test_owner_can_manage_accounts_and_block_suspended_login(client: TestClient) -> None:
@@ -56,6 +56,7 @@ def test_owner_controls_admin_scope_and_visits(client: TestClient) -> None:
     )
     assert promoted.status_code == 200, promoted.text
     assert promoted.json()["account_type"] == "admin"
+    complete_privileged_mfa_for_user(admin["user_id"])
 
     visible = admin_client.get("/site-admin/users")
     assert visible.status_code == 200, visible.text
@@ -104,6 +105,7 @@ def test_all_scope_admin_visit_telemetry_excludes_privileged_and_anonymous_rows(
             json={"account_type": "admin", "admin_scope": "all"},
         )
         assert promoted.status_code == 200, promoted.text
+        complete_privileged_mfa_for_user(target["user_id"])
 
     assert client.post("/site-admin/visits", json={"path": "/owner"}).status_code == 204
     assert admin_client.post("/site-admin/visits", json={"path": "/admin"}).status_code == 204

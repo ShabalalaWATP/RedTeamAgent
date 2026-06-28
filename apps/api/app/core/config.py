@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     captcha_provider: Literal["auto", "turnstile", "challenge"] = "auto"
     captcha_challenge_ttl_seconds: int = Field(default=300, ge=60, le=900)
     turnstile_secret_key: str = ""
+    privileged_mfa_required: bool = True
     mfa_issuer: str = "RedTeamAgent"
     mfa_change_rate_limit_per_minute: int = Field(default=5, ge=1)
+    webauthn_rp_id: str = ""
+    webauthn_rp_name: str = "RedTeamAgent"
     expose_auth_tokens: bool = False
     auto_bootstrap_site_owner: bool = False
     site_owner_bootstrap_token: str = ""
@@ -100,6 +103,8 @@ def validate_production_settings(settings: Settings) -> None:
         failures.append("CAPTCHA_PROVIDER must be turnstile with TURNSTILE_SECRET_KEY in production.")
     if _is_placeholder(settings.site_owner_bootstrap_token) or len(settings.site_owner_bootstrap_token) < 32:
         failures.append("SITE_OWNER_BOOTSTRAP_TOKEN must be configured in production.")
+    if not settings.privileged_mfa_required:
+        failures.append("PRIVILEGED_MFA_REQUIRED must be true in production.")
     if settings.mail_delivery != "smtp":
         failures.append("MAIL_DELIVERY must be smtp in production.")
     if not settings.smtp_starttls:

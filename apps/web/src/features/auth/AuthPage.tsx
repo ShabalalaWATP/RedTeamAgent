@@ -126,9 +126,11 @@ export function AuthPage() {
         workspaceRole: response.workspace_role ?? 'member',
         accountType: response.user.account_type,
         accountStatus: response.user.account_status,
-        csrfToken: response.csrf_token ?? ''
+        csrfToken: response.csrf_token ?? '',
+        mfaSetupRequired: response.mfa_setup_required,
+        passkeyVerificationRequired: response.passkey_verification_required
       });
-      navigate('/workflows');
+      navigate(response.mfa_setup_required || response.passkey_verification_required ? '/settings' : '/workflows');
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'mfa_required') {
         setRequiresMfa(true);

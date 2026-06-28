@@ -33,6 +33,76 @@
   padding: 8px;
 }
 
+.security-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.security-method {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--panel-raised);
+}
+
+.security-method h3 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+.qr-panel {
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.manual-secret {
+  display: grid;
+  gap: 8px;
+}
+
+.manual-secret summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.passkey-list {
+  display: grid;
+  gap: 8px;
+}
+
+.passkey-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.passkey-list-item span {
+  display: grid;
+  gap: 3px;
+}
+
+.passkey-list-item small {
+  color: var(--muted);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .site-admin-panel {
   gap: 18px;
 }

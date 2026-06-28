@@ -590,7 +590,7 @@ Stage 3 makes the platform credible for team and enterprise use.
 ### Enterprise identity and governance
 
 - SSO-ready architecture.
-- Optional MFA.
+- Mandatory owner/admin authenticator-app MFA and passkeys, with optional MFA and passkeys for standard users.
 - SCIM-ready user and group model.
 - Central provider management.
 - Provider allow-lists by workspace, data classification, region and purpose.
@@ -644,7 +644,7 @@ Stage 3 is done only when Stage 1 and Stage 2 still pass and all of the followin
 - Notifications exist for completed runs, failed runs, assigned actions and comments.
 - Reports can be shared through expiring links with explicit access controls.
 - SSO-ready identity interfaces exist even if only one SSO implementation is enabled initially.
-- MFA can be enabled for a user or workspace where implemented.
+- MFA and passkeys are mandatory for Owner and Admin accounts and can be enabled voluntarily by standard users where implemented.
 - SCIM-ready user and group mapping is represented in the data model and interfaces.
 - Administrators can centrally manage provider connections.
 - Provider and model allow-lists are enforceable by workspace, role, data classification, region and task purpose.

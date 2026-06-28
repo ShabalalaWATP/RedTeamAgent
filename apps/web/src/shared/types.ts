@@ -9,6 +9,8 @@ export type AuthState = {
   accountType: AccountType;
   accountStatus: AccountStatus;
   csrfToken: string;
+  mfaSetupRequired: boolean;
+  passkeyVerificationRequired: boolean;
 };
 
 export type AccountType = 'owner' | 'admin' | 'user';

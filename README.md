@@ -108,7 +108,7 @@ Workspace governance can centrally restrict provider adapters, model identifiers
 
 ## Admin Settings
 
-The admin-only `Settings` view includes AI provider setup, model registration, agent model profiles, organisation settings, member management, invitations, provider governance, SSO/MFA-ready identity fields, SCIM mappings, data retention, audit inspection, action notifications, custom agents, rubrics, report templates, API tokens, webhooks, scheduled re-review, outcome tracking, operations summaries and model comparison. Regular members do not see the `Settings` nav item and admin endpoints reject non-admin access.
+The admin-only `Settings` view includes AI provider setup, model registration, agent model profiles, organisation settings, member management, invitations, provider governance, mandatory owner/admin MFA and passkey setup, SSO-ready identity fields, SCIM mappings, data retention, audit inspection, action notifications, custom agents, rubrics, report templates, API tokens, webhooks, scheduled re-review, outcome tracking, operations summaries and model comparison. Regular members do not see the `Settings` nav item and admin endpoints reject non-admin access.
 
 API tokens are returned once and then stored only as hashes. Webhook deliveries use timestamped HMAC signatures with replay protection. Report shares use expiring tokens and access events are audited.
 
@@ -134,7 +134,8 @@ For `redteamagent.co.uk`, keep the GoDaddy domain registration if preferred and 
 - optional apex `AAAA` record: `@` to the VPS IPv6 address if the server is configured for IPv6;
 - `www` record: `CNAME` to `redteamagent.co.uk` or an `A` record to the same VPS IPv4;
 - Caddy hostnames: `redteamagent.co.uk,www.redteamagent.co.uk`;
-- app URLs: `PUBLIC_APP_URL=https://redteamagent.co.uk` and `CORS_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk`.
+- app URLs: `PUBLIC_APP_URL=https://redteamagent.co.uk` and `CORS_ORIGINS=https://redteamagent.co.uk,https://www.redteamagent.co.uk`;
+- privileged account security: `PRIVILEGED_MFA_REQUIRED=true`, `WEBAUTHN_RP_ID=redteamagent.co.uk` and `WEBAUTHN_RP_NAME=RedTeamAgent`.
 
 ## Known Limitations
 

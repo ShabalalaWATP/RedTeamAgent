@@ -16,6 +16,7 @@ from app.interfaces.api.routes import (
     enterprise_integrations,
     enterprise_operations,
     evaluations,
+    passkeys,
     projects,
     providers,
     reviews,
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(app)
     app.include_router(auth.router)
+    app.include_router(passkeys.router)
     app.include_router(projects.router)
     app.include_router(reviews.router)
     app.include_router(providers.router)

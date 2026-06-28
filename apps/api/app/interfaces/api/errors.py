@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.domain.exceptions import AuthenticationError, DomainError, MfaRequiredError
+from app.domain.exceptions import AuthenticationError, DomainError, MfaRequiredError, MfaSetupRequiredError
 from app.interfaces.api.schemas import ApiError
 
 
@@ -12,7 +12,8 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
         del request
-        if isinstance(exc, AuthenticationError) and not isinstance(exc, MfaRequiredError):
+        coded_auth_errors = (MfaRequiredError, MfaSetupRequiredError)
+        if isinstance(exc, AuthenticationError) and not isinstance(exc, coded_auth_errors):
             return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
         return JSONResponse(
             status_code=exc.status_code,

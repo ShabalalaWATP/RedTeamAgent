@@ -168,11 +168,12 @@ def test_spoofed_forwarded_for_does_not_bypass_login_rate_limit(client: TestClie
 
 
 def test_optional_mfa_requires_totp_or_single_use_recovery_code(client: TestClient) -> None:
+    register_verified(client, "mfa-owner@example.com")
     auth = register_verified(client, "mfa@example.com")
 
     status = client.get("/auth/mfa/status")
     assert status.status_code == 200
-    assert status.json() == {"enabled": False}
+    assert status.json() == {"enabled": False, "required": False}
 
     setup = client.post("/auth/mfa/setup", headers=csrf_headers(auth))
     assert setup.status_code == 200, setup.text
@@ -227,6 +228,7 @@ def test_mfa_disable_attempts_are_rate_limited(client: TestClient) -> None:
         mfa_change_rate_limit_per_minute=2,
     )
     client.app.dependency_overrides[get_settings] = lambda: settings
+    register_verified(client, "mfa-limit-owner@example.com")
     auth = register_verified(client, "mfa-limit@example.com")
     setup = client.post("/auth/mfa/setup", headers=csrf_headers(auth))
     assert setup.status_code == 200, setup.text

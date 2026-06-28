@@ -31,6 +31,7 @@ import {
   webhookSchema,
   workflowSummarySchema
 } from './schemas';
+import { passkeyOptionsSchema, passkeyStatusSchema } from './passkeySchemas';
 
 type RequestOptions = {
   csrf?: string;
@@ -98,6 +99,13 @@ export class ApiClient {
   async disableMfa(csrf: string, code: string) {
     await this.request('/auth/mfa/disable', 'POST', { csrf, body: { code } });
   }
+
+  async passkeyStatus() { return passkeyStatusSchema.parse(await this.request('/auth/passkeys/status', 'GET')); }
+  async passkeyRegistrationOptions(csrf: string) { return passkeyOptionsSchema.parse(await this.request('/auth/passkeys/registration/options', 'POST', { csrf })); }
+  async verifyPasskeyRegistration(csrf: string, credential: unknown, name?: string) { await this.request('/auth/passkeys/registration/verify', 'POST', { csrf, body: { credential, name } }); }
+  async passkeyAuthenticationOptions(csrf: string) { return passkeyOptionsSchema.parse(await this.request('/auth/passkeys/authentication/options', 'POST', { csrf })); }
+  async verifyPasskeyAuthentication(csrf: string, credential: unknown) { await this.request('/auth/passkeys/authentication/verify', 'POST', { csrf, body: { credential } }); }
+  async deletePasskey(csrf: string, id: string) { await this.request(`/auth/passkeys/${encodeURIComponent(id)}`, 'DELETE', { csrf }); }
 
   async recordVisit(path: string) {
     await this.request('/site-admin/visits', 'POST', { body: { path } });

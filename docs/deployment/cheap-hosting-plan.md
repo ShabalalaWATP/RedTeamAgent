@@ -78,6 +78,9 @@ Edit `.env.production`:
 - To enable the built-in one-question challenge without external keys, set `CAPTCHA_REQUIRED=true` and `CAPTCHA_PROVIDER=challenge`.
 - To use Cloudflare Turnstile instead, create a Turnstile widget, set `CAPTCHA_REQUIRED=true`, set `CAPTCHA_PROVIDER=turnstile`, set `TURNSTILE_SECRET_KEY` and set `VITE_TURNSTILE_SITE_KEY`.
 - Set `MFA_ISSUER` to the product name users should see in authenticator apps.
+- Keep `PRIVILEGED_MFA_REQUIRED=true` in production so Owner and Admin accounts must use authenticator-app MFA and passkeys.
+- Set `WEBAUTHN_RP_ID` to the registrable app domain, for example `redteamagent.co.uk`.
+- Set `WEBAUTHN_RP_NAME` to the product name users should see when creating a passkey.
 - Set `MAIL_DELIVERY=smtp`.
 - Set `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `SMTP_STARTTLS`.
 

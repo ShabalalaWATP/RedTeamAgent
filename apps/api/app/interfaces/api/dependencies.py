@@ -13,6 +13,7 @@ from app.application.enterprise_operations_service import EnterpriseOperationsSe
 from app.application.enterprise_service import EnterpriseService
 from app.application.evaluation_service import EvaluationService
 from app.application.mfa_service import MfaService
+from app.application.passkey_service import PRIVILEGED_ACCOUNT_TYPES, PasskeyService
 from app.application.ports.notifications import EmailSender
 from app.application.ports.storage import ObjectStoragePort
 from app.application.project_service import ProjectService
@@ -23,7 +24,7 @@ from app.application.usage_policy import UsagePolicy
 from app.application.workflow_service import WorkflowService
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
-from app.domain.exceptions import AuthenticationError, ValidationFailure
+from app.domain.exceptions import AuthenticationError, MfaSetupRequiredError, ValidationFailure
 from app.infrastructure.auth.credentials import FernetCredentialVault
 from app.infrastructure.auth.mfa_provider import BuiltInMfaProvider
 from app.infrastructure.auth.security import PasswordService, TokenService
@@ -105,6 +106,13 @@ def mfa_service(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> MfaService:
     return MfaService(repo, passwords, vault, BuiltInMfaProvider(), settings.mfa_issuer)
+
+
+def passkey_service(
+    repo: Annotated[SqlRepository, Depends(get_repo)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> PasskeyService:
+    return PasskeyService(repo, settings.public_app_url, settings.webauthn_rp_id, settings.webauthn_rp_name)
 
 
 def auth_service(
@@ -198,7 +206,9 @@ def enterprise_operations_service(
 
 
 def current_context(
+    request: Request,
     repo: Annotated[SqlRepository, Depends(get_repo)],
+    settings: Annotated[Settings, Depends(get_settings)],
     session_id: Annotated[str | None, Cookie(alias="rta_session")] = None,
 ) -> AuthContext:
     if session_id is None:
@@ -211,6 +221,7 @@ def current_context(
         raise AuthenticationError("Session user not found.")
     if getattr(user, "account_status", "active") != "active":
         raise AuthenticationError(str(getattr(user, "status_message", "") or "This account is not active."))
+    _enforce_privileged_mfa(request.url.path, repo, user, session, settings)
     return AuthContext(user=user, session=session)
 
 
@@ -314,3 +325,36 @@ def _reject_large_content_length(request: Request, max_bytes: int) -> None:
         raise ValidationFailure("Request content length is invalid.") from None
     if size > max_bytes:
         raise ValidationFailure("Request body exceeds the configured size limit.")
+
+
+_PRIVILEGED_MFA_ALLOWED_PATHS = {
+    "/auth/me",
+    "/auth/logout",
+    "/auth/mfa/status",
+}
+_PRIVILEGED_MFA_ALLOWED_PREFIXES = (
+    "/auth/mfa/setup",
+    "/auth/mfa/enable",
+    "/auth/passkeys",
+)
+
+
+def _enforce_privileged_mfa(path: str, repo: SqlRepository, user: Any, session: Any, settings: Settings) -> None:
+    if not settings.privileged_mfa_required or getattr(user, "account_type", "user") not in PRIVILEGED_ACCOUNT_TYPES:
+        return
+    if _is_privileged_mfa_path_allowed(path):
+        return
+    mfa_setting = repo.get_mfa_setting(user.id)
+    authenticator_enabled = bool(mfa_setting and mfa_setting.enabled)
+    passkey_registered = repo.count_user_passkeys(user.id) > 0
+    passkey_verified = bool(getattr(session, "passkey_verified_at", None))
+    if not authenticator_enabled or not passkey_registered:
+        raise MfaSetupRequiredError("Owner and admin accounts must set up an authenticator app and passkey.")
+    if not passkey_verified:
+        raise MfaSetupRequiredError("Verify your passkey to continue.")
+
+
+def _is_privileged_mfa_path_allowed(path: str) -> bool:
+    return path in _PRIVILEGED_MFA_ALLOWED_PATHS or any(
+        path.startswith(prefix) for prefix in _PRIVILEGED_MFA_ALLOWED_PREFIXES
+    )

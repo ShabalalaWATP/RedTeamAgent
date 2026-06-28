@@ -77,6 +77,81 @@ class IdentityRepositoryMixin:
         if setting:
             setting.recovery_code_hashes = recovery_code_hashes
 
+    def list_user_passkeys(self, user_id: str) -> list[models.UserPasskey]:
+        statement = (
+            select(models.UserPasskey)
+            .where(models.UserPasskey.user_id == user_id)
+            .order_by(models.UserPasskey.created_at)
+        )
+        return list(self.session.scalars(statement))
+
+    def count_user_passkeys(self, user_id: str) -> int:
+        statement = select(func.count()).select_from(models.UserPasskey).where(models.UserPasskey.user_id == user_id)
+        return int(self.session.scalar(statement) or 0)
+
+    def get_passkey_by_credential_id(self, credential_id: str) -> models.UserPasskey | None:
+        return self.session.scalar(select(models.UserPasskey).where(models.UserPasskey.credential_id == credential_id))
+
+    def get_passkey(self, passkey_id: str) -> models.UserPasskey | None:
+        return self.session.get(models.UserPasskey, passkey_id)
+
+    def create_passkey(
+        self,
+        user_id: str,
+        name: str,
+        credential_id: str,
+        public_key: str,
+        sign_count: int,
+        transports: list[str],
+        aaguid: str,
+    ) -> models.UserPasskey:
+        passkey = models.UserPasskey(
+            user_id=user_id,
+            name=name,
+            credential_id=credential_id,
+            public_key=public_key,
+            sign_count=sign_count,
+            transports=transports,
+            aaguid=aaguid,
+        )
+        self.session.add(passkey)
+        self.session.flush()
+        return passkey
+
+    def update_passkey_usage(self, passkey_id: str, sign_count: int) -> None:
+        passkey = self.session.get(models.UserPasskey, passkey_id)
+        if passkey:
+            passkey.sign_count = sign_count
+            passkey.last_used_at = models.utc_now()
+
+    def delete_passkey(self, passkey_id: str) -> None:
+        passkey = self.session.get(models.UserPasskey, passkey_id)
+        if passkey:
+            self.session.delete(passkey)
+
+    def set_session_passkey_challenge(self, session_id: str, purpose: str, challenge: str | None) -> None:
+        record = self.session.get(models.SessionRecord, session_id)
+        if record is None:
+            return
+        if purpose == "registration":
+            record.passkey_registration_challenge = challenge
+        else:
+            record.passkey_authentication_challenge = challenge
+
+    def get_session_passkey_challenge(self, session_id: str, purpose: str) -> str | None:
+        record = self.session.get(models.SessionRecord, session_id)
+        if record is None:
+            return None
+        if purpose == "registration":
+            return record.passkey_registration_challenge
+        return record.passkey_authentication_challenge
+
+    def mark_session_passkey_verified(self, session_id: str) -> None:
+        record = self.session.get(models.SessionRecord, session_id)
+        if record:
+            record.passkey_verified_at = models.utc_now()
+            record.passkey_authentication_challenge = None
+
     def create_session(self, user_id: str, csrf_token: str) -> models.SessionRecord:
         record = models.SessionRecord(
             user_id=user_id,

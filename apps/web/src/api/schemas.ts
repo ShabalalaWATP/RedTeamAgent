@@ -14,7 +14,24 @@ export const authSchema = z.object({
   workspace_role: z.string().nullable().optional(),
   csrf_token: z.string().nullable().optional(),
   verification_token: z.string().nullable().optional(),
-  reset_token: z.string().nullable().optional()
+  reset_token: z.string().nullable().optional(),
+  mfa_requirements: z.object({
+    required: z.boolean().default(false),
+    authenticator_app_enabled: z.boolean().default(false),
+    passkey_registered: z.boolean().default(false),
+    passkey_verified: z.boolean().default(false),
+    setup_required: z.boolean().default(false),
+    passkey_verification_required: z.boolean().default(false)
+  }).default({
+    required: false,
+    authenticator_app_enabled: false,
+    passkey_registered: false,
+    passkey_verified: false,
+    setup_required: false,
+    passkey_verification_required: false
+  }),
+  mfa_setup_required: z.boolean().default(false),
+  passkey_verification_required: z.boolean().default(false)
 });
 
 export const captchaChallengeSchema = z.object({
@@ -26,7 +43,8 @@ export const captchaChallengeSchema = z.object({
 });
 
 export const mfaStatusSchema = z.object({
-  enabled: z.boolean()
+  enabled: z.boolean(),
+  required: z.boolean().default(false)
 });
 
 export const mfaSetupSchema = z.object({
