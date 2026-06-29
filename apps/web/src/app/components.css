@@ -268,54 +268,7 @@
   width: min(1040px, 100%);
 }
 
-.wizard-steps {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.wizard-step {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 7px;
-  min-height: 54px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 10px;
-  background: var(--field-bg);
-  color: var(--muted);
-  text-align: left;
-}
-
-.wizard-step span,
-.wizard-step small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wizard-step small {
-  grid-column: 2;
-  color: var(--faint);
-  font-size: 0.72rem;
-  font-weight: 650;
-}
-
-.wizard-step.current {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--text);
-}
-
-.wizard-step:not(:disabled) {
-  cursor: pointer;
-}
-
-.wizard-step:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
+/* The review-stage stepper lives in features/reviews/reviewWizard.css. */
 
 .stage-actions {
   display: flex;
