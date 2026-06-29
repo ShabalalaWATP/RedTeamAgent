@@ -1,0 +1,108 @@
+.run-progress {
+  display: grid;
+  gap: 12px;
+}
+
+.run-progress-header,
+.run-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.run-progress-header strong,
+.run-progress-header span:last-child {
+  display: block;
+  color: var(--text);
+}
+
+.run-progress-header span:last-child {
+  font-family: var(--mono);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.run-progress-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+}
+
+.run-progress progress {
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--field-bg);
+}
+
+.run-progress progress::-webkit-progress-bar {
+  background: var(--field-bg);
+}
+
+.run-progress progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--accent), var(--accent-red));
+}
+
+.run-progress progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--accent), var(--accent-red));
+}
+
+.run-stage-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.run-stage-list li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+}
+
+.run-stage-list span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.run-stage-list strong {
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.run-stage-list .is-complete span {
+  color: var(--ok);
+  border-color: var(--ok-line);
+  background: var(--ok-bg);
+}
+
+.run-stage-list .is-current,
+.run-stage-list .is-current strong {
+  color: var(--text);
+}
+
+.run-stage-list .is-current span {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--info-bg);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.run-stage-list .is-stopped span {
+  color: var(--bad);
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+}

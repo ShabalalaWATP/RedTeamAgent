@@ -208,6 +208,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/passkeys/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Passkey Status */
+        get: operations["passkey_status_auth_passkeys_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/passkeys/registration/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Passkey Registration Options */
+        post: operations["passkey_registration_options_auth_passkeys_registration_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/passkeys/registration/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Passkey Registration Verify */
+        post: operations["passkey_registration_verify_auth_passkeys_registration_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/passkeys/authentication/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Passkey Authentication Options */
+        post: operations["passkey_authentication_options_auth_passkeys_authentication_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/passkeys/authentication/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Passkey Authentication Verify */
+        post: operations["passkey_authentication_verify_auth_passkeys_authentication_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/passkeys/{passkey_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Passkey Delete */
+        delete: operations["passkey_delete_auth_passkeys__passkey_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -273,6 +375,23 @@ export interface paths {
         put?: never;
         /** Create Standalone Review */
         post: operations["create_standalone_review_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Review */
+        put: operations["update_review_reviews__review_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -497,6 +616,23 @@ export interface paths {
         put?: never;
         /** Probe Model */
         post: operations["probe_model_providers_models__model_id__probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/models/{model_id}/select": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Select Model */
+        post: operations["select_model_providers_models__model_id__select_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1424,6 +1560,17 @@ export interface components {
             verification_token?: string | null;
             /** Reset Token */
             reset_token?: string | null;
+            mfa_requirements?: components["schemas"]["MfaRequirementView"];
+            /**
+             * Mfa Setup Required
+             * @default false
+             */
+            mfa_setup_required: boolean;
+            /**
+             * Passkey Verification Required
+             * @default false
+             */
+            passkey_verification_required: boolean;
         };
         /** Body_upload_source_reviews__review_id__sources_upload_post */
         Body_upload_source_reviews__review_id__sources_upload_post: {
@@ -1772,6 +1919,39 @@ export interface components {
             /** Code */
             code: string;
         };
+        /** MfaRequirementView */
+        MfaRequirementView: {
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Authenticator App Enabled
+             * @default false
+             */
+            authenticator_app_enabled: boolean;
+            /**
+             * Passkey Registered
+             * @default false
+             */
+            passkey_registered: boolean;
+            /**
+             * Passkey Verified
+             * @default false
+             */
+            passkey_verified: boolean;
+            /**
+             * Setup Required
+             * @default false
+             */
+            setup_required: boolean;
+            /**
+             * Passkey Verification Required
+             * @default false
+             */
+            passkey_verification_required: boolean;
+        };
         /** MfaSetupView */
         MfaSetupView: {
             /** Enabled */
@@ -1787,6 +1967,11 @@ export interface components {
         MfaStatusView: {
             /** Enabled */
             enabled: boolean;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
         };
         /** ModelCreate */
         ModelCreate: {
@@ -1932,6 +2117,88 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** PasskeyAuthenticationVerifyRequest */
+        PasskeyAuthenticationVerifyRequest: {
+            /** Credential */
+            credential: {
+                [key: string]: unknown;
+            };
+        };
+        /** PasskeyCredentialView */
+        PasskeyCredentialView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+        };
+        /** PasskeyOptionsView */
+        PasskeyOptionsView: {
+            /** Options */
+            options: {
+                [key: string]: unknown;
+            };
+        };
+        /** PasskeyRegistrationVerifyRequest */
+        PasskeyRegistrationVerifyRequest: {
+            /** Credential */
+            credential: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name?: string | null;
+        };
+        /** PasskeyStatusView */
+        PasskeyStatusView: {
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Authenticator App Enabled
+             * @default false
+             */
+            authenticator_app_enabled: boolean;
+            /**
+             * Passkey Registered
+             * @default false
+             */
+            passkey_registered: boolean;
+            /**
+             * Passkey Verified
+             * @default false
+             */
+            passkey_verified: boolean;
+            /**
+             * Setup Required
+             * @default false
+             */
+            setup_required: boolean;
+            /**
+             * Passkey Verification Required
+             * @default false
+             */
+            passkey_verification_required: boolean;
+            /**
+             * Registered
+             * @default false
+             */
+            registered: boolean;
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Credentials */
+            credentials?: components["schemas"]["PasskeyCredentialView"][];
         };
         /** PasswordResetConfirmRequest */
         PasswordResetConfirmRequest: {
@@ -2283,6 +2550,35 @@ export interface components {
             /** Domain Blocklist */
             domain_blocklist?: string[];
         };
+        /** ReviewUpdate */
+        ReviewUpdate: {
+            /** Title */
+            title: string;
+            /** Proposal Text */
+            proposal_text: string;
+            /**
+             * Mode
+             * @default standard
+             * @enum {string}
+             */
+            mode: "basic" | "standard" | "in_depth";
+            /** Focus Chips */
+            focus_chips?: string[];
+            /**
+             * External Research
+             * @default false
+             */
+            external_research: boolean;
+            /**
+             * Private Research
+             * @default true
+             */
+            private_research: boolean;
+            /** Domain Allowlist */
+            domain_allowlist?: string[];
+            /** Domain Blocklist */
+            domain_blocklist?: string[];
+        };
         /** ReviewView */
         ReviewView: {
             /** Id */
@@ -2352,6 +2648,11 @@ export interface components {
             message: string;
             /** Sequence */
             sequence: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** RunView */
         RunView: {
@@ -3167,6 +3468,206 @@ export interface operations {
             };
         };
     };
+    passkey_status_auth_passkeys_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyStatusView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passkey_registration_options_auth_passkeys_registration_options_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptionsView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passkey_registration_verify_auth_passkeys_registration_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyRegistrationVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passkey_authentication_options_auth_passkeys_authentication_options_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptionsView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passkey_authentication_verify_auth_passkeys_authentication_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyAuthenticationVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passkey_delete_auth_passkeys__passkey_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                passkey_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_projects_projects_get: {
         parameters: {
             query: {
@@ -3395,6 +3896,45 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StandaloneReviewCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_review_reviews__review_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewUpdate"];
             };
         };
         responses: {
@@ -3972,6 +4512,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    select_model_providers_models__model_id__select_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path: {
+                model_id: string;
+            };
+            cookie?: {
+                rta_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileView"];
                 };
             };
             /** @description Validation Error */

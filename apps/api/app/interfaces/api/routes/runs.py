@@ -141,6 +141,7 @@ def _sse_event(event: Any) -> str:
         "state": event.state,
         "message": event.message,
         "sequence": event.sequence,
+        "created_at": event.created_at.isoformat(),
     }
     return f"id: {event.sequence}\ndata: {json.dumps(payload)}\n\n"
 

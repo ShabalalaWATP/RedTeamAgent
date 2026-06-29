@@ -574,6 +574,388 @@
         }
       }
     },
+    "/auth/passkeys/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Status",
+        "operationId": "passkey_status_auth_passkeys_status_get",
+        "parameters": [
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyStatusView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/registration/options": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Registration Options",
+        "operationId": "passkey_registration_options_auth_passkeys_registration_options_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptionsView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/registration/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Registration Verify",
+        "operationId": "passkey_registration_verify_auth_passkeys_registration_verify_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegistrationVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/authentication/options": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Authentication Options",
+        "operationId": "passkey_authentication_options_auth_passkeys_authentication_options_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptionsView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/authentication/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Authentication Verify",
+        "operationId": "passkey_authentication_verify_auth_passkeys_authentication_verify_post",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAuthenticationVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/{passkey_id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Passkey Delete",
+        "operationId": "passkey_delete_auth_passkeys__passkey_id__delete",
+        "parameters": [
+          {
+            "name": "passkey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Passkey Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects": {
       "get": {
         "tags": [
@@ -1049,6 +1431,90 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StandaloneReviewCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reviews/{review_id}": {
+      "put": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Update Review",
+        "operationId": "update_review_reviews__review_id__put",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewUpdate"
               }
             }
           }
@@ -2194,6 +2660,80 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ModelView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers/models/{model_id}/select": {
+      "post": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Select Model",
+        "operationId": "select_model_providers_models__model_id__select_post",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "name": "rta_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rta Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileView"
                 }
               }
             }
@@ -7185,6 +7725,19 @@
               }
             ],
             "title": "Reset Token"
+          },
+          "mfa_requirements": {
+            "$ref": "#/components/schemas/MfaRequirementView"
+          },
+          "mfa_setup_required": {
+            "type": "boolean",
+            "title": "Mfa Setup Required",
+            "default": false
+          },
+          "passkey_verification_required": {
+            "type": "boolean",
+            "title": "Passkey Verification Required",
+            "default": false
           }
         },
         "type": "object",
@@ -7972,6 +8525,42 @@
         ],
         "title": "MfaCodeRequest"
       },
+      "MfaRequirementView": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "authenticator_app_enabled": {
+            "type": "boolean",
+            "title": "Authenticator App Enabled",
+            "default": false
+          },
+          "passkey_registered": {
+            "type": "boolean",
+            "title": "Passkey Registered",
+            "default": false
+          },
+          "passkey_verified": {
+            "type": "boolean",
+            "title": "Passkey Verified",
+            "default": false
+          },
+          "setup_required": {
+            "type": "boolean",
+            "title": "Setup Required",
+            "default": false
+          },
+          "passkey_verification_required": {
+            "type": "boolean",
+            "title": "Passkey Verification Required",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "MfaRequirementView"
+      },
       "MfaSetupView": {
         "properties": {
           "enabled": {
@@ -8008,6 +8597,11 @@
           "enabled": {
             "type": "boolean",
             "title": "Enabled"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
           }
         },
         "type": "object",
@@ -8343,6 +8937,149 @@
           "created_at"
         ],
         "title": "OutcomeView"
+      },
+      "PasskeyAuthenticationVerifyRequest": {
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Credential"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "title": "PasskeyAuthenticationVerifyRequest"
+      },
+      "PasskeyCredentialView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "PasskeyCredentialView"
+      },
+      "PasskeyOptionsView": {
+        "properties": {
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "options"
+        ],
+        "title": "PasskeyOptionsView"
+      },
+      "PasskeyRegistrationVerifyRequest": {
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Credential"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "title": "PasskeyRegistrationVerifyRequest"
+      },
+      "PasskeyStatusView": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "authenticator_app_enabled": {
+            "type": "boolean",
+            "title": "Authenticator App Enabled",
+            "default": false
+          },
+          "passkey_registered": {
+            "type": "boolean",
+            "title": "Passkey Registered",
+            "default": false
+          },
+          "passkey_verified": {
+            "type": "boolean",
+            "title": "Passkey Verified",
+            "default": false
+          },
+          "setup_required": {
+            "type": "boolean",
+            "title": "Setup Required",
+            "default": false
+          },
+          "passkey_verification_required": {
+            "type": "boolean",
+            "title": "Passkey Verification Required",
+            "default": false
+          },
+          "registered": {
+            "type": "boolean",
+            "title": "Registered",
+            "default": false
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 0
+          },
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/PasskeyCredentialView"
+            },
+            "type": "array",
+            "title": "Credentials"
+          }
+        },
+        "type": "object",
+        "title": "PasskeyStatusView"
       },
       "PasswordResetConfirmRequest": {
         "properties": {
@@ -9223,6 +9960,72 @@
         ],
         "title": "ReviewCreate"
       },
+      "ReviewUpdate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 220,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "proposal_text": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Proposal Text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "basic",
+              "standard",
+              "in_depth"
+            ],
+            "title": "Mode",
+            "default": "standard"
+          },
+          "focus_chips": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Focus Chips"
+          },
+          "external_research": {
+            "type": "boolean",
+            "title": "External Research",
+            "default": false
+          },
+          "private_research": {
+            "type": "boolean",
+            "title": "Private Research",
+            "default": true
+          },
+          "domain_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "title": "Domain Allowlist"
+          },
+          "domain_blocklist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "title": "Domain Blocklist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "proposal_text"
+        ],
+        "title": "ReviewUpdate"
+      },
       "ReviewView": {
         "properties": {
           "id": {
@@ -9385,6 +10188,11 @@
           "sequence": {
             "type": "integer",
             "title": "Sequence"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -9393,7 +10201,8 @@
           "run_id",
           "state",
           "message",
-          "sequence"
+          "sequence",
+          "created_at"
         ],
         "title": "RunEventView"
       },

@@ -150,8 +150,10 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     events = client.get(f"/runs/{run.json()['id']}/events")
     assert events.status_code == 200, events.text
     assert [item["state"] for item in events.json()][0] == "intake"
+    assert "created_at" in events.json()[0]
     stream = client.get(f"/runs/{run.json()['id']}/events/stream")
     assert '"state": "completed"' in stream.text
+    assert '"created_at":' in stream.text
 
     report = client.get(f"/runs/{run.json()['id']}/report")
     assert report.status_code == 200, report.text

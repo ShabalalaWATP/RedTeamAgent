@@ -285,7 +285,7 @@ describe('RedTeamAgent app flows', () => {
     renderApp('/runs/run-1');
     expect((await screen.findAllByText('LLM specialist review')).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /cancel run/i }));
-    expect(await screen.findByText('Cancelled')).toBeInTheDocument();
+    expect((await screen.findAllByText('Cancelled')).length).toBeGreaterThan(0);
   });
 
   it('shows previous workflows for the signed-in account', async () => {
