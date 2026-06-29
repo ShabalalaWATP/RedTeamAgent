@@ -2,7 +2,7 @@ import { Activity, FolderKanban, Settings, ShieldCheck } from 'lucide-react';
 import { useEffect, type ReactElement } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
-import logo from '../assets/redteamagent-logo.png';
+import logo from '../assets/theallseeingeye-logo.png';
 import { AuthPage } from '../features/auth/AuthPage';
 import { Dashboard } from '../features/projects/Dashboard';
 import { ReportPage } from '../features/reports/ReportPage';
@@ -18,6 +18,18 @@ import './theme.css';
 import './styles.css';
 import './components.css';
 import './effects.css';
+
+function BrandMark() {
+  return (
+    <div className="brand">
+      <img className="brand-logo" src={logo} alt="" width="46" height="28" />
+      <span className="brand-name">
+        TheAllSeeingEye
+        <small>Decision intelligence</small>
+      </span>
+    </div>
+  );
+}
 
 function Layout() {
   const { auth, setAuth } = useAuth();
@@ -35,13 +47,7 @@ function Layout() {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
-        <div className="brand">
-          <img src={logo} alt="" width="40" height="40" />
-          <span className="brand-name">
-            RedTeamAgent
-            <small>Decision intelligence</small>
-          </span>
-        </div>
+        <BrandMark />
         <nav>
           <NavLink to="/workflows"><Activity size={18} aria-hidden="true" />Workflows</NavLink>
           <NavLink to="/projects"><FolderKanban size={18} aria-hidden="true" />Projects</NavLink>
@@ -73,13 +79,7 @@ function PrivilegedMfaGate({ auth, logout }: { auth: AuthState; logout: () => vo
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
-        <div className="brand">
-          <img src={logo} alt="" width="40" height="40" />
-          <span className="brand-name">
-            RedTeamAgent
-            <small>Decision intelligence</small>
-          </span>
-        </div>
+        <BrandMark />
         <p className="sidebar-foot">Privileged accounts require authenticator-app MFA and a verified passkey.</p>
       </aside>
       <main>

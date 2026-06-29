@@ -273,7 +273,7 @@ export function ProviderSettings({ embedded = false }: ProviderSettingsProps) {
       <div className="screen-header">
         <div>
           {embedded ? <h2>AI setup</h2> : <h1>AI setup</h1>}
-          <p className="muted">Choose the provider and model RedTeamAgent should use.</p>
+          <p className="muted">Choose the provider and model TheAllSeeingEye should use.</p>
         </div>
       </div>
       <ErrorState message={error || workspaceError} />

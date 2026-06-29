@@ -67,12 +67,13 @@ a:focus-visible {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.brand img {
-  width: 40px;
-  height: 40px;
+.brand-logo {
+  width: 48px;
+  height: auto;
+  aspect-ratio: 5 / 3;
   object-fit: contain;
   flex: 0 0 auto;
-  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.4));
+  filter: drop-shadow(0 0 9px rgb(240 96 109 / 0.4));
 }
 
 .brand-name {

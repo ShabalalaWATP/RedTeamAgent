@@ -23,7 +23,7 @@ export function SavedConnectionsPanel({
     <aside className="panel stack">
       <h2>Saved connections</h2>
       {connections.length === 0 ? (
-        <EmptyState title="No saved provider" body="Save the provider RedTeamAgent should use for reviews." />
+        <EmptyState title="No saved provider" body="Save the provider TheAllSeeingEye should use for reviews." />
       ) : (
         <div className="list">
           {connections.map((connection) => {

@@ -44,7 +44,7 @@ export function ProviderConnectionForm({
       {schemas.length === 0 ? (
         <EmptyState title="No adapters" body="No provider adapters are available in this environment." />
       ) : null}
-      <Field label="AI provider" hint="This controls where RedTeamAgent sends AI review requests.">
+      <Field label="AI provider" hint="This controls where TheAllSeeingEye sends AI review requests.">
         <select value={selected} onChange={(event) => onSelectedChange(event.target.value)}>
           {visibleSchemas.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
         </select>
@@ -65,7 +65,7 @@ export function ProviderConnectionForm({
       <Button type="button" onClick={onLoadProviderModels} disabled={!schema || loadingModels}>
         <RefreshCcw size={16} /> {loadingModels ? 'Loading models' : 'Load models'}
       </Button>
-      <Field label="Model" hint="Load the provider's live model list, then choose the model RedTeamAgent should use.">
+      <Field label="Model" hint="Load the provider's live model list, then choose the model TheAllSeeingEye should use.">
         <ModelDropdown
           value={defaultModelIdentifier}
           options={defaultModelOptions}
