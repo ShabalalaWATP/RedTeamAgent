@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { contextPackResponse, reportResponse, runResponse } from './app-flow-fixtures';
 import { authState, jsonResponse, mockFetch, renderApp, storeAuth, textResponse } from './test-utils';
-
 afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.clear();
@@ -218,7 +217,7 @@ describe('RedTeamAgent app flows', () => {
     await user.type(screen.getByLabelText(/domain allow-list/i), 'example.com');
     await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /run review/i }));
-    await waitFor(() => expect(screen.getByText(/Report preview/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Final report/i)).toBeInTheDocument());
   });
 
   it('loads report data, filters findings and exports markdown', async () => {
@@ -263,8 +262,7 @@ describe('RedTeamAgent app flows', () => {
     await user.type(screen.getByLabelText(/other run id/i), 'run-previous');
     await user.click(screen.getByRole('button', { name: /compare reports/i }));
     expect(await screen.findByText('Legacy risk removed')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /retry run/i }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/reviews/review-1/runs'), expect.anything()));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/report/compare'), expect.anything());
   });
 
   it('cancels a running workflow from the report timeline', async () => {

@@ -70,7 +70,7 @@ describe('ReportPage run controls', () => {
     expect(await screen.findByText('Streamed report')).toBeInTheDocument();
     expect(screen.getByText('Architecture policy')).toBeInTheDocument();
     expect(screen.getByText('software_architecture')).toBeInTheDocument();
-    expect(screen.getAllByText('done').length).toBeGreaterThan(0);
+    expect(screen.queryByText('done')).not.toBeInTheDocument();
     expect(FakeEventSource.instances[0].closed).toBe(true);
     act(() => FakeEventSource.instances[0].fail());
     expect(FakeEventSource.instances[0].closed).toBe(true);
@@ -334,8 +334,8 @@ describe('ReportPage run controls', () => {
 
     renderApp('/runs/run-1');
 
-    expect(await screen.findByText('Critical finding')).toBeInTheDocument();
-    expect(screen.getByText('Unscored finding')).toBeInTheDocument();
+    expect((await screen.findAllByText('Critical finding')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unscored finding').length).toBeGreaterThan(0);
     // The unrecognised severity still renders as a (neutral) status pill.
     expect(screen.getAllByText('experimental').length).toBeGreaterThan(0);
   });
@@ -356,7 +356,7 @@ describe('ReportPage run controls', () => {
     expect(await screen.findByText('Finding 50')).toBeInTheDocument();
     expect(performance.now() - started).toBeLessThan(2000);
     await user.click(screen.getByRole('button', { name: 'high' }));
-    expect(screen.getByText('Finding 2')).toBeInTheDocument();
+    expect(screen.getAllByText('Finding 2').length).toBeGreaterThan(0);
     expect(screen.queryByText('Finding 1')).not.toBeInTheDocument();
   });
 

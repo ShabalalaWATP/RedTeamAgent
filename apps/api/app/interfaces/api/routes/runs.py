@@ -123,14 +123,14 @@ async def stream_events(
             last_sequence = event.sequence
             yield _sse_event(event)
         for _ in range(120):
-            run = service.get_run(context.user.id, run_id)
-            if run.state in {RunState.COMPLETED.value, RunState.FAILED.value, RunState.CANCELLED.value}:
-                break
             await asyncio.sleep(0.25)
             for event in service.list_events(context.user.id, run_id):
                 if event.sequence > last_sequence:
                     last_sequence = event.sequence
                     yield _sse_event(event)
+            run = service.get_run(context.user.id, run_id)
+            if run.state in {RunState.COMPLETED.value, RunState.FAILED.value, RunState.CANCELLED.value}:
+                break
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 

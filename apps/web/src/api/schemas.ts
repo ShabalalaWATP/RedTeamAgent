@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export { reportComparisonSchema, reportSchema } from './reportSchemas';
+
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 export const authSchema = z.object({
@@ -199,107 +201,6 @@ export const modelProfileSchema = z.object({
   agent_key: z.string(),
   model_record_id: z.string(),
   explicit_pin: z.boolean()
-});
-
-const contextPackProvenanceSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  agent_key: z.string(),
-  referenced_by_agents: z.array(z.string()).default([]),
-  knowledge_ref: z.string().optional(),
-  version: z.number(),
-  markdown_sha256: z.string(),
-  source: z.string().default('workspace'),
-  source_urls: z.array(z.string()).default([]),
-  licence: z.string().optional(),
-  curated_at: z.string().optional(),
-  load_strategy: z.string().default('lazy_selected_agent_only'),
-  materialised_for_orchestrator: z.boolean().default(false)
-});
-
-const retrievedEvidenceSchema = z.object({
-  source_id: z.string(),
-  source_filename: z.string(),
-  locator: z.string(),
-  excerpt: z.string(),
-  score: z.number()
-});
-
-const externalSourceSchema = z.object({
-  title: z.string(),
-  url: z.string(),
-  query: z.string().default(''),
-  quality_rank: z.number().default(0),
-  captured_at: z.string().default('')
-}).catchall(z.unknown());
-
-const riskMatrixSchema = z.object({
-  risk: z.string(),
-  likelihood: z.string(),
-  impact: z.string(),
-  colour_independent_label: z.string()
-});
-
-const actionItemSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  status: z.string(),
-  owner: z.string(),
-  due: z.string().nullable(),
-  source: z.string()
-});
-
-export const reportSchema = z.object({
-  data: z.object({
-    title: z.string(),
-    provisional_recommendation: z.string(),
-    executive_summary: z.string(),
-    coverage_map: z.object({
-      sources: z.number(),
-      agents: z.array(z.string()),
-      retrieved_evidence: z.number().optional(),
-      external_sources: z.number().optional()
-    }),
-    top_risks: z.array(z.string()),
-    dependencies: z.array(z.string()),
-    blockers: z.array(z.string()),
-    assumptions: z.array(z.string()),
-    evidence_gaps: z.array(z.string()),
-    context_packs: z.array(contextPackProvenanceSchema).default([]),
-    agent_cards: z.array(z.record(z.string(), z.unknown())).default([]),
-    assurance_agents: z.array(z.record(z.string(), z.unknown())).default([]),
-    tool_manifest: z.record(z.string(), z.unknown()).default({}),
-    context_strategy: z.record(z.string(), z.unknown()).default({}),
-    quality_assurance: z.record(z.string(), z.unknown()).default({}),
-    findings: z.array(z.record(z.string(), z.unknown())),
-    retrieved_evidence: z.array(retrievedEvidenceSchema).default([]),
-    external_sources: z.array(externalSourceSchema).default([]),
-    risk_matrix: z.array(riskMatrixSchema).default([]),
-    dependency_graph: z.array(z.object({ from: z.string(), to: z.string() })).default([]),
-    time_horizons: z.record(z.string(), z.array(z.string())).default({}),
-    evidence_quality: z.record(z.string(), z.unknown()).default({}),
-    cross_agent_disagreements: z.array(z.object({
-      topic: z.string(),
-      positions: z.array(z.string())
-    })).default([]),
-    strongest_case_for: z.string().default(''),
-    strongest_case_against: z.string().default(''),
-    pre_mortem: z.array(z.string()).default([]),
-    scenarios: z.record(z.string(), z.string()).default({}),
-    validation_experiments: z.array(z.string()).default([]),
-    action_items: z.array(actionItemSchema).default([]),
-    sources: z.array(z.string()),
-    methodology: z.string()
-  })
-});
-
-export const reportComparisonSchema = z.object({
-  left_run_id: z.string(),
-  right_run_id: z.string(),
-  changed_risks: z.array(z.string()),
-  changed_assumptions: z.array(z.string()),
-  changed_evidence_gaps: z.array(z.string()),
-  changed_recommendations: z.array(z.string())
 });
 
 export const evaluationResultSchema = z.object({

@@ -3,9 +3,23 @@ from __future__ import annotations
 from typing import Any
 
 from app.application.ports.repositories import RepositoryPorts
+from app.application.report_narrative import (
+    blockers,
+    dependencies,
+    evidence_gaps,
+    executive_summary,
+    orchestrator_narrative,
+    recommendation,
+)
 from app.application.search_service import DeterministicSearchProvider, research_queries
 from app.domain.agents import AGENT_LABELS
 from app.domain.enums import AgentKey
+
+GENERIC_CAVEAT_PHRASES = (
+    "human review before relying on it",
+    "not professional sign-off",
+    "not a formal approval record",
+)
 
 
 def compose_report(
@@ -31,6 +45,8 @@ def compose_report(
         _finding_from_claim(index, claim, primary_evidence, evidence_label, evidence_type)
         for index, claim in enumerate(llm_claims, start=1)
     ]
+    agent_outputs = _agent_outputs(provider_output)
+    specialist_findings = _specialist_findings(provider_output, routing_plan["selected_agents"])
     action_items = [
         {
             "id": f"action-{index}",
@@ -45,8 +61,8 @@ def compose_report(
     return {
         "id": f"report-{run_id}",
         "title": review.title,
-        "provisional_recommendation": "Proceed with controls and validation before irreversible rollout.",
-        "executive_summary": "The review found manageable risk with evidence gaps that need active closure.",
+        "provisional_recommendation": recommendation(findings, primary_evidence),
+        "executive_summary": executive_summary(review, findings, agent_outputs, primary_evidence),
         "coverage_map": {
             "sources": len(sources) or 1,
             "agents": routing_plan["selected_agents"],
@@ -54,11 +70,11 @@ def compose_report(
             "external_sources": len(external_sources),
         },
         "top_risks": [finding["title"] for finding in findings],
-        "dependencies": ["Provider routing policy", "Evidence quality", "Operational ownership"],
-        "blockers": [] if primary_evidence else ["No retrievable evidence was available."],
+        "dependencies": dependencies(findings),
+        "blockers": blockers(findings, primary_evidence),
         "assumptions": ["Report is decision support and not a formal approval record."],
-        "evidence_gaps": [] if primary_evidence else ["No source-backed evidence was retrieved."],
-        "specialist_findings": _specialist_findings(provider_output, routing_plan["selected_agents"]),
+        "evidence_gaps": evidence_gaps(findings, primary_evidence),
+        "specialist_findings": specialist_findings,
         "context_packs": context_packs,
         "agent_cards": _safe_list(routing_plan.get("agent_cards", [])),
         "assurance_agents": _safe_list(routing_plan.get("assurance_cards", [])),
@@ -88,9 +104,10 @@ def compose_report(
         "evidence_quality": {
             "retrieval_score": retrieved_evidence[0]["score"] if retrieved_evidence else 0.0,
             "llm_claim_count": len(llm_claims),
-            "llm_agent_count": len(_agent_outputs(provider_output)),
+            "llm_agent_count": len(agent_outputs),
         },
         "llm_review": _llm_review_record(provider_output),
+        "orchestrator_narrative": orchestrator_narrative(review, findings, agent_outputs, primary_evidence),
         "cross_agent_disagreements": [
             {
                 "topic": "Proceed timing",
@@ -198,7 +215,8 @@ def _claim_text(claim: dict[str, Any] | None, key: str, fallback: str) -> str:
     if claim is None:
         return fallback
     value = claim.get(key)
-    return str(value) if isinstance(value, str) and value.strip() else fallback
+    text = str(value).strip() if isinstance(value, str) and value.strip() else fallback
+    return _without_repeated_caveat(text) or fallback
 
 
 def _claim_title(claim: dict[str, Any], index: int) -> str:
@@ -209,6 +227,19 @@ def _claim_title(claim: dict[str, Any], index: int) -> str:
     if summary:
         return summary[:160]
     return f"LLM agent finding {index}"
+
+
+def _without_repeated_caveat(text: str) -> str:
+    lowered = text.lower()
+    if not any(phrase in lowered for phrase in GENERIC_CAVEAT_PHRASES):
+        return text
+    sentences = [sentence.strip() for sentence in text.split(".") if sentence.strip()]
+    kept = [
+        sentence
+        for sentence in sentences
+        if not any(phrase in sentence.lower() for phrase in GENERIC_CAVEAT_PHRASES)
+    ]
+    return ". ".join(kept).strip()
 
 
 def _severity(value: str) -> str:

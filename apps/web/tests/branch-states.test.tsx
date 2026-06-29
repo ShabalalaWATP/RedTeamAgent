@@ -63,12 +63,8 @@ describe('unauthenticated and alternate branch states', () => {
       '/runs'
     );
     expect(screen.getByText('Report loading')).toBeInTheDocument();
-    const exportButton = screen.getByRole('button', { name: /markdown/i }) as HTMLButtonElement;
-    exportButton.disabled = false;
-    fireEvent.click(exportButton);
-    const pdfButton = screen.getByRole('button', { name: 'PDF' }) as HTMLButtonElement;
-    pdfButton.disabled = false;
-    fireEvent.click(pdfButton);
+    expect(screen.getByRole('button', { name: /cancel run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /retry run/i })).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

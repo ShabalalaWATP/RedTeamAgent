@@ -4,7 +4,7 @@ import { AdvancedReportSections } from '../src/features/reports/AdvancedReportSe
 import { reportResponse } from './report-fixtures';
 
 describe('AdvancedReportSections', () => {
-  it('shows when a report has no recorded LLM agent output', () => {
+  it('shows empty states for optional advanced report sections', () => {
     render(
       <AdvancedReportSections
         report={{
@@ -14,26 +14,26 @@ describe('AdvancedReportSections', () => {
       />
     );
 
-    expect(screen.getByText('No agent output')).toBeInTheDocument();
+    expect(screen.getByText('No matrix entries')).toBeInTheDocument();
+    expect(screen.getByText('No external research records were used for this report.')).toBeInTheDocument();
   });
 
-  it('shows weak recorded LLM agent output explicitly', () => {
+  it('shows recorded scenarios and action status without relying on colour', () => {
     render(
       <AdvancedReportSections
         report={{
           ...advancedReport(),
-          llm_review: {
-            schema: 'multi_agent_specialist_output',
-            summary: '',
-            claim_count: 0,
-            agent_outputs: [{ agent: 'evidence_context', label: 'Evidence Agent', summary: '', claims: [] }]
-          }
+          strongest_case_for: 'The plan can work if ownership is clear.',
+          strongest_case_against: 'The plan fails if evidence is thin.',
+          scenarios: { base: 'Narrow rollout needed.' },
+          action_items: [{ id: 'action-1', title: 'Assign owner', status: 'open', owner: 'Ops', due: null, source: 'proposal' }]
         }}
       />
     );
 
-    expect(screen.getByText('No summary returned.')).toBeInTheDocument();
-    expect(screen.getByText('0 claims')).toBeInTheDocument();
+    expect(screen.getByText('The plan can work if ownership is clear.')).toBeInTheDocument();
+    expect(screen.getByText('Assign owner')).toBeInTheDocument();
+    expect(screen.getByText('open')).toBeInTheDocument();
   });
 });
 
