@@ -158,10 +158,15 @@ def _strict_output_instruction(agent_key: str) -> str:
     return "\n".join(
         [
             "Return only a JSON object with these keys: schema, summary, claims.",
-            "Write the summary as practical synthesis: likely user intent, what will work, what will not work, "
-            "key blockers, and the next decision the user should make.",
+            "Write the summary in direct, down-to-earth language. Explain what this really means, what is likely "
+            "to happen in practice, where it will probably break first, what can still work, and the next decision "
+            "the user should make.",
             "The claims array must contain at least one useful claim from this agent.",
             "Each claim must include title, severity, confidence, category, summary and recommended_action.",
+            "Each claim summary must describe a concrete real-world failure mode, trade-off, user impact, blocker "
+            "or hidden assumption. Avoid vague policy-document wording.",
+            "Each recommended_action must be a practical next move with an owner, test, decision rule or evidence "
+            "request where possible.",
             "Use severity and confidence values from: low, medium, high, critical.",
             "Use evidence_label when a supplied locator supports the claim, otherwise use review_setup:proposal.",
             "Use evidence_type as source, inference, assumption or unknown.",

@@ -170,6 +170,9 @@ def test_auth_project_review_run_report_flow(client: TestClient) -> None:
     assert report_data["specialist_findings"][0]["claim_count"] >= 1
     assert report_data["orchestrator_narrative"]["agents_run"]
     assert report_data["orchestrator_narrative"]["recommended_plan"]
+    assert "The practical read" in report_data["executive_summary"]
+    assert "Plain reality" in report_data["orchestrator_narrative"]["synthesis"]
+    assert "real use" in report_data["executive_summary"]
     assert report_data["context_packs"][0]["markdown_sha256"] == policy_hash
     assert all("markdown" not in pack for pack in report_data["context_packs"])
     assert report_data["quality_assurance"]["status"] == "passed"

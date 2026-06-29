@@ -9,7 +9,12 @@ from app.application.report_narrative import (
     evidence_gaps,
     executive_summary,
     orchestrator_narrative,
+    pre_mortem,
     recommendation,
+    scenarios,
+    strongest_case_against,
+    strongest_case_for,
+    validation_experiments,
 )
 from app.application.search_service import DeterministicSearchProvider, research_queries
 from app.domain.agents import AGENT_LABELS
@@ -114,20 +119,11 @@ def compose_report(
                 "positions": ["Operations favours gated rollout.", "Policy asks for stronger evidence first."],
             }
         ],
-        "strongest_case_for": "A staged rollout can reduce uncertainty while preserving reversibility.",
-        "strongest_case_against": "Proceeding without named owners can turn manageable gaps into operational failure.",
-        "pre_mortem": [
-            "The decision fails because rollback ownership and support coverage were assumed, not verified."
-        ],
-        "scenarios": {
-            "best": "Validation closes key gaps and the rollout proceeds with low disruption.",
-            "base": "Some evidence remains incomplete, requiring a narrower launch.",
-            "worst": "Unsupported assumptions create avoidable operational and reputational impact.",
-        },
-        "validation_experiments": [
-            "Run a tabletop rollback rehearsal.",
-            "Ask support to simulate peak incident coverage.",
-        ],
+        "strongest_case_for": strongest_case_for(findings, primary_evidence),
+        "strongest_case_against": strongest_case_against(findings, primary_evidence),
+        "pre_mortem": pre_mortem(findings, primary_evidence),
+        "scenarios": scenarios(findings, primary_evidence),
+        "validation_experiments": validation_experiments(findings, primary_evidence),
         "action_items": action_items,
         "recommended_actions": [finding["recommended_action"] for finding in findings],
         "sources": source_labels,
