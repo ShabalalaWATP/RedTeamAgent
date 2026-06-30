@@ -65,11 +65,11 @@ test('stage 2 browser flow reaches evidence-linked report', async ({ page }) => 
 
   await expect(page.getByRole('heading', { name: 'Run review' })).toBeVisible();
   await page.getByRole('button', { name: 'Run review' }).click();
-  await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Final report' })).toBeVisible();
   await expect(page.getByLabel('Findings').getByText('Unsupported claim risk')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Risk matrix' })).toBeVisible();
-  await expect(page.getByText('Assign validation owner')).toBeVisible();
-  await expect(page.getByText('Stage 1 governance context')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Action tracking' }).getByText('Assign validation owner')).toBeVisible();
+  await expect(page.getByText('Stage 1 governance context').first()).toBeVisible();
   await page.getByRole('button', { name: 'Markdown' }).click();
   await expect(page.getByLabel('Export output')).toContainText('Evidence-linked report');
   await page.getByRole('button', { name: 'PDF' }).click();
@@ -138,7 +138,7 @@ test('stage 2 core workflow is keyboard operable', async ({ page }) => {
   await tabTo(page, page.getByRole('button', { name: 'Run review' }));
   await page.keyboard.press('Enter');
 
-  await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Final report' })).toBeVisible();
   await expect(page.getByLabel('Findings').getByText('Unsupported claim risk')).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: 'medium' }));
   await page.keyboard.press('Enter');
