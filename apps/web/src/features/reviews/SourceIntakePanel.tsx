@@ -2,10 +2,7 @@ import { FileUp, GitBranch, Globe2, Mic, Square } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import type { Source } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
-
-const RECORDING_TIMESLICE_MS = 1000;
-const MIN_RECORDING_MS = 1200;
-const FINAL_CHUNK_GRACE_MS = 150;
+import { startVoiceCapture, supportsVoiceCapture, type VoiceCaptureSession } from './voiceCapture';
 
 type SourceIntakePanelProps = {
   disabled: boolean;
@@ -30,101 +27,80 @@ export function SourceIntakePanel({
   const [repositoryUrl, setRepositoryUrl] = useState('https://github.com/example/decision-review');
   const [recording, setRecording] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('No voice note recorded.');
+  const [voiceLevel, setVoiceLevel] = useState(0);
+  const [voiceSignal, setVoiceSignal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('No files selected.');
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recordingStartedAtRef = useRef(0);
+  const captureRef = useRef<VoiceCaptureSession | null>(null);
+  const voiceSignalRef = useRef(false);
   const stopPendingRef = useRef(false);
-  const stopTimerRef = useRef<number | null>(null);
 
   const startVoiceNote = async () => {
     /* v8 ignore next */
     if (disabled) return;
     try {
-      if (!supportsRecording()) {
+      if (!supportsVoiceCapture()) {
         setVoiceStatus('Voice recording is not available in this browser. Upload an audio file instead.');
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = preferredAudioMimeType();
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      chunksRef.current = [];
-      streamRef.current = stream;
-      recorderRef.current = recorder;
-      recordingStartedAtRef.current = Date.now();
+      setVoiceLevel(0);
+      setVoiceSignal(false);
+      voiceSignalRef.current = false;
       stopPendingRef.current = false;
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-      recorder.onstop = () => {
-        window.setTimeout(() => {
-          submitVoiceNote(recorder.mimeType || mimeType || 'audio/webm');
-        }, FINAL_CHUNK_GRACE_MS);
-      };
-      recorder.start(RECORDING_TIMESLICE_MS);
+      const capture = await startVoiceCapture((level, hasSignal) => {
+        setVoiceLevel(level);
+        if (hasSignal && !voiceSignalRef.current) {
+          voiceSignalRef.current = true;
+          setVoiceSignal(true);
+          setVoiceStatus('Recording voice note. Microphone is receiving audio.');
+        }
+      });
+      captureRef.current = capture;
       setRecording(true);
-      setVoiceStatus('Recording voice note.');
+      setVoiceStatus('Microphone access granted. Waiting for voice input.');
     } catch (err) {
-      stopTracks();
-      recorderRef.current = null;
+      captureRef.current?.dispose();
+      captureRef.current = null;
       setRecording(false);
       setVoiceStatus(recordingErrorMessage(err));
     }
   };
 
   const stopVoiceNote = () => {
-    const recorder = recorderRef.current;
+    const capture = captureRef.current;
     if (stopPendingRef.current) {
       setVoiceStatus('Voice note is already being saved.');
       return;
     }
-    if (!recorder || recorder.state === 'inactive') {
+    if (!capture || !capture.isActive()) {
       setVoiceStatus('No active voice recording to stop.');
       return;
     }
     stopPendingRef.current = true;
-    const elapsed = Date.now() - recordingStartedAtRef.current;
-    if (elapsed < MIN_RECORDING_MS && chunksRef.current.length === 0) {
-      setVoiceStatus('Finishing a short voice note so the browser can save audio.');
-      stopTimerRef.current = window.setTimeout(() => stopRecorder(recorder), MIN_RECORDING_MS - elapsed);
-      return;
-    }
-    stopRecorder(recorder);
+    setVoiceStatus('Stopping voice note and checking captured audio.');
+    void capture.stop()
+      .then((result) => submitVoiceNote(result.file, result.source, result.hadSignal))
+      .catch((err: unknown) => setVoiceStatus(recordingErrorMessage(err)));
   };
 
-  const stopRecorder = (recorder: MediaRecorder) => {
-    setVoiceStatus('Stopping voice note and saving evidence.');
-    recorder.stop();
-  };
-
-  const submitVoiceNote = (mimeType: string) => {
-    const captured = chunksRef.current.filter((chunk) => chunk.size > 0);
-    const capturedType = baseMimeType(mimeType);
-    const file = new File(captured, voiceFilename(capturedType), { type: capturedType });
-    stopTracks();
-    recorderRef.current = null;
+  const submitVoiceNote = (file: File | null, source: string, hadSignal: boolean) => {
+    captureRef.current = null;
     stopPendingRef.current = false;
-    if (stopTimerRef.current !== null) {
-      window.clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = null;
-    }
     setRecording(false);
-    if (file.size === 0) {
-      setVoiceStatus('No audio was captured. Try recording for a little longer, then allow microphone access if prompted.');
+    setVoiceLevel(0);
+    if (!file || file.size === 0) {
+      const detail = hadSignal
+        ? 'Microphone sound was detected, but the browser did not return a usable audio file. Try Safari with this tab open, or upload a Voice Memos recording as evidence.'
+        : 'Microphone access was granted, but no voice input was detected. Check iPhone microphone permission for this browser and try again.';
+      setVoiceStatus(detail);
       return;
     }
-    setVoiceStatus('Voice note captured, submitting transcript source.');
+    const fallbackNote = source === 'wav-fallback' ? ' using a mobile-safe fallback' : '';
+    setVoiceStatus(`Voice note captured${fallbackNote}, submitting transcript source.`);
     void onUpload(file)
       .then(() => setVoiceStatus('Voice note submitted for timestamped transcription.'))
       .catch((err: unknown) => setVoiceStatus((err as Error).message));
-  };
-
-  const stopTracks = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
   };
 
   return (
@@ -189,6 +165,7 @@ export function SourceIntakePanel({
         </Button>
         <span className="muted" role="status">{voiceStatus}</span>
       </div>
+      {recording ? <VoiceInputMeter level={voiceLevel} active={voiceSignal} /> : null}
       <ErrorState message={error} />
       {sources.length === 0 ? (
         <EmptyState title="No evidence yet" body="Add text, rich files, websites, voice, video or repository evidence." />
@@ -198,6 +175,25 @@ export function SourceIntakePanel({
         </div>
       )}
     </section>
+  );
+}
+
+function VoiceInputMeter({ level, active }: { level: number; active: boolean }) {
+  const percentage = Math.max(4, Math.round(level * 100));
+  return (
+    <div className="voice-input-meter">
+      <div
+        className="voice-input-bar"
+        role="progressbar"
+        aria-label="Microphone input level"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percentage}
+      >
+        <span className={active ? 'is-active' : ''} style={{ width: `${percentage}%` }} />
+      </div>
+      <small className="muted">{active ? 'Voice input detected.' : 'No voice input detected yet.'}</small>
+    </div>
   );
 }
 
@@ -214,31 +210,6 @@ function SourceCard({ source }: { source: Source }) {
       <Status tone={source.state === 'ingested' ? 'ok' : 'bad'}>{source.state}</Status>
     </article>
   );
-}
-
-function supportsRecording() {
-  return typeof navigator !== 'undefined'
-    && Boolean(navigator.mediaDevices?.getUserMedia)
-    && typeof MediaRecorder !== 'undefined';
-}
-
-function preferredAudioMimeType() {
-  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
-  for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4']) {
-    if (MediaRecorder.isTypeSupported(type)) return type;
-  }
-  return '';
-}
-
-function baseMimeType(value: string) {
-  return value.split(';', 1)[0].trim().toLowerCase() || 'audio/webm';
-}
-
-function voiceFilename(mimeType: string) {
-  if (mimeType === 'audio/mp4') return 'voice-note.m4a';
-  if (mimeType === 'audio/mpeg') return 'voice-note.mp3';
-  if (mimeType === 'audio/wav' || mimeType === 'audio/wave' || mimeType === 'audio/x-wav') return 'voice-note.wav';
-  return 'voice-note.webm';
 }
 
 function recordingErrorMessage(err: unknown) {

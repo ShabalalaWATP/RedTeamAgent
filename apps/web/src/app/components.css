@@ -274,6 +274,32 @@
   flex-wrap: wrap;
 }
 
+.voice-input-meter {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.voice-input-bar {
+  overflow: hidden;
+  height: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--field-bg);
+}
+
+.voice-input-bar span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  background: var(--warn);
+  transition: width 0.12s ease, background 0.12s ease;
+}
+
+.voice-input-bar span.is-active {
+  background: var(--ok);
+}
+
 .visually-hidden-file {
   position: absolute;
   width: 1px;
