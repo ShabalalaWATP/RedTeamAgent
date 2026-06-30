@@ -20,6 +20,15 @@ def test_production_csp_allows_configured_turnstile_origin() -> None:
     assert "frame-src https://challenges.cloudflare.com" in text
 
 
+def test_production_permissions_policy_allows_voice_notes_only() -> None:
+    root = Path(__file__).resolve().parents[3]
+    caddyfile = root / "deploy" / "cheap-vps" / "Caddyfile"
+    text = caddyfile.read_text(encoding="utf-8")
+
+    assert 'Permissions-Policy "camera=(), microphone=(self), geolocation=()"' in text
+    assert "microphone=()" not in text
+
+
 def test_production_settings_fail_closed_for_unsafe_defaults() -> None:
     settings = Settings(
         app_env="production",
