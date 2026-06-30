@@ -71,20 +71,7 @@
   box-shadow: 0 0 24px rgb(78 163 255 / 0.32);
 }
 
-/* Light sweep across the primary call to action on hover. */
-.auth-actions .button.primary { position: relative; overflow: hidden; }
-
-.auth-actions .button.primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, transparent 32%, rgb(255 255 255 / 0.26) 50%, transparent 68%);
-  transform: translateX(-130%);
-  transition: transform 0.6s ease;
-  pointer-events: none;
-}
-
-.auth-actions .button.primary:hover::after { transform: translateX(130%); }
+/* The primary-action light sweep is global (see app/effects.css). */
 
 /* Staggered entrance and a slow blue/red breathing glow on the card.
    Finite entrances fast-forward to their visible end state under snapshot

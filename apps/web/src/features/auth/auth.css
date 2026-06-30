@@ -71,7 +71,6 @@
 .auth-brand-panel h1 {
   font-size: clamp(2rem, 3vw, 2.9rem);
   line-height: 1;
-  text-shadow: 0 0 26px rgb(240 96 109 / 0.35);
 }
 
 .auth-tagline {

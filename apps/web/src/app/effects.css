@@ -3,8 +3,8 @@
 html { scroll-behavior: smooth; }
 
 ::selection {
-  background: var(--accent-soft);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--primary-text);
 }
 
 input,
@@ -31,7 +31,7 @@ textarea {
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--faint);
+  background: var(--accent);
   background-clip: padding-box;
 }
 
@@ -54,9 +54,9 @@ textarea {
   animation: rta-rise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-/* Soft accent glow behind the login title (keeps solid, accessible text) */
+/* Soft red glow behind the login title, tying it to the eye (solid, accessible text). */
 .auth-brand-panel h1 {
-  text-shadow: 0 0 32px rgb(78 163 255 / 0.3);
+  text-shadow: 0 0 28px rgb(240 96 109 / 0.35);
 }
 
 /* Light sweep across primary actions on hover */
@@ -76,6 +76,26 @@ textarea {
 }
 
 .button.primary:hover::after { transform: translateX(120%); }
+.button.primary:hover { transform: translateY(-1px); }
+
+/* Faint technical grid behind the authed app, echoing the login backdrop. */
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 72% -4%, #000, transparent 78%);
+}
+
+/* Glow on the active nav item and a soft halo on the user avatar. */
+.sidebar a.active::before { box-shadow: 0 0 12px var(--accent); }
+.sidebar a.active svg { filter: drop-shadow(0 0 6px rgb(78 163 255 / 0.55)); }
+.avatar { box-shadow: 0 0 16px rgb(240 96 109 / 0.28); }
 
 /* Aligned, technical figures */
 .status,
