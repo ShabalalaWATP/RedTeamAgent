@@ -17,22 +17,6 @@
   top: 88px;
 }
 
-/* Section titles wear a glowing accent chip around the icon. */
-.report-final-layout .section-title { gap: 12px; }
-
-.report-final-layout .section-title svg {
-  width: 34px;
-  height: 34px;
-  padding: 8px;
-  border-radius: 10px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 1px solid var(--info-line);
-  box-shadow: 0 0 18px rgb(78 163 255 / 0.18);
-}
-
-.report-final-layout .section-title h2 { font-size: 1.16rem; }
-
 /* Orchestrator synthesis hero. */
 .report-synthesis {
   position: relative;

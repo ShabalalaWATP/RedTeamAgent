@@ -17,7 +17,20 @@
 .settings-block-header h2 {
   align-items: center;
   display: flex;
-  gap: 8px;
+  gap: 10px;
+}
+
+/* Heading icons wear the same glowing chip as section titles. */
+.settings-block-header h2 svg,
+.security-method h3 svg {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--info-line);
 }
 
 .recovery-grid {
@@ -40,19 +53,35 @@
 }
 
 .security-method {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 14px;
   align-content: start;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
-  background: var(--panel-raised);
+  background: linear-gradient(180deg, var(--panel-2), var(--field-bg));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.security-method::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-teal), var(--accent));
+}
+
+.security-method:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .security-method h3 {
   align-items: center;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
 }
 

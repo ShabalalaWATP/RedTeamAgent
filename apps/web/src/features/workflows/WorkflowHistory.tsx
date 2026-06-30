@@ -15,6 +15,13 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function workflowStateTone(state: string): 'ok' | 'warn' | 'bad' | 'info' {
+  if (state === 'completed') return 'ok';
+  if (state === 'failed') return 'bad';
+  if (state === 'cancelled') return 'info';
+  return 'warn';
+}
+
 export function WorkflowHistory() {
   const { auth } = useAuth();
   const navigate = useNavigate();
@@ -73,14 +80,14 @@ export function WorkflowHistory() {
         ) : (
           <div className="workflow-list">
             {workflows.map((workflow) => (
-              <TiltCard className="workflow-item" key={workflow.id}>
+              <TiltCard className={`workflow-item is-${workflow.state}`} key={workflow.id}>
                 <div className="stack">
                   <div className="workflow-heading">
                     <div>
                       <strong>{workflow.review_title}</strong>
                       <p className="muted">{workflow.project_title}</p>
                     </div>
-                    <Status tone={workflow.state === 'completed' ? 'ok' : 'warn'}>{workflow.state}</Status>
+                    <Status tone={workflowStateTone(workflow.state)}>{workflow.state}</Status>
                   </div>
                   <p className="muted">{formatDate(workflow.created_at)} · {workflow.mode.replace('_', '-')}</p>
                   <div className="row">

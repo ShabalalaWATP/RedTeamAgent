@@ -44,7 +44,17 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.section-title svg { color: var(--accent); flex: 0 0 auto; }
+.section-title svg {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--info-line);
+  box-shadow: 0 0 18px rgb(78 163 255 / 0.18);
+}
 .section-title h2 { margin: 0; }
 
 .error-state,
@@ -93,7 +103,14 @@
 .list-item p { margin: 4px 0 0; }
 .list-item small { color: var(--faint); }
 
-.project-item { align-items: flex-start; }
+.project-item {
+  align-items: flex-start;
+  border-left: 3px solid var(--accent);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.project-item:hover { box-shadow: var(--shadow-sm); }
+.project-item > div strong { font-size: 1.05rem; }
 .project-edit { width: 100%; }
 .project-actions { justify-content: flex-end; align-items: center; }
 
@@ -132,6 +149,11 @@
   border-left-color: var(--accent);
   box-shadow: var(--shadow-sm);
 }
+
+/* Left rail colour tracks the workflow outcome for quick scanning. */
+.workflow-item.is-completed { border-left-color: var(--ok); }
+.workflow-item.is-failed { border-left-color: var(--bad); }
+.workflow-item.is-cancelled { border-left-color: var(--faint); }
 
 .workflow-item > .stack { min-width: 0; }
 .workflow-heading strong { font-size: 1.05rem; }
