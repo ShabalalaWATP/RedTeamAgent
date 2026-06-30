@@ -38,14 +38,12 @@ export function SourceIntakePanel({
     if (disabled) return;
     try {
       if (!supportsRecording()) {
-        await onUpload(new File(['Voice-note capture unavailable in this browser.'], 'voice-note.txt', {
-          type: 'text/plain'
-        }));
-        setVoiceStatus('Browser recording unavailable, fallback note submitted.');
+        setVoiceStatus('Voice recording is not available in this browser. Upload an audio file instead.');
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = preferredAudioMimeType();
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       chunksRef.current = [];
       streamRef.current = stream;
       recorderRef.current = recorder;
@@ -53,10 +51,16 @@ export function SourceIntakePanel({
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        const mimeType = recorder.mimeType || 'audio/webm';
-        const file = new File(chunksRef.current, 'voice-note.webm', { type: mimeType });
+        const captured = chunksRef.current.filter((chunk) => chunk.size > 0);
+        const capturedType = baseMimeType(recorder.mimeType || mimeType || 'audio/webm');
+        const file = new File(captured, voiceFilename(capturedType), { type: capturedType });
         stopTracks();
+        recorderRef.current = null;
         setRecording(false);
+        if (file.size === 0) {
+          setVoiceStatus('No audio was captured. Check the microphone permission and try again.');
+          return;
+        }
         setVoiceStatus('Voice note captured, submitting transcript source.');
         void onUpload(file)
           .then(() => setVoiceStatus('Voice note submitted for timestamped transcription.'))
@@ -67,13 +71,21 @@ export function SourceIntakePanel({
       setVoiceStatus('Recording voice note.');
     } catch (err) {
       stopTracks();
+      recorderRef.current = null;
       setRecording(false);
-      setVoiceStatus((err as Error).message);
+      setVoiceStatus(recordingErrorMessage(err));
     }
   };
 
   const stopVoiceNote = () => {
-    recorderRef.current?.stop();
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      setVoiceStatus('No active voice recording to stop.');
+      return;
+    }
+    setVoiceStatus('Stopping voice note and saving evidence.');
+    recorder.requestData?.();
+    recorder.stop();
   };
 
   const stopTracks = () => {
@@ -174,6 +186,35 @@ function supportsRecording() {
   return typeof navigator !== 'undefined'
     && Boolean(navigator.mediaDevices?.getUserMedia)
     && typeof MediaRecorder !== 'undefined';
+}
+
+function preferredAudioMimeType() {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
+  for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
+function baseMimeType(value: string) {
+  return value.split(';', 1)[0].trim().toLowerCase() || 'audio/webm';
+}
+
+function voiceFilename(mimeType: string) {
+  if (mimeType === 'audio/mp4') return 'voice-note.m4a';
+  if (mimeType === 'audio/mpeg') return 'voice-note.mp3';
+  if (mimeType === 'audio/wav' || mimeType === 'audio/wave' || mimeType === 'audio/x-wav') return 'voice-note.wav';
+  return 'voice-note.webm';
+}
+
+function recordingErrorMessage(err: unknown) {
+  if (!(err instanceof Error)) return 'Voice recording failed. Check microphone permission and try again.';
+  if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+    return 'Microphone permission was blocked. Allow microphone access for this site and try again.';
+  }
+  if (err.name === 'NotFoundError') return 'No microphone was found on this device.';
+  if (err.name === 'NotReadableError') return 'The microphone is already in use or cannot be opened.';
+  return err.message || 'Voice recording failed. Check microphone permission and try again.';
 }
 
 async function uploadSelected(

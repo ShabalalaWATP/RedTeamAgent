@@ -172,16 +172,7 @@ describe('RedTeamAgent app flows', () => {
           warnings: []
         });
       }
-      if (url.includes('/sources/upload')) {
-        return jsonResponse({
-          id: 'source-voice',
-          filename: 'voice-note.txt',
-          content_type: 'text/plain',
-          state: 'ingested',
-          metadata: { transcript_quality: 'fallback' },
-          warnings: []
-        });
-      }
+      if (url.includes('/sources/upload')) return jsonResponse({ message: 'unexpected voice upload' }, 500);
       if (url.includes('/context-packs?')) return jsonResponse(contextPacks);
       if (url.endsWith('/context-packs') && init?.method === 'POST') {
         const body = JSON.parse(String(init.body));
@@ -205,8 +196,8 @@ describe('RedTeamAgent app flows', () => {
     await user.click(screen.getByRole('button', { name: /ingest repository/i }));
     expect(await screen.findByText('repo.repo.txt')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /record voice note/i }));
-    expect(await screen.findByText('voice-note.txt')).toBeInTheDocument();
-    expect(screen.getByText(/fallback note submitted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/voice recording is not available/i)).toBeInTheDocument();
+    expect(screen.queryByText('voice-note.txt')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next stage/i }));
     await user.click(screen.getByRole('button', { name: /add context pack/i }));
     expect(await screen.findByText('Version 1')).toBeInTheDocument();

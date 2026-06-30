@@ -24,6 +24,8 @@ ALLOWED_UPLOADS = {
     "image/webp": (".webp",),
     "audio/mpeg": (".mp3",),
     "audio/wav": (".wav",),
+    "audio/wave": (".wav",),
+    "audio/x-wav": (".wav",),
     "audio/webm": (".webm",),
     "audio/mp4": (".m4a", ".mp4"),
     "video/mp4": (".mp4",),
@@ -57,12 +59,16 @@ def validate_upload(content_type: str, filename: str, size: int, max_size: int) 
     safe_name = filename.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
     if safe_name != filename or ".." in safe_name:
         raise ValidationFailure("Filename is not safe.")
-    expected_suffixes = ALLOWED_UPLOADS.get(content_type)
+    expected_suffixes = ALLOWED_UPLOADS.get(_base_content_type(content_type))
     if expected_suffixes is None:
         raise ValidationFailure("Unsupported file type.")
     if not safe_name.lower().endswith(expected_suffixes):
         raise ValidationFailure("File extension does not match content type.")
     return safe_name
+
+
+def _base_content_type(content_type: str) -> str:
+    return content_type.split(";", 1)[0].strip().lower()
 
 
 def route_agents(

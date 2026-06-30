@@ -19,9 +19,30 @@ export function SavedConnectionsPanel({
   onTest,
   onRefresh
 }: SavedConnectionsPanelProps) {
+  const activeModel = models.find((model) => model.id === activeModelId) ?? null;
+  const activeConnection = connections.find((connection) => connection.id === activeModel?.provider_connection_id);
+  const activeReady = Boolean(activeModel?.verified && activeConnection);
   return (
     <aside className="panel stack">
       <h2>Saved connections</h2>
+      <section className={`provider-active-status ${activeReady ? 'connected' : 'needs-action'}`}>
+        <div>
+          <strong>Current review model</strong>
+          <p>
+            {activeModel && activeConnection
+              ? `${activeConnection.name} / ${activeModel.model_identifier}`
+              : 'No workspace review model is selected yet.'}
+          </p>
+          <small>
+            {activeReady
+              ? 'Connected, tested and used for all users in this workspace. No need to select it again after login.'
+              : 'An owner must select and test one model before production reviews can run.'}
+          </small>
+        </div>
+        <span className={`status-chip ${activeReady ? 'success' : 'warning'}`}>
+          {activeReady ? 'Connected' : 'Action required'}
+        </span>
+      </section>
       {connections.length === 0 ? (
         <EmptyState title="No saved provider" body="Save the provider TheAllSeeingEye should use for reviews." />
       ) : (
@@ -60,7 +81,13 @@ export function SavedConnectionsPanel({
           })}
         </div>
       )}
-      <p className="muted">{result || 'Select and test one saved provider before running reviews.'}</p>
+      <p className="muted">
+        {result || (
+          activeReady
+            ? 'Provider changes are owner-controlled and should only be needed when rotating keys or changing models.'
+            : 'Select and test one saved provider before running reviews.'
+        )}
+      </p>
     </aside>
   );
 }

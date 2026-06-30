@@ -13,8 +13,8 @@ describe('SavedConnectionsPanel', () => {
           connection({ id: 'conn-2', name: 'Backup provider', has_credentials: true })
         ]}
         models={[
-          model({ provider_connection_id: 'conn-1', verified: false }),
-          model({ id: 'model-2', provider_connection_id: 'conn-2', model_identifier: 'gpt-4.1', verified: true })
+          model({ provider_connection_id: 'conn-1', verified: true }),
+          model({ id: 'model-2', provider_connection_id: 'conn-2', model_identifier: 'gpt-4.1', verified: false })
         ]}
         activeModelId="model-1"
         result=""
@@ -24,6 +24,11 @@ describe('SavedConnectionsPanel', () => {
     );
 
     expect(screen.getByText('Selected')).toBeInTheDocument();
+    expect(screen.getByText('Current review model')).toBeInTheDocument();
+    expect(screen.getByText('Production provider / gpt-4.1-mini')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText(/used for all users in this workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/only be needed when rotating keys or changing models/i)).toBeInTheDocument();
     expect(screen.getByText('Needs selection')).toBeInTheDocument();
     expect(screen.getByText('Needs test')).toBeInTheDocument();
     expect(screen.getByText('Tested')).toBeInTheDocument();
@@ -35,6 +40,23 @@ describe('SavedConnectionsPanel', () => {
     expect(selectionResult(' ', [model()], null)).toBe(
       'Provider returned 1 model, but no review model was selected.'
     );
+  });
+
+  it('shows action required when no workspace review model is selected', () => {
+    render(
+      <SavedConnectionsPanel
+        connections={[connection()]}
+        models={[model()]}
+        activeModelId=""
+        result=""
+        onTest={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('No workspace review model is selected yet.')).toBeInTheDocument();
+    expect(screen.getByText('Action required')).toBeInTheDocument();
+    expect(screen.getByText(/owner must select and test one model/i)).toBeInTheDocument();
   });
 });
 

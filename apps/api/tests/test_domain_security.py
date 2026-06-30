@@ -34,6 +34,8 @@ def test_role_policy() -> None:
 
 def test_upload_policy() -> None:
     assert validate_upload("text/plain", "notes.txt", 5, 10) == "notes.txt"
+    assert validate_upload("audio/webm;codecs=opus", "note.webm", 5, 10) == "note.webm"
+    assert validate_upload("audio/x-wav", "note.wav", 5, 10) == "note.wav"
     with pytest.raises(ValidationFailure):
         validate_upload("text/plain", "notes.exe", 5, 10)
     with pytest.raises(ValidationFailure):
