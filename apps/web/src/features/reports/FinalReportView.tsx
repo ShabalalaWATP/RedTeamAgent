@@ -119,10 +119,10 @@ function ReportAnalytics({ report }: { report: ReportData }) {
         <h2 id="analytics-heading">Decision analytics</h2>
       </div>
       <div className="report-kpi-grid">
-        <Metric label="Findings" value={String(report.findings.length)} />
-        <Metric label="Agents run" value={String(report.llm_review?.agent_outputs.length ?? report.coverage_map.agents.length)} />
-        <Metric label="Evidence items" value={String(report.coverage_map.retrieved_evidence ?? report.retrieved_evidence.length)} />
-        <Metric label="Actions" value={String(report.action_items.length)} />
+        <Metric label="Findings" value={String(report.findings.length)} tone="findings" />
+        <Metric label="Agents run" value={String(report.llm_review?.agent_outputs.length ?? report.coverage_map.agents.length)} tone="agents" />
+        <Metric label="Evidence items" value={String(report.coverage_map.retrieved_evidence ?? report.retrieved_evidence.length)} tone="evidence" />
+        <Metric label="Actions" value={String(report.action_items.length)} tone="actions" />
       </div>
       <div className="report-analytics-grid">
         <article className="report-mini-panel">
@@ -215,7 +215,7 @@ function SpecialistCard({ item }: { item: Record<string, unknown> }) {
 
 function FindingCard({ finding }: { finding: ReportFinding }) {
   return (
-    <article className="finding-card">
+    <article className={`finding-card sev-${finding.severity}`}>
       <header className="finding-card-head">
         <div>
           <strong>{finding.title}</strong>
@@ -309,8 +309,8 @@ function ListBlock({ title, items, empty = 'Not recorded.' }: { title: string; i
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric-tile"><strong>{value}</strong><span>{label}</span></div>;
+function Metric({ label, value, tone }: { label: string; value: string; tone: 'findings' | 'agents' | 'evidence' | 'actions' }) {
+  return <div className={`metric-tile kpi-${tone}`}><strong>{value}</strong><span>{label}</span></div>;
 }
 
 function topFindings(findings: ReportFinding[]) {

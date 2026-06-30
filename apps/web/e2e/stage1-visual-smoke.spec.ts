@@ -78,7 +78,7 @@ async function verifyVisualJourney(page: Page, suffix: string) {
   await verifyScreen(page, `new-review${suffix}`);
 
   await page.goto('/runs/run-1');
-  await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Final report' })).toBeVisible();
   await expect(page.getByText('Unsupported claim risk').first()).toBeVisible();
   await verifyScreen(page, `report${suffix}`);
 
@@ -163,7 +163,7 @@ async function auditNewReview(page: Page) {
 
 async function auditReport(page: Page) {
   await page.goto('/runs/run-1');
-  await expect(page.getByRole('heading', { name: 'Report preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Final report' })).toBeVisible();
   await expect(page.getByText('Unsupported claim risk').first()).toBeVisible();
   await auditCurrentScreen(page);
 }

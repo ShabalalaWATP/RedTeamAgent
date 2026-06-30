@@ -17,14 +17,46 @@
   top: 88px;
 }
 
+/* Section titles wear a glowing accent chip around the icon. */
+.report-final-layout .section-title { gap: 12px; }
+
+.report-final-layout .section-title svg {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--info-line);
+  box-shadow: 0 0 18px rgb(78 163 255 / 0.18);
+}
+
+.report-final-layout .section-title h2 { font-size: 1.16rem; }
+
+/* Orchestrator synthesis hero. */
 .report-synthesis {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 16px;
+  border-color: var(--info-line);
+  background:
+    radial-gradient(130% 150% at 0% 0%, rgb(78 163 255 / 0.12), transparent 55%),
+    linear-gradient(180deg, var(--panel-raised), var(--panel));
+}
+
+.report-synthesis::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-teal), var(--accent), var(--accent-red));
 }
 
 .report-synthesis h3 {
   margin: 0;
-  font-size: 1.26rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
 }
 
 .report-lede {
@@ -32,8 +64,16 @@
   margin: 0;
   color: var(--muted);
   line-height: 1.7;
+  font-size: 1.02rem;
 }
 
+/* Recommendation callout glow (base rule lives in components.css). */
+.report-synthesis .report-reco {
+  background: linear-gradient(135deg, var(--info-bg), transparent 78%);
+  box-shadow: 0 0 0 1px var(--info-line), 0 10px 30px rgb(20 90 180 / 0.15);
+}
+
+/* Shared card surfaces. */
 .report-narrative-grid,
 .report-analytics-grid {
   display: grid;
@@ -49,7 +89,8 @@
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--field-bg);
+  background: linear-gradient(180deg, var(--panel-2), var(--field-bg));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .report-narrative-grid article,
@@ -57,6 +98,14 @@
 .agent-card,
 .finding-card {
   padding: 15px;
+}
+
+.report-narrative-grid article:hover,
+.report-mini-panel:hover,
+.agent-card:hover,
+.finding-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .report-narrative-grid strong,
@@ -76,12 +125,42 @@
   line-height: 1.55;
 }
 
+/* KPI tiles with a coloured accent rail. */
 .report-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
+.report-kpi-grid .metric-tile {
+  position: relative;
+  overflow: hidden;
+  gap: 4px;
+  border-color: var(--line);
+  background: linear-gradient(165deg, var(--panel-2), var(--field-bg));
+}
+
+.report-kpi-grid .metric-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--accent);
+}
+
+.report-kpi-grid .metric-tile strong {
+  font-size: 1.95rem;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+}
+
+.kpi-findings::before { background: linear-gradient(90deg, var(--accent), var(--accent-strong)); }
+.kpi-agents::before { background: linear-gradient(90deg, var(--accent-teal), #1f9e8a); }
+.kpi-evidence::before { background: linear-gradient(90deg, var(--warn), #e0a23c); }
+.kpi-actions::before { background: linear-gradient(90deg, var(--ok), #1fae74); }
+
+/* Severity shape bars get gradient fills and a soft glow. */
 .bar-row {
   display: grid;
   grid-template-columns: 66px minmax(0, 1fr) 24px;
@@ -94,7 +173,7 @@
 }
 
 .bar-track {
-  height: 9px;
+  height: 11px;
   overflow: hidden;
   border-radius: var(--radius-pill);
   background: var(--panel-2);
@@ -104,21 +183,13 @@
 .bar-fill {
   height: 100%;
   border-radius: inherit;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
 }
 
 .bar-fill.critical,
-.bar-fill.high {
-  background: var(--bad);
-}
-
-.bar-fill.medium {
-  background: var(--warn);
-}
-
-.bar-fill.low {
-  background: var(--ok);
-}
+.bar-fill.high { background: linear-gradient(90deg, #b4232c, var(--bad)); box-shadow: 0 0 12px rgb(240 104 111 / 0.5); }
+.bar-fill.medium { background: linear-gradient(90deg, #d99a2b, var(--warn)); box-shadow: 0 0 12px rgb(246 189 87 / 0.45); }
+.bar-fill.low { background: linear-gradient(90deg, #1fae74, var(--ok)); box-shadow: 0 0 12px rgb(52 211 153 / 0.4); }
 
 .ranked-list {
   display: grid;
@@ -128,10 +199,8 @@
   color: var(--muted);
 }
 
-.ranked-list li {
-  min-width: 0;
-  padding-left: 4px;
-}
+.ranked-list li { min-width: 0; padding-left: 4px; }
+.ranked-list li::marker { color: var(--accent); font-weight: 700; }
 
 .ranked-list li:has(.status) {
   display: grid;
@@ -140,9 +209,7 @@
   align-items: start;
 }
 
-.ranked-list span {
-  overflow-wrap: anywhere;
-}
+.ranked-list span { overflow-wrap: anywhere; }
 
 .agent-grid {
   display: grid;
@@ -150,10 +217,7 @@
   gap: 12px;
 }
 
-.agent-card {
-  display: grid;
-  gap: 10px;
-}
+.agent-card { display: grid; gap: 10px; }
 
 .agent-card header,
 .finding-card-head {
@@ -164,29 +228,36 @@
 }
 
 .agent-card header > strong,
-.finding-card-head > div {
-  min-width: 0;
-}
+.finding-card-head > div { min-width: 0; }
 
-.agent-card p {
-  margin: 0;
-  color: var(--muted);
-}
+.agent-card p { margin: 0; color: var(--muted); }
+.agent-card .compact-list span { display: block; margin-top: 3px; }
 
-.agent-card .compact-list span {
-  display: block;
-  margin-top: 3px;
-}
-
-.report-finding-list {
-  display: grid;
-  gap: 12px;
-}
+/* Finding cards carry a severity-coloured stripe for quick scanning. */
+.report-finding-list { display: grid; gap: 12px; }
 
 .finding-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 12px;
+  padding-left: 19px;
 }
+
+.finding-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+}
+
+.finding-card.sev-critical::before,
+.finding-card.sev-high::before { background: var(--bad); }
+.finding-card.sev-medium::before { background: var(--warn); }
+.finding-card.sev-low::before { background: var(--ok); }
 
 .finding-card-head strong {
   display: block;
@@ -194,10 +265,7 @@
   font-size: 1.02rem;
 }
 
-.finding-card-head p {
-  margin: 0;
-  color: var(--muted);
-}
+.finding-card-head p { margin: 0; color: var(--muted); }
 
 .finding-badges {
   display: flex;
@@ -215,9 +283,7 @@
   font-size: 0.88rem;
 }
 
-.finding-detail-grid span {
-  overflow-wrap: anywhere;
-}
+.finding-detail-grid span { overflow-wrap: anywhere; }
 
 .finding-action {
   display: flex;
@@ -228,60 +294,35 @@
   padding-top: 12px;
 }
 
-.finding-action svg {
-  flex: 0 0 auto;
-  color: var(--accent);
-  margin-top: 2px;
-}
+.finding-action svg { flex: 0 0 auto; color: var(--accent); margin-top: 2px; }
 
-.evidence-list {
-  display: grid;
-  gap: 10px;
-}
-
-.evidence-list article {
-  padding: 12px;
-}
-
+.evidence-list { display: grid; gap: 10px; }
+.evidence-list article { padding: 12px; }
 .evidence-list strong,
-.evidence-list small {
-  display: block;
-}
+.evidence-list small { display: block; }
+.evidence-list strong { font-family: var(--mono); font-size: 0.9rem; color: var(--accent); }
+.evidence-list p { margin: 6px 0; color: var(--muted); }
+.evidence-list small { color: var(--faint); }
 
-.evidence-list p {
-  margin: 6px 0;
-  color: var(--muted);
-}
-
-.evidence-list small {
-  color: var(--faint);
+/* Lift report list rows (external sources, action items) onto the gradient. */
+.report-final-layout .list-item {
+  background: linear-gradient(180deg, var(--panel-2), var(--field-bg));
 }
 
 @media (max-width: 1040px) {
-  .report-final-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .report-support-stack {
-    position: static;
-  }
+  .report-final-layout { grid-template-columns: 1fr; }
+  .report-support-stack { position: static; }
 }
 
 @media (max-width: 720px) {
   .report-narrative-grid,
   .report-analytics-grid,
-  .report-kpi-grid,
-  .finding-detail-grid {
-    grid-template-columns: 1fr;
-  }
+  .finding-detail-grid { grid-template-columns: 1fr; }
+
+  .report-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .agent-card header,
-  .finding-card-head {
-    display: grid;
-  }
+  .finding-card-head { display: grid; }
 
-  .finding-badges {
-    justify-content: flex-start;
-    flex-basis: auto;
-  }
+  .finding-badges { justify-content: flex-start; flex-basis: auto; }
 }
