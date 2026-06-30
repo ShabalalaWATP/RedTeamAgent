@@ -62,6 +62,65 @@
   100% { top: 100%; opacity: 0; }
 }
 
+/* Feature chips lift toward the pointer. */
+.auth-feature-icon { transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease; }
+
+.auth-features li:hover .auth-feature-icon {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgb(78 163 255 / 0.32);
+}
+
+/* Light sweep across the primary call to action on hover. */
+.auth-actions .button.primary { position: relative; overflow: hidden; }
+
+.auth-actions .button.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 32%, rgb(255 255 255 / 0.26) 50%, transparent 68%);
+  transform: translateX(-130%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.auth-actions .button.primary:hover::after { transform: translateX(130%); }
+
+/* Staggered entrance and a slow blue/red breathing glow on the card.
+   Finite entrances fast-forward to their visible end state under snapshot
+   tooling; the infinite breathe resets to the card's base glow. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-brand-top,
+  .auth-features li,
+  .auth-form-header,
+  .auth-form .field,
+  .auth-form .password-field,
+  .auth-actions {
+    animation: auth-enter 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .auth-brand-top { animation-delay: 0.05s; }
+  .auth-features li:nth-child(1) { animation-delay: 0.16s; }
+  .auth-features li:nth-child(2) { animation-delay: 0.24s; }
+  .auth-features li:nth-child(3) { animation-delay: 0.32s; }
+  .auth-form-header { animation-delay: 0.1s; }
+  .auth-form .field,
+  .auth-form .password-field { animation-delay: 0.22s; }
+  .auth-actions { animation-delay: 0.32s; }
+
+  .auth-card { animation: auth-card-breathe 7s ease-in-out infinite; }
+}
+
+@keyframes auth-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes auth-card-breathe {
+  0%, 100% { box-shadow: var(--shadow), 0 0 56px rgb(78 163 255 / 0.07); }
+  50% { box-shadow: var(--shadow), 0 0 72px rgb(240 96 109 / 0.1); }
+}
+
 @media (max-width: 860px) {
   .auth-brand-eye { width: 180px; }
 }

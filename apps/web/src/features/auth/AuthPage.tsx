@@ -1,4 +1,4 @@
-import { FileText, ListChecks, Shield } from 'lucide-react';
+import { FileText, ListChecks, LogIn, Mail, Shield, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiRequestError, api } from '../../api/client';
@@ -291,7 +291,9 @@ export function AuthPage() {
           <div className="auth-actions">
             {mode === 'login' ? (
               <>
-                <Button type="button" variant="primary" onClick={login} disabled={!email || !password || (requiresMfa && !mfaCode)}>Sign in</Button>
+                <Button type="button" variant="primary" onClick={login} disabled={!email || !password || (requiresMfa && !mfaCode)}>
+                  <LogIn aria-hidden="true" size={18} /> Sign in
+                </Button>
                 <button className="auth-text-button" type="button" onClick={() => switchMode('register')}>
                   Create an account
                 </button>
@@ -304,7 +306,7 @@ export function AuthPage() {
             {mode === 'register' ? (
               <>
                 <Button type="button" variant="primary" onClick={register} disabled={!canRegister}>
-                  Create account
+                  <UserPlus aria-hidden="true" size={18} /> Create account
                 </Button>
                 <button className="auth-text-button" type="button" onClick={() => switchMode('login')}>
                   Back to sign in
@@ -315,7 +317,9 @@ export function AuthPage() {
             {mode === 'reset' ? (
               <>
                 {!hasResetToken ? (
-                  <Button type="button" variant="primary" onClick={reset} disabled={!email || !captchaReady}>Send reset link</Button>
+                  <Button type="button" variant="primary" onClick={reset} disabled={!email || !captchaReady}>
+                    <Mail aria-hidden="true" size={18} /> Send reset link
+                  </Button>
                 ) : null}
                 <button className="auth-text-button" type="button" onClick={() => switchMode('login')}>
                   Back to sign in
