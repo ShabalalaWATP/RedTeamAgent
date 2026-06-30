@@ -72,13 +72,32 @@ def image_result(filename: str, content_type: str, content: bytes) -> Extraction
     )
 
 
-def audio_result(filename: str, content_type: str, content: bytes) -> ExtractionResult:
+def audio_result(
+    filename: str,
+    content_type: str,
+    content: bytes,
+    transcript_text: str | None = None,
+    transcript_warning: str | None = None,
+) -> ExtractionResult:
     del content_type
     seconds = max(1, min(300, len(content) // 16_000))
+    transcript = transcript_text.strip() if transcript_text else ""
+    transcript_quality = "provider_generated" if transcript else "deterministic_placeholder"
+    text = transcript or f"Transcript placeholder for {filename}."
+    warning = transcript_warning or (
+        "Speech-to-text transcription completed with the configured provider; verify transcript quality."
+        if transcript
+        else "Local deterministic transcription was used; verify transcript quality before relying on it."
+    )
     return ExtractionResult(
-        [ExtractedChunk(locator=f"{filename}:00:00-00:{seconds:02d}", text=f"Transcript placeholder for {filename}.")],
-        {"kind": "audio", "duration_seconds": seconds, "timestamps": True},
-        ["Local deterministic transcription was used; verify transcript quality before relying on it."],
+        [ExtractedChunk(locator=f"{filename}:00:00-00:{seconds:02d}", text=text)],
+        {
+            "kind": "audio",
+            "duration_seconds": seconds,
+            "timestamps": True,
+            "transcript_quality": transcript_quality,
+        },
+        [warning],
     )
 
 

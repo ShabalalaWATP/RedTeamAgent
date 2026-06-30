@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.orm import Session
 
+from app.application.audio_transcription import AudioTranscriptionService
 from app.application.auth_service import AuthService
 from app.application.enterprise_operations_service import EnterpriseOperationsService
 from app.application.enterprise_service import EnterpriseService
@@ -32,6 +33,7 @@ from app.infrastructure.db.enterprise_repository import SqlEnterpriseRepository
 from app.infrastructure.db.repositories import SqlRepository
 from app.infrastructure.ingestion.external_sources import SafeExternalSourceIngestor
 from app.infrastructure.ingestion.extractors import SourceExtractor
+from app.infrastructure.ingestion.transcription import ProviderAudioTranscriber
 from app.infrastructure.notifications.email import NullEmailSender, SmtpEmailSender
 from app.infrastructure.providers.adapters import ProviderRegistry
 from app.infrastructure.security.captcha import CaptchaVerifier
@@ -194,6 +196,7 @@ def review_service(
         SafeExternalSourceIngestor(),
         settings.max_upload_bytes,
         settings.allow_fake_provider,
+        AudioTranscriptionService(repo, FernetCredentialVault(settings.app_secret_key), ProviderAudioTranscriber()),
     )
 
 

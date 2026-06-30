@@ -24,6 +24,7 @@ class ReviewService:
         external_sources: ExternalSourceIngestor,
         max_upload_bytes: int,
         allow_fake_provider: bool = True,
+        audio_transcription: Any | None = None,
     ) -> None:
         self.repo = repo
         self.storage = storage
@@ -31,6 +32,7 @@ class ReviewService:
         self.external_sources = external_sources
         self.max_upload_bytes = max_upload_bytes
         self.allow_fake_provider = allow_fake_provider
+        self.audio_transcription = audio_transcription
 
     def create_review(self, user_id: str, project_id: str, data: dict[str, Any]) -> Any:
         project = self._require_project_write(user_id, project_id)
@@ -238,7 +240,13 @@ class ReviewService:
         content: bytes,
     ) -> None:
         try:
-            extracted = self.extractor.extract(filename, content_type, content)
+            transcript_text, transcript_warning = self._transcript_for_upload(
+                workspace_id,
+                filename,
+                content_type,
+                content,
+            )
+            extracted = self.extractor.extract(filename, content_type, content, transcript_text, transcript_warning)
             chunks = [{"locator": chunk.locator, "text": chunk.text} for chunk in extracted.chunks]
             self.repo.add_chunks(source_id, workspace_id, chunks)
             state = SourceState.INGESTED.value if chunks else SourceState.FAILED.value
@@ -246,6 +254,17 @@ class ReviewService:
             self.repo.mark_source(source_id, state, extracted.metadata, warnings)
         except Exception as exc:
             self.repo.mark_source(source_id, SourceState.FAILED.value, {}, [str(exc)])
+
+    def _transcript_for_upload(
+        self,
+        workspace_id: str,
+        filename: str,
+        content_type: str,
+        content: bytes,
+    ) -> tuple[str | None, str | None]:
+        if self.audio_transcription is None:
+            return None, None
+        return self.audio_transcription.transcript_for_upload(workspace_id, filename, content_type, content)
 
     def _capability_warnings(self, workspace_id: str) -> list[str]:
         models = self.repo.list_models(workspace_id)

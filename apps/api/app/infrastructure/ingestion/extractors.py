@@ -28,7 +28,14 @@ MAX_DOCX_TEXT_CHARS = 100_000
 
 
 class SourceExtractor:
-    def extract(self, filename: str, content_type: str, content: bytes) -> ExtractionResult:
+    def extract(
+        self,
+        filename: str,
+        content_type: str,
+        content: bytes,
+        transcript_text: str | None = None,
+        transcript_warning: str | None = None,
+    ) -> ExtractionResult:
         if content_type in {"text/plain", "text/markdown"}:
             return self._text(filename, content)
         if content_type == "application/pdf":
@@ -44,7 +51,7 @@ class SourceExtractor:
         if content_type in {"image/png", "image/jpeg", "image/webp"}:
             return image_result(filename, content_type, content)
         if content_type.startswith("audio/"):
-            return audio_result(filename, content_type, content)
+            return audio_result(filename, content_type, content, transcript_text, transcript_warning)
         if content_type.startswith("video/"):
             return video_result(filename, content_type, content)
         if content_type in {"application/zip", "application/x-tar", "application/gzip"}:
