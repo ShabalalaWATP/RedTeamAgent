@@ -3,6 +3,10 @@ import { useId, useRef, useState } from 'react';
 import type { Source } from '../../shared/types';
 import { Button, EmptyState, ErrorState, Field, Status } from '../../shared/ui';
 
+const RECORDING_TIMESLICE_MS = 1000;
+const MIN_RECORDING_MS = 1200;
+const FINAL_CHUNK_GRACE_MS = 150;
+
 type SourceIntakePanelProps = {
   disabled: boolean;
   sources: Source[];
@@ -32,6 +36,9 @@ export function SourceIntakePanel({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const recordingStartedAtRef = useRef(0);
+  const stopPendingRef = useRef(false);
+  const stopTimerRef = useRef<number | null>(null);
 
   const startVoiceNote = async () => {
     /* v8 ignore next */
@@ -47,26 +54,17 @@ export function SourceIntakePanel({
       chunksRef.current = [];
       streamRef.current = stream;
       recorderRef.current = recorder;
+      recordingStartedAtRef.current = Date.now();
+      stopPendingRef.current = false;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        const captured = chunksRef.current.filter((chunk) => chunk.size > 0);
-        const capturedType = baseMimeType(recorder.mimeType || mimeType || 'audio/webm');
-        const file = new File(captured, voiceFilename(capturedType), { type: capturedType });
-        stopTracks();
-        recorderRef.current = null;
-        setRecording(false);
-        if (file.size === 0) {
-          setVoiceStatus('No audio was captured. Check the microphone permission and try again.');
-          return;
-        }
-        setVoiceStatus('Voice note captured, submitting transcript source.');
-        void onUpload(file)
-          .then(() => setVoiceStatus('Voice note submitted for timestamped transcription.'))
-          .catch((err: unknown) => setVoiceStatus((err as Error).message));
+        window.setTimeout(() => {
+          submitVoiceNote(recorder.mimeType || mimeType || 'audio/webm');
+        }, FINAL_CHUNK_GRACE_MS);
       };
-      recorder.start();
+      recorder.start(RECORDING_TIMESLICE_MS);
       setRecording(true);
       setVoiceStatus('Recording voice note.');
     } catch (err) {
@@ -79,13 +77,49 @@ export function SourceIntakePanel({
 
   const stopVoiceNote = () => {
     const recorder = recorderRef.current;
+    if (stopPendingRef.current) {
+      setVoiceStatus('Voice note is already being saved.');
+      return;
+    }
     if (!recorder || recorder.state === 'inactive') {
       setVoiceStatus('No active voice recording to stop.');
       return;
     }
+    stopPendingRef.current = true;
+    const elapsed = Date.now() - recordingStartedAtRef.current;
+    if (elapsed < MIN_RECORDING_MS && chunksRef.current.length === 0) {
+      setVoiceStatus('Finishing a short voice note so the browser can save audio.');
+      stopTimerRef.current = window.setTimeout(() => stopRecorder(recorder), MIN_RECORDING_MS - elapsed);
+      return;
+    }
+    stopRecorder(recorder);
+  };
+
+  const stopRecorder = (recorder: MediaRecorder) => {
     setVoiceStatus('Stopping voice note and saving evidence.');
-    recorder.requestData?.();
     recorder.stop();
+  };
+
+  const submitVoiceNote = (mimeType: string) => {
+    const captured = chunksRef.current.filter((chunk) => chunk.size > 0);
+    const capturedType = baseMimeType(mimeType);
+    const file = new File(captured, voiceFilename(capturedType), { type: capturedType });
+    stopTracks();
+    recorderRef.current = null;
+    stopPendingRef.current = false;
+    if (stopTimerRef.current !== null) {
+      window.clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = null;
+    }
+    setRecording(false);
+    if (file.size === 0) {
+      setVoiceStatus('No audio was captured. Try recording for a little longer, then allow microphone access if prompted.');
+      return;
+    }
+    setVoiceStatus('Voice note captured, submitting transcript source.');
+    void onUpload(file)
+      .then(() => setVoiceStatus('Voice note submitted for timestamped transcription.'))
+      .catch((err: unknown) => setVoiceStatus((err as Error).message));
   };
 
   const stopTracks = () => {
@@ -190,7 +224,7 @@ function supportsRecording() {
 
 function preferredAudioMimeType() {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
-  for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']) {
+  for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4']) {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return '';

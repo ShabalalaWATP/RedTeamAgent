@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceIntakePanel } from '../src/features/reviews/SourceIntakePanel';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -80,6 +81,51 @@ describe('Stage 2 voice source intake', () => {
       name: 'voice-note.m4a',
       type: 'audio/mp4'
     })));
+  });
+
+  it('waits for short iOS-style recordings so final audio chunks can be emitted', async () => {
+    const user = userEvent.setup();
+    const stopTrack = vi.fn();
+    const onUpload = vi.fn().mockResolvedValue(undefined);
+    const recorderInstances: FakeRecorder[] = [];
+    class FakeRecorder {
+      static isTypeSupported(type: string) {
+        return type === 'audio/mp4;codecs=mp4a.40.2';
+      }
+      ondataavailable: ((event: BlobEvent) => void) | null = null;
+      onstop: (() => void) | null = null;
+      mimeType = 'audio/mp4;codecs=mp4a.40.2';
+      state = 'recording';
+      stopCalls = 0;
+      constructor() {
+        recorderInstances.push(this);
+      }
+      start() {}
+      stop() {
+        this.stopCalls += 1;
+        this.state = 'inactive';
+        this.ondataavailable?.({ data: new Blob(['voice'], { type: 'audio/mp4' }) } as BlobEvent);
+        this.onstop?.();
+      }
+    }
+
+    stubMicrophone({ getTracks: () => [{ stop: stopTrack }] });
+    vi.stubGlobal('MediaRecorder', FakeRecorder);
+    renderSourcePanel({ onUpload });
+
+    await user.click(screen.getByRole('button', { name: /record voice note/i }));
+    await user.click(screen.getByRole('button', { name: /stop and submit/i }));
+
+    expect(screen.getByText(/finishing a short voice note/i)).toBeInTheDocument();
+    expect(recorderInstances[0]?.stopCalls).toBe(0);
+
+    await waitFor(() => expect(recorderInstances[0]?.stopCalls).toBe(1), { timeout: 2000 });
+
+    await waitFor(() => expect(onUpload).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'voice-note.m4a',
+      type: 'audio/mp4'
+    })), { timeout: 2000 });
+    expect(stopTrack).toHaveBeenCalledTimes(1);
   });
 
   it('uses the browser default recorder when no preferred audio type is reported', async () => {
@@ -206,6 +252,31 @@ describe('Stage 2 voice source intake', () => {
     expect(await screen.findByText('No active voice recording to stop.')).toBeInTheDocument();
   });
 
+  it('reports when stop is pressed while a voice note is already saving', async () => {
+    const user = userEvent.setup();
+    class FakeRecorder {
+      ondataavailable: ((event: BlobEvent) => void) | null = null;
+      onstop: (() => void) | null = null;
+      mimeType = 'audio/webm';
+      state = 'recording';
+      start() {
+        this.ondataavailable?.({ data: new Blob(['voice'], { type: 'audio/webm' }) } as BlobEvent);
+      }
+      stop() {
+        this.state = 'inactive';
+      }
+    }
+    stubMicrophone({ getTracks: () => [] });
+    vi.stubGlobal('MediaRecorder', FakeRecorder);
+    renderSourcePanel();
+
+    await user.click(screen.getByRole('button', { name: /record voice note/i }));
+    await user.click(screen.getByRole('button', { name: /stop and submit/i }));
+    await user.click(screen.getByRole('button', { name: /stop and submit/i }));
+
+    expect(await screen.findByText('Voice note is already being saved.')).toBeInTheDocument();
+  });
+
   it('does not upload empty recorder chunks', async () => {
     const user = userEvent.setup();
     class FakeRecorder {
@@ -229,8 +300,8 @@ describe('Stage 2 voice source intake', () => {
     await user.click(screen.getByRole('button', { name: /record voice note/i }));
     await user.click(screen.getByRole('button', { name: /stop and submit/i }));
 
-    await waitFor(() => expect(onUpload).not.toHaveBeenCalled());
-    expect(await screen.findByText(/no audio was captured/i)).toBeInTheDocument();
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(await screen.findByText(/no audio was captured/i, {}, { timeout: 2500 })).toBeInTheDocument();
   });
 });
 
